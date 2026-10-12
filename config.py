@@ -10,7 +10,9 @@ CACHE_DIR = ROOT / "data" / "cache"
 SOURCE_NAME = "Mahabharata (Ganguli)"
 PARVA = "Adi Parva"
 SECTION_URL = "https://sacred-texts.com/hin/m01/m01{n:03d}.htm"
-NUM_SECTIONS = 236  # Adi Parva has 236 sections in Ganguli's numbering; verify after download
+# Page m01001 is the Translator's Preface; page m01002 is Section I (so page = section + 1).
+# Adi Parva should have 236 sections -> pages 001..237. Verify after download.
+NUM_SECTIONS = 240  # upper bound; downloader stops at the first 404
 
 # --- Phase 1 knobs (filled in when we get there) ---
 CHUNK_SIZE = 1000      # characters

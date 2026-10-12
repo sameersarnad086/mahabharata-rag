@@ -6,6 +6,7 @@ Usage: python scripts/download_adi_parva.py [--limit N]
 import argparse
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -27,8 +28,14 @@ def main() -> None:
             continue
         url = config.SECTION_URL.format(n=n)
         req = urllib.request.Request(url, headers={"User-Agent": "mahabharata-rag-learning-project"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            out.write_bytes(resp.read())
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                out.write_bytes(resp.read())
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                print(f"404 at page {n:03d}: end of book")
+                break
+            raise
         print(f"saved section {n:03d}")
         time.sleep(DELAY_SECONDS)
 
