@@ -15,6 +15,9 @@ def main() -> None:
         paras = parse_file(config.RAW_DIR / f"section_{n:03d}.html")
         print(f"\n===== file {n:03d}: heading={paras[0].heading!r}, {len(paras)} paragraphs, "
               f"{sum(len(p.text) for p in paras)} chars =====")
+        for p in paras:
+            if p.merged:
+                print(f"  MERGED x{p.merged} [{p.para_index}] ...{p.text[:60]!r} ... {p.text[-60:]!r}")
         for p in paras[:4] + paras[-2:]:
             print(f"[{p.para_index}] sub_parva={p.sub_parva!r} page={p.printed_page}  {p.text[:110]!r}")
 

@@ -21,6 +21,7 @@ from bs4 import BeautifulSoup
 PAGE_MARKER = re.compile(r"^p\.\s*(\d+|[ivxlc]+)$", re.I)  # preface uses roman: "p. xii"
 SECTION_HEADING = re.compile(r"^SECTION [IVXLC]+$")
 SUB_PARVA = re.compile(r"^\((.+)\)$")
+CONTINUES = re.compile(r"^\[paragraph continues\]\s*", re.I)  # site marker: page break split this paragraph
 
 
 @dataclass
@@ -31,6 +32,7 @@ class Paragraph:
     para_index: int            # position among story paragraphs in this file
     printed_page: int | str | None  # most recent "p. NN" marker seen BEFORE this paragraph
     text: str
+    merged: int = 0            # how many page-break fragments were glued onto this paragraph
 
 
 def _clean(text: str) -> str:
@@ -59,6 +61,7 @@ def parse_file(path: Path) -> list[Paragraph]:
     paragraphs: list[Paragraph] = []
     sub_parva: str | None = None
     printed_page: int | str | None = None
+    after_marker = False  # a page marker was seen since the last story paragraph
 
     # TODO(me): this loop is the cleaning rule set. Right now it is my first draft;
     # after we review the output on the first 2 files, decide what to keep/drop/change.
@@ -69,11 +72,22 @@ def parse_file(path: Path) -> list[Paragraph]:
         if m := PAGE_MARKER.match(text):
             v = m.group(1)
             printed_page = int(v) if v.isdigit() else v
+            after_marker = True
             continue
         if m := SUB_PARVA.match(text):
             sub_parva = m.group(1)
             continue
-        paragraphs.append(
-            Paragraph(path.name, heading, sub_parva, len(paragraphs), printed_page, text)
-        )
+        # Option A: a page break can cut a paragraph in two. Glue the fragment back on if it
+        # carries the site's "[paragraph continues]" tag, or follows a page marker and starts
+        # in lowercase (a real paragraph starts with a capital or a quote mark).
+        explicit = bool(CONTINUES.match(text))
+        text = CONTINUES.sub("", text)
+        if paragraphs and (explicit or (after_marker and text[:1].islower())):
+            paragraphs[-1].text += " " + text
+            paragraphs[-1].merged += 1
+        else:
+            paragraphs.append(
+                Paragraph(path.name, heading, sub_parva, len(paragraphs), printed_page, text)
+            )
+        after_marker = False
     return paragraphs
