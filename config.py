@@ -9,7 +9,7 @@ CACHE_DIR = ROOT / "data" / "cache"
 # --- Source (Phase 0) ---
 SOURCE_NAME = "Mahabharata (Ganguli)"
 PARVA = "Adi Parva"
-SECTION_URL = "https://www.sacred-texts.com/hin/m01/m01{n:03d}.htm"
+SECTION_URL = "https://sacred-texts.com/hin/m01/m01{n:03d}.htm"
 NUM_SECTIONS = 236  # Adi Parva has 236 sections in Ganguli's numbering; verify after download
 
 # --- Phase 1 knobs (filled in when we get there) ---
