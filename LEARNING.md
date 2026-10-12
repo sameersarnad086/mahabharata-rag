@@ -32,7 +32,7 @@ Updated at the end of every meaningful step. Each entry: Concept / What we built
 - The sub-parva label appears on every section, not just the first, but spelled inconsistently (`Sambhava Parva`, `… continued`, `…, continued `). Normalised to 18 values; without that, a metadata filter on "Sambhava Parva" would miss most of its paragraphs. Same class of problem as Yudhishthira/Yudhisthira.
 - Files 001–003 (preface, Sections I–II) have no sub-parva (`None`), which is expected. `Haranaharana Parva` looks odd but is probably genuine (not yet verified against the Parva-sangraha list).
 
-## Phase 1 — Chunking (lesson; implementation not started)
+## Phase 1 — Chunking (baseline built; not yet scored)
 **Concept:** An embedding model turns a piece of text into ONE vector. A whole section (thousands of words) averages many topics into a blurry vector, and the LLM's context window is limited, so we cut the corpus into chunks, embed each, and retrieve the best few. Chunk size is a trade-off:
 - *Small chunks:* precise vectors, cheap context, but lost surroundings ("he then went to the forest" no longer says who "he" is).
 - *Large chunks:* keep context, but blurrier vectors and more tokens spent per retrieved result.
@@ -116,3 +116,10 @@ The mean is far above the median, so the distribution has a long tail. 35% of pa
 **What the stats can't tell me.** They narrow the range but can't pick a winner. Whether 800 beats 1000 depends on how well each retrieves answers to real questions. So 1000/200 is a *hypothesis*, a baseline to beat, not a finding. Next I'll build a test set of questions and sweep the size one value at a time (600, 800, 1000, 1500), logging every result.
 
 The general lesson: use data statistics to rule out bad settings and justify a starting point, then let evaluation make the final call.
+
+
+---
+# In plain words (for explaining to others)
+**Ingestion, in one paragraph.** The downloaded pages are web pages, so we use a library called BeautifulSoup to read the page structure and pull out only the story paragraphs from the one container that holds them. We note which section and sub-section each paragraph belongs to, remove page-number markers, and stitch back together paragraphs that a page break split in two. The result is a clean list of 1,306 paragraphs, each labelled with where it came from.
+
+**Chunking, in one paragraph.** We join all paragraphs into one long text, then slice it into pieces of 1,000 characters, each starting 800 characters after the last, so neighbours share 200 characters. The overlap is insurance: if an important fact sits on a cut, at least one piece contains all of it. Each piece keeps a label of which sections and paragraph it came from, so answers can cite sources. Only Python's built-in tools are used. It's called "fixed-size" because it ignores meaning and just counts characters, which is why it sometimes cuts mid-word. Smarter methods come later and will be compared against this one.

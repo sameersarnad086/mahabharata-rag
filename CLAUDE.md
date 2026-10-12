@@ -13,10 +13,11 @@ lineage relationships.
 - **Teach before you build.** Before implementing any new stage or technique, explain the concept:
   what problem it solves, how it works, and the main alternatives with their trade-offs. Keep
   explanations concrete and tied to our Mahabharata data where possible.
-- **Leave the core logic to me.** Scaffold files, boilerplate, and plumbing, but leave the key
-  piece of each stage (e.g. the chunker, the similarity search, the prompt assembly) for me to
-  write. Mark it clearly with a `TODO(me):` comment and a short hint. Then review my code honestly:
-  point out bugs, edge cases, and better approaches.
+- **I don't write code; I need to understand and explain it.** Claude writes all the code,
+  including the core logic of each stage. I am not a coder, so explain in plain language, not
+  code: which libraries and methods were used and why, how the technique works, the technical
+  details and trade-offs, and what the results mean, so I can explain it to others. Mention any
+  new library by name. Still review honestly and point out bugs, edge cases and better approaches.
 - **One variable at a time.** When experimenting, change one thing, run the evaluation, and compare
   against the previous result. Don't bundle multiple changes into one experiment.
 - **Ask, don't assume.** If a choice has real learning value (e.g. which embedding model to try
