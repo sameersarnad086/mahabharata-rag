@@ -25,3 +25,9 @@ Updated at the end of every meaningful step. Each entry: Concept / What we built
 - `printed_page` is approximate (preface numbering goes xii then ix; unclear if a marker means start or end of page). Do not use it in citations yet.
 - Closing lines such as "Thus endeth the section called Parva-sangraha…" are kept as text.
 - Source typos exist ("sixty-tour"); exact-match retrieval can't rely on clean spelling.
+
+**Full-corpus run (all 237 files) — what the report found:**
+- 1,306 paragraphs, 1.33 M chars, 385 page-break fragments merged. Output: `data/processed/paragraphs.jsonl` (gitignored; rebuild with `scripts/run_ingest.py`, check with `scripts/report_ingest.py`).
+- Checking only 3 files was not enough: file 177 writes its heading as `Section CLXXVI` (mixed case), which silently broke the section sequence until the report flagged it. Always run a whole-corpus report.
+- The sub-parva label appears on every section, not just the first, but spelled inconsistently (`Sambhava Parva`, `… continued`, `…, continued `). Normalised to 18 values; without that, a metadata filter on "Sambhava Parva" would miss most of its paragraphs. Same class of problem as Yudhishthira/Yudhisthira.
+- Files 001–003 (preface, Sections I–II) have no sub-parva (`None`), which is expected. `Haranaharana Parva` looks odd but is probably genuine (not yet verified against the Parva-sangraha list).

@@ -19,7 +19,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 PAGE_MARKER = re.compile(r"^p\.\s*(\d+|[ivxlc]+)$", re.I)  # preface uses roman: "p. xii"
-SECTION_HEADING = re.compile(r"^SECTION [IVXLC]+$")
+SECTION_HEADING = re.compile(r"^SECTION [IVXLC]+$", re.I)  # file 177 is "Section CLXXVI"
 SUB_PARVA = re.compile(r"^\((.+)\)$")
 CONTINUES = re.compile(r"^\[paragraph continues\]\s*", re.I)  # site marker: page break split this paragraph
 
@@ -52,7 +52,7 @@ def parse_file(path: Path) -> list[Paragraph]:
     for el in article.find_all(["h1", "h2", "h3", "div"]):
         t = _clean(el.get_text())
         if SECTION_HEADING.match(t):
-            heading = t
+            heading = t.upper()
             break
     if not heading:
         h1 = article.find("h1")
@@ -75,7 +75,8 @@ def parse_file(path: Path) -> list[Paragraph]:
             after_marker = True
             continue
         if m := SUB_PARVA.match(text):
-            sub_parva = m.group(1)
+            # Labels vary: "Sambhava Parva", "... continued", "..., continued ". Same parva.
+            sub_parva = re.sub(r"[,\s]+continued\s*$", "", m.group(1).strip(), flags=re.I)
             continue
         # Option A: a page break can cut a paragraph in two. Glue the fragment back on if it
         # carries the site's "[paragraph continues]" tag, or follows a page marker and starts
