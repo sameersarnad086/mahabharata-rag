@@ -12,7 +12,8 @@ Alternatives → Gotchas → Results.**
 3. [Phase 0 — Setup and download](#phase-0--setup-and-download)
 4. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
 5. [Phase 1 — Chunking](#phase-1--chunking)
-6. [Public post drafts](#public-post-drafts)
+6. [Phase 1 — Embeddings (concept; model not chosen yet)](#phase-1--embeddings-concept-model-not-chosen-yet)
+7. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -252,6 +253,48 @@ section. A single value would produce wrong citations.
 - 1,670 chunks. Length minimum / median / maximum = 661 / 1000 / 1000 (the 661 is just the final tail).
 - 297 chunks (18%) span more than one section.
 - No retrieval metrics yet; they need the Phase 2 test questions. See `EXPERIMENTS.md`.
+
+---
+
+## Phase 1 — Embeddings (concept; model not chosen yet)
+
+### Why it exists
+A computer cannot compare chunks by meaning if they are just text. A question like "Who was Shantanu's wife?" has to find
+the chunk about Ganga and Satyavati even when they share few words. Embeddings turn text into numbers so that
+"similar meaning" becomes "numerically close".
+
+### How it works (in plain words)
+- An **embedding model** reads a piece of text and outputs a **vector**: one fixed-length list of numbers (for example 384 or 1,024 of them).
+- **One chunk becomes one vector**, not one number per word. Inside the model each word piece (token) gets its own vector first, but they are combined into a single final vector for the whole chunk, and that is the only one we keep.
+- **The length of the list is called the number of dimensions and is fixed by the model.** Every chunk, short or long, comes out the same length, which is what makes comparison possible. bge-small gives 384; OpenAI's small model gives 1,536.
+- **No single number has a human meaning** (position 17 is not "mentions Bhishma"). Meaning is spread across the whole pattern, which the model learned in training.
+- **Similar meaning gives similar patterns.** "Bhishma vowed celibacy so Satyavati's sons could inherit" lands close to "Bhishma gave up the throne"; "Arjuna shot the fish's eye" lands far away.
+- **Our scale:** 1,670 chunks = 1,670 vectors. With a 384-dimension model that is a table of 1,670 rows by 384 columns, about 640,000 numbers and a few MB. Searching it by brute force takes milliseconds, which is why the roadmap starts with plain NumPy and not a vector database.
+
+### How retrieval uses it
+1. Embed every chunk once, ahead of time, and save the vectors to disk.
+2. At question time, embed the question with **the same model** (same length, comparable).
+3. Score the question vector against every chunk vector with **cosine similarity** (the angle between two vectors; similar meaning means a small angle).
+4. Return the top-k chunks (`TOP_K = 5` in `config.py`).
+
+### Things to keep in mind
+- **Changing the model means re-embedding everything**, because vectors from different models cannot be compared. So cache the vectors on disk, labelled with the model name and chunk settings.
+- **Input limit.** Each model reads a maximum number of tokens and silently cuts off the rest. Our 1,000-character chunks are roughly 250 to 350 tokens, but Sanskrit names split into many pieces, so that is an estimate. A 256-token model could truncate some chunks. This links back to the chunk-size decision.
+- **One chunk = one vector** is why a chunk covering many topics gives a blurry vector, and why chunk size matters.
+- **Aliases and spelling variants** (Partha = Arjuna, Yudhishthira / Yudhisthira): a general-purpose model may or may not connect them. To be measured with the Phase 2 test set; keyword search (BM25) may help later.
+
+### Options checked (October 2026; third-party sources disagree, so verify on each model card)
+| Option | Type | Notes |
+|---|---|---|
+| bge-small-en (33M parameters) | Local, tiny | Lightweight, widely used; input limit recalled as 512 tokens, not yet verified |
+| all-MiniLM-L6-v2 (384 dims) | Local, tiny | Classic tutorial model; older; recalled 256-token limit may truncate our chunks |
+| EmbeddingGemma-300M | Local, small | Built for on-device use; Gemma licence terms |
+| Qwen3-Embedding-0.6B | Local, small | Newer, Apache 2.0, reported 32K-token input |
+| OpenAI text-embedding-3-small | API | About $0.02 per million tokens (the whole corpus costs well under a cent); reported 8,191-token limit; needs an API key |
+
+Very large models (Qwen3-Embedding-8B, Harrier-OSS 27B) need serious hardware and do not suit this project right now.
+
+**Decision pending:** which model is the baseline. Leaning: one small local model with a roomy input limit, then compare 2 to 3 models in Phase 3, one change at a time.
 
 ---
 
