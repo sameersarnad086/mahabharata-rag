@@ -56,7 +56,12 @@ Updated at the end of every meaningful step. Each entry: Concept / What we built
 **Data facts that shape chunking** (from `data/processed/paragraphs.jsonl`, 1,306 paragraphs): median 653 chars, mean 1,021, p90 2,334, p99 5,618, max 10,838. 35% of paragraphs exceed 1,000 chars; 31% are under 400. Long paragraphs get cut mid-thought (speaker tag only in the first piece); very short ones (one-line speech) embed poorly without neighbouring context.
 
 **Domain flag:** chunking cannot fix aliases (Partha = Arjuna), but chunk size decides how much surrounding text carries identifying context.
-**Gotchas:** (to be filled in as we implement)
+**What we built:** [`src/rag/chunking.py`](src/rag/chunking.py): `fixed_size_spans()` (sliding window over character offsets), `build_chunks()` (joins all paragraphs into one string, cuts it, attaches metadata), `Chunk` dataclass. [`tests/test_chunking.py`](tests/test_chunking.py) has 9 edge-case checks; [`scripts/run_chunking.py`](scripts/run_chunking.py) writes `data/processed/chunks.jsonl`. Standard library only. Baseline run at 1000/200: 1,670 chunks, median length 1000, shortest 661 (the final tail).
+**Gotchas:**
+- The window must stop as soon as a chunk reaches the end of the text; otherwise the loop emits extra tail windows that add no new text.
+- `overlap >= size` makes the step zero or negative and loops forever, so it must raise an error.
+- Pure fixed-size cuts mid-word (chunk 500 starts `'e numerous. And…'`).
+- 297 of 1,670 chunks (18%) span more than one section, so a chunk's metadata must be a list of sections, not a single value, or citations will be wrong.
 
 ---
 # Public post drafts

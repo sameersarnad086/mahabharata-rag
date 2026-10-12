@@ -4,8 +4,7 @@ Baseline (experiment #1): pure fixed-size. The whole corpus is joined into ONE s
 cut every CHUNK_SIZE characters with CHUNK_OVERLAP overlap, ignoring paragraph and section
 boundaries on purpose. Structure-aware chunking is a later experiment that must beat this.
 
-Plumbing (loading, offset bookkeeping, metadata) is done. The core is yours:
-`fixed_size_spans` below.
+Only the standard library is used (json, bisect, dataclasses, pathlib).
 """
 import json
 from bisect import bisect_right
@@ -34,17 +33,25 @@ class Chunk:
 def fixed_size_spans(text: str, size: int, overlap: int) -> list[tuple[int, int]]:
     """Return (start, end) character offsets of each chunk of `text`.
 
-    TODO(me): implement the sliding window.
-    Hints:
-      - Each chunk starts `size - overlap` characters after the previous one (the "step").
-      - The last chunk ends at len(text); don't emit a tiny tail that is ENTIRELY inside
-        the previous chunk (think: when does the last window add no new text?).
-      - Guard bad configs: overlap >= size would loop forever. Raise ValueError.
-      - Empty text -> no chunks.
-      - Return offsets, not strings; the caller slices and attaches metadata.
-    Run `python tests/test_chunking.py` to check your edge cases.
+    Each chunk starts `size - overlap` characters after the previous one. The last chunk
+    stops at len(text). Windows that would add no new text are never emitted: once a chunk
+    reaches the end of the text, we stop.
     """
-    raise NotImplementedError("fixed_size_spans is your TODO(me)")
+    if size <= 0:
+        raise ValueError(f"size must be positive, got {size}")
+    if overlap < 0 or overlap >= size:
+        raise ValueError(f"overlap must satisfy 0 <= overlap < size, got overlap={overlap}, size={size}")
+
+    step = size - overlap
+    spans = []
+    start = 0
+    while start < len(text):
+        end = min(start + size, len(text))
+        spans.append((start, end))
+        if end == len(text):
+            break
+        start += step
+    return spans
 
 
 def load_paragraphs(path: Path | None = None) -> list[dict]:
