@@ -1,69 +1,260 @@
-# LEARNING.md — my RAG reference
+# LEARNING.md — my RAG notes
 
-Updated at the end of every meaningful step. Each entry: Concept / What we built / Alternatives / Gotchas.
+My personal reference for the Mahabharata RAG project. Written so I can re-read it months later and explain every
+decision to someone else without opening the code. Updated at the end of every meaningful step.
 
-## Phase 0 — Setup
-**Concept:** A reproducible project skeleton: one config file, raw data cached on disk, metadata-first thinking.
-**What we built:** `config.py`, `scripts/download_adi_parva.py`, folder layout (see README).
-**Alternatives:** Project Gutenberg plain text (one big file, needs splitting by parva); sacred-texts HTML (already split into sections, which gives us section metadata for free).
-**Gotchas:**
-- Page numbers are offset: `m01001` is the Translator's Preface, `m01002` is Section I, so page = section + 1. Files are named `section_NNN.html` by *page*, so file 237 = Section CCXXXVI. Chunk metadata must use the real Roman-numeral section from the page title, not the file number, or every citation will be off by one.
-- sacred-texts.com redirects `www.` to the bare domain; both hosts had to be allowed in the sandbox network policy.
-- Raw pages are ~400 KB each (96 MB total) because they're full of site scripts/JSON; the actual text is a small fraction. Phase 1 ingestion must strip this, and the Sanskrit-name spelling in titles is Roman numerals.
+Each stage follows the same layout: **Why it exists → What I decided (and why) → How it works → Tools used →
+Alternatives → Gotchas → Results.**
 
-## Phase 1 — Ingestion / cleaning (in progress; reviewed on files 001–003 only)
-**Concept:** Chunking and embedding only see strings, so anything left in the text gets cut up and embedded. Ingestion turns raw HTML into clean paragraphs *with metadata* before any chunking. RAG quality is capped here: no later stage can fix embedded garbage.
-**What we built:** [`src/rag/ingest.py`](src/rag/ingest.py) (`parse_file`) using BeautifulSoup with the stdlib `html.parser` backend; [`scripts/inspect_ingest.py`](scripts/inspect_ingest.py) prints extracted paragraphs and every page-break merge for eyeball review. Raw HTML is never modified.
-**Alternatives:** stdlib `html.parser` alone (no dependency, but hand-written state tracking); `lxml` (faster, compiled extra, unnecessary at 237 small files); Project Gutenberg plain text (no HTML, but no per-section structure).
-**Gotchas:**
-- Raw pages are 99 MB but only 1.4% is story text (1.34 MB). Embedding raw HTML would mean ~124,000 chunks instead of ~1,700, mostly scripts and markup.
-- The `<meta description>` / JSON-LD in `<head>` looks like text but is a truncated SEO summary. Never use it.
-- Scope extraction to `<article data-slot="reader-content">`; a bare "all `<p>`" also grabs UI text ("No bookmarks yet", copyright footer).
-- Read files as UTF-8. Reading as latin-1 turns `'` and `–` into mojibake (`â\x80\x99`), which would corrupt name matching.
-- The `SECTION I` heading is in a `<div>`, not the `<h1>`, on file 002; heading detection must not assume `<h1>`.
-- Page markers (`p. 16`, Roman `p. xii` in the preface) split paragraphs mid-sentence. Rule (Option A): glue a fragment back if it has the site's `[paragraph continues]` tag, or follows a page marker and starts lowercase. Roughly a third of "paragraphs" on file 003 were fragments before this.
-- `printed_page` is approximate (preface numbering goes xii then ix; unclear if a marker means start or end of page). Do not use it in citations yet.
-- Closing lines such as "Thus endeth the section called Parva-sangraha…" are kept as text.
-- Source typos exist ("sixty-tour"); exact-match retrieval can't rely on clean spelling.
-
-**Full-corpus run (all 237 files) — what the report found:**
-- 1,306 paragraphs, 1.33 M chars, 385 page-break fragments merged. Output: `data/processed/paragraphs.jsonl` (gitignored; rebuild with `scripts/run_ingest.py`, check with `scripts/report_ingest.py`).
-- Checking only 3 files was not enough: file 177 writes its heading as `Section CLXXVI` (mixed case), which silently broke the section sequence until the report flagged it. Always run a whole-corpus report.
-- The sub-parva label appears on every section, not just the first, but spelled inconsistently (`Sambhava Parva`, `… continued`, `…, continued `). Normalised to 18 values; without that, a metadata filter on "Sambhava Parva" would miss most of its paragraphs. Same class of problem as Yudhishthira/Yudhisthira.
-- Files 001–003 (preface, Sections I–II) have no sub-parva (`None`), which is expected. `Haranaharana Parva` looks odd but is probably genuine (not yet verified against the Parva-sangraha list).
-
-## Phase 1 — Chunking (baseline built; not yet scored)
-**Concept:** An embedding model turns a piece of text into ONE vector. A whole section (thousands of words) averages many topics into a blurry vector, and the LLM's context window is limited, so we cut the corpus into chunks, embed each, and retrieve the best few. Chunk size is a trade-off:
-- *Small chunks:* precise vectors, cheap context, but lost surroundings ("he then went to the forest" no longer says who "he" is).
-- *Large chunks:* keep context, but blurrier vectors and more tokens spent per retrieved result.
-
-**Baseline = fixed-size with overlap** (`CHUNK_SIZE`, `CHUNK_OVERLAP` in `config.py`): cut every N characters, overlapping neighbours so a fact straddling a boundary appears whole in at least one chunk. Weakness: it can cut mid-sentence or mid-name, e.g. "Santanu begat Bhishma on Ganga, and Vichi|travirya on Satyavati" leaves neither chunk with the full relationship. That is the lineage/multi-hop problem in miniature.
-
-**Alternatives (each becomes its own one-variable experiment in Phase 3):**
-| Method | Idea | Best when |
-|---|---|---|
-| Fixed-size | Cut every N chars, with overlap | Baseline, uniform text |
-| Recursive | Split on paragraph, then sentence, then word, until under N | General-purpose default |
-| Sentence-based | Group whole sentences up to N | Facts live inside single sentences |
-| Semantic | Cut where adjacent-sentence embedding similarity drops | Topics shift unpredictably; costs embedding calls |
-| Structure-aware | Cut on the source's own boundaries (paragraphs, speaker turns like "Sauti said…") | Text has real structure, as ours does |
-| Parent-child | Embed small chunks, return the larger parent | Want precise matching AND rich context |
-
-**Open decisions before implementing:** characters vs tokens (start with characters, test tokens as a separate experiment); whether chunks may cross paragraph boundaries (baseline: yes, pure fixed-size, so structure-aware is a measurable improvement later).
-
-**Metadata on every chunk, from day one:** source, parva, real section number (Roman numeral from the page title, not the file number), sub-parva, paragraph index, character offsets. Citations depend on this.
-
-**Data facts that shape chunking** (from `data/processed/paragraphs.jsonl`, 1,306 paragraphs): median 653 chars, mean 1,021, p90 2,334, p99 5,618, max 10,838. 35% of paragraphs exceed 1,000 chars; 31% are under 400. Long paragraphs get cut mid-thought (speaker tag only in the first piece); very short ones (one-line speech) embed poorly without neighbouring context.
-
-**Domain flag:** chunking cannot fix aliases (Partha = Arjuna), but chunk size decides how much surrounding text carries identifying context.
-**What we built:** [`src/rag/chunking.py`](src/rag/chunking.py): `fixed_size_spans()` (sliding window over character offsets), `build_chunks()` (joins all paragraphs into one string, cuts it, attaches metadata), `Chunk` dataclass. [`tests/test_chunking.py`](tests/test_chunking.py) has 9 edge-case checks; [`scripts/run_chunking.py`](scripts/run_chunking.py) writes `data/processed/chunks.jsonl`. Standard library only. Baseline run at 1000/200: 1,670 chunks, median length 1000, shortest 661 (the final tail).
-**Gotchas:**
-- The window must stop as soon as a chunk reaches the end of the text; otherwise the loop emits extra tail windows that add no new text.
-- `overlap >= size` makes the step zero or negative and loops forever, so it must raise an error.
-- Pure fixed-size cuts mid-word (chunk 500 starts `'e numerous. And…'`).
-- 297 of 1,670 chunks (18%) span more than one section, so a chunk's metadata must be a list of sections, not a single value, or citations will be wrong.
+**Contents**
+1. [The pipeline at a glance](#the-pipeline-at-a-glance)
+2. [Decisions log](#decisions-log)
+3. [Phase 0 — Setup and download](#phase-0--setup-and-download)
+4. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
+5. [Phase 1 — Chunking](#phase-1--chunking)
+6. [Public post drafts](#public-post-drafts)
 
 ---
+
+## The pipeline at a glance
+
+```
+download  →  ingest/clean  →  chunk  →  embed  →  index  →  retrieve  →  generate answer
+ (done)        (done)         (done:     (next)
+                              baseline)
+```
+
+Rule of thumb I keep coming back to: **each stage can only pass on what the previous stage gave it.** A mistake in
+ingestion is inherited by chunking, embedding and retrieval, and nothing later can repair it.
+
+Current data flow and files (all derived data is gitignored and can be rebuilt with the scripts):
+
+| Step | Input | Output | Script |
+|---|---|---|---|
+| Download | sacred-texts.com pages | `data/raw/.../section_001..237.html` (99 MB) | `scripts/download_adi_parva.py` |
+| Ingest | raw HTML | `data/processed/paragraphs.jsonl` (1,306 paragraphs) | `scripts/run_ingest.py` |
+| Check | paragraphs | sanity report | `scripts/report_ingest.py` |
+| Chunk | paragraphs | `data/processed/chunks.jsonl` (1,670 chunks) | `scripts/run_chunking.py` |
+
+---
+
+## Decisions log
+
+A quick list of what I chose, so I never have to hunt for it. Details are in the sections below.
+
+| Decision | Choice | Why (short) | Status |
+|---|---|---|---|
+| HTML parser | BeautifulSoup with Python's built-in `html.parser` | Simple, common, one small dependency | Final for now |
+| Cleaning happens | During ingestion, before chunking | Chunking and embedding only see strings | Final |
+| Page-break fragments | Glue back (Option A: `[paragraph continues]` tag, or lowercase start after a page marker) | A third of "paragraphs" were fragments | Final |
+| Closing lines ("Thus endeth the section…") | Keep as text | Real content, names the sub-parva | Final |
+| `printed_page` | Store, but treat as approximate and do not cite | Marker meaning unclear | Revisit |
+| Chunking strategy | Pure fixed-size, characters, may cross paragraph and section boundaries | Simplest baseline that smarter methods must beat | Baseline |
+| Chunk size / overlap | 1000 / 200 characters (20%) | Inside the range the paragraph stats support; conventional | **Hypothesis, to be tested** |
+
+---
+
+## Phase 0 — Setup and download
+
+**Why it exists.** A reproducible start: one config file for every tunable, raw data cached on disk so I hit the
+website once, and metadata-first thinking so citations are possible later.
+
+**What I decided.**
+- All tunables live in `config.py` (chunk size, overlap, paths, source URL). Experiments change values there, never inline.
+- Source: Kisari Mohan Ganguli's translation on sacred-texts.com. The site is already split into one page per section, so section metadata comes almost free.
+- The downloader saves one HTML file per page and skips files it already has, so re-running is safe. It waits one second between requests to be polite to a volunteer-run site.
+
+**Alternatives.** Project Gutenberg plain text: no HTML to clean, but it is one big file I would have to split by parva myself.
+
+**Gotchas.**
+- **Page numbers are offset by one.** `m01001` is the Translator's Preface and `m01002` is Section I, so page = section + 1. Files are named `section_NNN.html` by *page*, so file 237 is Section CCXXXVI. Metadata must use the Roman-numeral section from the page itself, not the file number, or every citation is off by one.
+- The site redirects `www.` to the bare domain; both hosts had to be allowed in the sandbox network policy.
+- Each page is about 420 KB because it is full of site scripts; the real text is a tiny part of that (see Ingestion).
+
+**Result.** 237 pages: the Preface plus Sections I to CCXXXVI.
+
+---
+
+## Phase 1 — Ingestion and cleaning
+
+### Why it exists
+Chunking and embedding only ever see a string of characters. They cannot tell story from website furniture. So anything I
+leave in gets cut up, embedded and searched. Ingestion turns raw HTML into **clean paragraphs, each tagged with where it
+came from.** Retrieval quality is capped here: no reranker or better embedding model can rescue text that should never
+have been embedded.
+
+The size of the problem, measured on all 237 files:
+
+| | Characters | Chunks it would produce (1000/800 step) |
+|---|---|---|
+| Raw HTML | 99.2 million | about 124,000 |
+| Actual story text | 1.34 million (**1.4%**) | about 1,700 |
+
+Embedding the raw HTML would mean about 70 times more cost and time, and the top results could be JavaScript.
+
+### What I decided (and why)
+- **Clean first, during ingestion, before chunking.** If chunking ran first, window boundaries would be computed from text full of noise, and page markers could split sentences.
+- **Never touch the raw files.** Cleaning writes to `data/processed/`. If a rule turns out wrong I re-run with a new one.
+- **Keep provenance on every paragraph:** file, section heading, sub-parva, paragraph index, approximate printed page. Citations depend on it.
+- **Be conservative:** drop only what I can justify (page markers, empty tags, site furniture). Do not "improve" the content, and do not normalise name spellings here; aliases are a retrieval-stage decision that I want to be able to measure.
+
+### How it works (in plain words)
+Each downloaded page is a web page. A library reads its structure and finds the one container that holds the story
+(`<article data-slot="reader-content">`). Inside it, plain paragraphs are story; special paragraphs are page markers
+(`p. 33`) or the sub-parva label (`(Paushya Parva)`). The code walks the paragraphs in order, remembers the latest
+sub-parva and page marker, records the story paragraphs, and glues back any paragraph that a page break split in two.
+The result is **1,306 clean, labelled paragraphs.**
+
+### Tools used
+- **BeautifulSoup (`beautifulsoup4`)** with Python's built-in `html.parser` backend: reads and searches the page structure. The only third-party package so far.
+- Python standard library: `re` (pattern matching), `dataclasses`, `pathlib`, `json`, `urllib`.
+
+Code: [`src/rag/ingest.py`](src/rag/ingest.py). Helpers: [`scripts/run_ingest.py`](scripts/run_ingest.py) (writes the output),
+[`scripts/inspect_ingest.py`](scripts/inspect_ingest.py) (print a few files), [`scripts/report_ingest.py`](scripts/report_ingest.py)
+(whole-corpus checks). A 3-file sample for reading is committed in [`samples/`](samples/ingest_sample.txt).
+
+### Alternatives
+| Option | Trade-off |
+|---|---|
+| Python's built-in `html.parser` alone | No dependency, but I would hand-write the "am I inside the article / a paragraph / a link" tracking. More code, more bugs. |
+| `lxml` | Faster, but a compiled extra; speed is irrelevant for 237 small files. |
+| Project Gutenberg plain text | No HTML, but no per-section structure. |
+
+### Gotchas (each one is a real thing that bit me)
+- **The meta description lies.** The page head contains a convenient text excerpt, but it is a truncated search-engine summary that stops mid-sentence. It looks like text and is not. Never use it.
+- **"Grab every paragraph" grabs site furniture** ("No bookmarks yet", the copyright footer). Scope extraction to the article container.
+- **Encoding.** The files are UTF-8. Reading them as latin-1 turns every apostrophe and dash into garbage (`â\x80\x99`), which would quietly corrupt name matching.
+- **The section heading is not always in the `<h1>`.** On file 002 the `<h1>` is the book title and `SECTION I` sits in a `<div>`.
+- **Page breaks split paragraphs mid-sentence.** Markers like `p. 16` (and Roman ones like `p. xii` in the preface) fall inside paragraphs. Rule I chose: glue a fragment back to the previous paragraph if it carries the site's `[paragraph continues]` tag, or if it follows a page marker and starts with a lowercase letter. Before this, about a third of the "paragraphs" on one page were fragments. 385 fragments were merged across the corpus.
+- **Test on everything, not three files.** My rules worked on the first three pages. The full run found a heading written `Section CLXXVI` (mixed case) that broke the section sequence, and sub-parva labels spelled several ways for the same name (`Sambhava Parva`, `… continued`, `…, continued `). Normalised from 35 raw variants to 18 values. Without that, a filter on "Sambhava Parva" would have missed most of its text. This is the same class of problem as Yudhishthira / Yudhisthira.
+- **`printed_page` is approximate.** In the preface it goes `xii` then `ix`, and it is unclear whether a marker means "page starts here" or "page ends here". Do not use it in citations yet.
+- **Source typos exist** (e.g. "sixty-tour"), so exact-match search cannot assume clean spelling.
+
+### Results
+- 237 of 237 files parsed. Sections I to CCXXXVI in order, no gaps.
+- 1,306 paragraphs, 1.33 million characters.
+- No garbled characters, no site junk, no lowercase-start fragments left.
+- Files 001 to 003 (preface, Sections I and II) have no sub-parva label, which is expected.
+- Open question: `Haranaharana Parva` looks odd; probably a genuine sub-parva name, not yet checked against the Parva-sangraha list.
+
+---
+
+## Phase 1 — Chunking
+
+### Why it exists
+An embedding model turns a piece of text into **one** list of numbers (a vector). A whole section is thousands of words
+on many topics, so one vector for it is a blurry average. The language model also has a limited reading window. So I cut
+the text into **chunks**, embed each one, and later retrieve the few that best match a question.
+
+The core trade-off, which every chunking choice is about:
+- **Small chunks:** precise vectors and cheap to send to the model, but they lose surroundings. "He then went to the forest" no longer says who "he" is.
+- **Large chunks:** keep context, but the vector gets blurrier and each retrieved result uses more of the model's reading window.
+
+### The baseline strategy (what I built first, and why)
+A **baseline** is the simplest reasonable version. Every later, smarter method has to beat it, and I can only claim an
+improvement if I have this to compare against.
+
+| Setting | Baseline choice | Reason |
+|---|---|---|
+| Method | **Pure fixed-size with overlap** | Simplest possible; no judgement involved |
+| Unit | **Characters** (not tokens) | Simple and matches `config.py`; tokens become a separate experiment later |
+| Boundaries | **Ignored.** The whole corpus is joined into one long string and cut; chunks may cross paragraph and even section boundaries | The deliberately "dumb" case, so structure-aware chunking shows a measurable gain |
+| Size | **1000 characters** | See "How I arrived at 1000 / 200" below |
+| Overlap | **200 characters (20%)** | See below |
+
+**How it works.** Join all 1,306 paragraphs into one long text (separated by a blank line). Start at position 0 and take
+1000 characters. Move forward by **800** (that is size minus overlap) and take the next 1000. Repeat until the text ends.
+Neighbouring chunks therefore share 200 characters. The overlap is insurance: if a fact sits on a cut, at least one
+chunk contains all of it. The number of chunks is roughly total characters ÷ 800, and 1.33 M ÷ 800 ≈ 1,670, which is
+exactly what I got.
+
+**Its known weakness.** It counts characters and ignores meaning, so it cuts mid-word and mid-sentence. For example,
+"Santanu begat Bhishma on Ganga, and Vichi | travirya on Satyavati" could leave neither chunk with the whole
+relationship. That is the lineage / multi-hop problem in miniature, and it is why this is a baseline and not the answer.
+
+### How I arrived at 1000 / 200
+This is the part worth being able to explain, because "1000 / 200" is a popular default and I wanted a reason beyond that.
+
+**Step 1 — measure the paragraphs.** Before choosing a size I measured the cleaned corpus (1,306 paragraphs):
+
+| | Characters |
+|---|---|
+| Median | 653 |
+| Mean | 1,021 |
+| 90th percentile | 2,334 |
+| 99th percentile | 5,618 |
+| Longest | 10,838 |
+
+The mean is well above the median: a long tail of very long paragraphs. 35% of paragraphs are over 1,000 characters and
+31% are under 400.
+
+**Step 2 — see what each size does to those paragraphs** (with 20% overlap):
+
+| Chunk size | Overlap | Approx. chunks | Paragraphs that fit whole | Paragraphs needing 3+ chunks |
+|---|---|---|---|---|
+| 400 | 80 | 4,166 | 31% | 33% |
+| 600 | 120 | 2,777 | 47% | 20% |
+| 800 | 160 | 2,083 | 57% | 12% |
+| **1000** | **200** | **1,666** | **65%** | **8%** |
+| 1500 | 300 | 1,111 | 79% | 2% |
+| 2000 | 400 | 833 | 87% | 1% |
+
+(The "fit whole" columns describe paragraph-sized pieces; the pure fixed-size baseline ignores paragraph boundaries, so
+treat them as a guide to how much cutting a size causes, not an exact prediction.)
+
+**Step 3 — bracket a sensible range.**
+- Below about **600**, most paragraphs get cut apart, a third of them into three or more pieces. Too fragmented for text where the speaker tag ("Sauti said…") sits at the start.
+- Above about **1,500**, chunks mostly keep whole paragraphs, but they start mixing unrelated neighbours, and the many short paragraphs get swallowed into bigger ones.
+- So the sensible range is **roughly 600 to 1,500.**
+
+**Step 4 — pick a starting point inside the range.** I chose **1000** because it is inside that range, so the stats do not
+argue against it; it is a round, widely used value, which makes my results easy to compare with other people's; and it is
+typically within the input limit of common embedding models (limits vary by model, so I must re-check this once I choose
+one). I chose **20% overlap (200)** because that is a conventional safety margin for facts that straddle a cut, and it
+keeps the extra storage modest.
+
+**Step 5 — be honest about what the stats cannot say.** They narrow the range; they cannot pick a winner. Whether 800
+beats 1000 depends on how well each retrieves the right passages for real questions. So **1000 / 200 is a hypothesis
+and a baseline to beat, not a finding.** After the Phase 2 test set exists I will sweep the size one value at a time
+(600, 800, 1000, 1500), log each result in `EXPERIMENTS.md`, and let the numbers decide.
+
+### Tools used
+Standard library only: `json` (read/write data), `bisect` (quickly find which paragraph a character position falls in),
+`dataclasses` (the `Chunk` structure), `pathlib` (paths), `statistics` (median in the report). No new packages.
+
+Code: [`src/rag/chunking.py`](src/rag/chunking.py) (`fixed_size_spans` = the sliding window; `build_chunks` = join, cut,
+attach metadata). Checks: [`tests/test_chunking.py`](tests/test_chunking.py), 9 edge cases (empty text, shorter than one
+chunk, exact fit, no overlap, last chunk shorter, bad settings, full coverage). Runner:
+[`scripts/run_chunking.py`](scripts/run_chunking.py).
+
+### Metadata on every chunk
+Source, parva, **a list of sections** it touches, a list of sub-parvas, the first file and paragraph it starts in, and
+character offsets. The sections are a list, not a single value, because 297 of the 1,670 chunks (18%) span more than one
+section. A single value would produce wrong citations.
+
+### Alternatives (each becomes its own one-variable experiment in Phase 3)
+| Method | Idea | Best when |
+|---|---|---|
+| Fixed-size | Cut every N characters, with overlap | Baseline, uniform text |
+| Recursive | Split on paragraph, then sentence, then word, until under N | General-purpose default |
+| Sentence-based | Group whole sentences up to N | Facts live inside single sentences |
+| Semantic | Cut where adjacent-sentence similarity drops | Topics shift unpredictably; costs embedding calls |
+| Structure-aware | Cut on the source's own boundaries (paragraphs, speaker turns like "Sauti said…") | The text has real structure, as ours does |
+| Parent-child | Embed small chunks, return the larger parent | Want precise matching and rich context |
+
+### Gotchas
+- The window must stop as soon as a chunk reaches the end of the text; otherwise the loop emits extra tail windows that add no new text.
+- Overlap equal to or larger than size makes the step zero or negative and the loop never ends, so that must be rejected with an error.
+- Pure fixed-size cuts mid-word (chunk 500 starts `'e numerous. And…'`).
+- The chunker cannot fix aliases (Partha = Arjuna) or spelling variants. Chunk size only decides how much surrounding text carries identifying context.
+
+### Results (baseline, not yet scored)
+- 1,670 chunks. Length minimum / median / maximum = 661 / 1000 / 1000 (the 661 is just the final tail).
+- 297 chunks (18%) span more than one section.
+- No retrieval metrics yet; they need the Phase 2 test questions. See `EXPERIMENTS.md`.
+
+---
+
 # Public post drafts
 Written for a general audience (blog / LinkedIn). Numbers come from this project's Adi Parva corpus.
 
@@ -116,10 +307,3 @@ The mean is far above the median, so the distribution has a long tail. 35% of pa
 **What the stats can't tell me.** They narrow the range but can't pick a winner. Whether 800 beats 1000 depends on how well each retrieves answers to real questions. So 1000/200 is a *hypothesis*, a baseline to beat, not a finding. Next I'll build a test set of questions and sweep the size one value at a time (600, 800, 1000, 1500), logging every result.
 
 The general lesson: use data statistics to rule out bad settings and justify a starting point, then let evaluation make the final call.
-
-
----
-# In plain words (for explaining to others)
-**Ingestion, in one paragraph.** The downloaded pages are web pages, so we use a library called BeautifulSoup to read the page structure and pull out only the story paragraphs from the one container that holds them. We note which section and sub-section each paragraph belongs to, remove page-number markers, and stitch back together paragraphs that a page break split in two. The result is a clean list of 1,306 paragraphs, each labelled with where it came from.
-
-**Chunking, in one paragraph.** We join all paragraphs into one long text, then slice it into pieces of 1,000 characters, each starting 800 characters after the last, so neighbours share 200 characters. The overlap is insurance: if an important fact sits on a cut, at least one piece contains all of it. Each piece keeps a label of which sections and paragraph it came from, so answers can cite sources. Only Python's built-in tools are used. It's called "fixed-size" because it ignores meaning and just counts characters, which is why it sometimes cuts mid-word. Smarter methods come later and will be compared against this one.
