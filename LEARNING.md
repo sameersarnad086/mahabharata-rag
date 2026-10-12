@@ -31,3 +31,29 @@ Updated at the end of every meaningful step. Each entry: Concept / What we built
 - Checking only 3 files was not enough: file 177 writes its heading as `Section CLXXVI` (mixed case), which silently broke the section sequence until the report flagged it. Always run a whole-corpus report.
 - The sub-parva label appears on every section, not just the first, but spelled inconsistently (`Sambhava Parva`, `… continued`, `…, continued `). Normalised to 18 values; without that, a metadata filter on "Sambhava Parva" would miss most of its paragraphs. Same class of problem as Yudhishthira/Yudhisthira.
 - Files 001–003 (preface, Sections I–II) have no sub-parva (`None`), which is expected. `Haranaharana Parva` looks odd but is probably genuine (not yet verified against the Parva-sangraha list).
+
+## Phase 1 — Chunking (lesson; implementation not started)
+**Concept:** An embedding model turns a piece of text into ONE vector. A whole section (thousands of words) averages many topics into a blurry vector, and the LLM's context window is limited, so we cut the corpus into chunks, embed each, and retrieve the best few. Chunk size is a trade-off:
+- *Small chunks:* precise vectors, cheap context, but lost surroundings ("he then went to the forest" no longer says who "he" is).
+- *Large chunks:* keep context, but blurrier vectors and more tokens spent per retrieved result.
+
+**Baseline = fixed-size with overlap** (`CHUNK_SIZE`, `CHUNK_OVERLAP` in `config.py`): cut every N characters, overlapping neighbours so a fact straddling a boundary appears whole in at least one chunk. Weakness: it can cut mid-sentence or mid-name, e.g. "Santanu begat Bhishma on Ganga, and Vichi|travirya on Satyavati" leaves neither chunk with the full relationship. That is the lineage/multi-hop problem in miniature.
+
+**Alternatives (each becomes its own one-variable experiment in Phase 3):**
+| Method | Idea | Best when |
+|---|---|---|
+| Fixed-size | Cut every N chars, with overlap | Baseline, uniform text |
+| Recursive | Split on paragraph, then sentence, then word, until under N | General-purpose default |
+| Sentence-based | Group whole sentences up to N | Facts live inside single sentences |
+| Semantic | Cut where adjacent-sentence embedding similarity drops | Topics shift unpredictably; costs embedding calls |
+| Structure-aware | Cut on the source's own boundaries (paragraphs, speaker turns like "Sauti said…") | Text has real structure, as ours does |
+| Parent-child | Embed small chunks, return the larger parent | Want precise matching AND rich context |
+
+**Open decisions before implementing:** characters vs tokens (start with characters, test tokens as a separate experiment); whether chunks may cross paragraph boundaries (baseline: yes, pure fixed-size, so structure-aware is a measurable improvement later).
+
+**Metadata on every chunk, from day one:** source, parva, real section number (Roman numeral from the page title, not the file number), sub-parva, paragraph index, character offsets. Citations depend on this.
+
+**Data facts that shape chunking** (from `data/processed/paragraphs.jsonl`, 1,306 paragraphs): median 653 chars, mean 1,021, p90 2,334, p99 5,618, max 10,838. 35% of paragraphs exceed 1,000 chars; 31% are under 400. Long paragraphs get cut mid-thought (speaker tag only in the first piece); very short ones (one-line speech) embed poorly without neighbouring context.
+
+**Domain flag:** chunking cannot fix aliases (Partha = Arjuna), but chunk size decides how much surrounding text carries identifying context.
+**Gotchas:** (to be filled in as we implement)
