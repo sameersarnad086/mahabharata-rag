@@ -1,3 +1,4 @@
 python-dotenv
 numpy
 beautifulsoup4
+sentence-transformers

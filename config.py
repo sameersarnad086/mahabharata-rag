@@ -18,5 +18,9 @@ NUM_SECTIONS = 240  # upper bound; downloader stops at the first 404
 CHUNK_SIZE = 1000      # characters
 CHUNK_OVERLAP = 200
 TOP_K = 5
-EMBEDDING_MODEL = None  # decided together in Phase 1
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"  # chosen with user; 384 dims, ~512-token limit (verify on model card)
+EMBEDDING_BATCH_SIZE = 32
+# bge models are trained to see this prefix on QUERIES (not on chunks) for retrieval. A later experiment.
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+USE_QUERY_PREFIX = False  # baseline: off. Test on/off as its own one-variable experiment.
 LLM_MODEL = None
