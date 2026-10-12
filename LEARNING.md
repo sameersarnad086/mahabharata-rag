@@ -57,3 +57,57 @@ Updated at the end of every meaningful step. Each entry: Concept / What we built
 
 **Domain flag:** chunking cannot fix aliases (Partha = Arjuna), but chunk size decides how much surrounding text carries identifying context.
 **Gotchas:** (to be filled in as we implement)
+
+---
+# Public post drafts
+Written for a general audience (blog / LinkedIn). Numbers come from this project's Adi Parva corpus.
+
+## Post 1 — Your RAG pipeline starts with cleaning, not embedding
+
+I'm learning RAG by building one over the Mahabharata: Kisari Mohan Ganguli's English translation, starting with the Adi Parva. I'd read the usual advice: load, chunk, embed, retrieve. Then I looked at what I'd actually downloaded.
+
+**The files are 99 MB. The story is 1.3 MB.** Each section is an HTML page, and only 1.4% of the characters are Mahabharata text. The rest is scripts, styling, sidebars and footers. A chunker doesn't know that. It sees a string and cuts it into windows. Feed it raw HTML and you'd build about 124,000 chunks instead of about 1,700, and almost all of them would be web markup. Every one gets embedded, stored and searched. Your top-5 results can end up being JavaScript.
+
+Cleaning has to happen *before* chunking and embedding, as part of ingestion, because everything after it inherits its mistakes. Here is what mattered in practice:
+
+- **The tempting shortcut is wrong.** The page's `<meta description>` holds a convenient text excerpt, but it's a truncated SEO summary that stops mid-sentence. It looks like text and isn't.
+- **Scope the extraction.** Grabbing every `<p>` also picks up "No bookmarks yet" and the copyright footer. Only paragraphs inside the reader's article container are story.
+- **Encoding silently corrupts names.** Reading UTF-8 files as latin-1 turns every apostrophe and dash into `â\x80\x99`. In a corpus where retrieval hinges on exact names, that's damage you won't notice until answers go wrong.
+- **Page breaks split sentences.** Printed-page markers like `p. 16` fall in the middle of paragraphs. Chunk first and a speaker's "Sauti said…" ends up in one piece and the speech in another. About a third of the "paragraphs" on one page were really fragments. I glue them back using the site's own `[paragraph continues]` tag or a lowercase start after a marker, and I log every merge so I can eyeball them.
+- **Test on everything, not three files.** My rules worked on the first three pages. The full run found a heading written `Section CLXXVI` instead of `SECTION CLXXVI`, and sub-section labels spelled three different ways for the same name. Without fixing those, a metadata filter would have silently dropped most of a section's text.
+
+Two habits made this safe: **never modify the raw files** (cleaning writes to a separate folder, so I can re-run with new rules), and **keep provenance** (each paragraph carries its section, sub-parva and paragraph index, because citations depend on it later).
+
+The takeaway: retrieval quality is capped by ingestion. No reranker or better embedding model rescues text you shouldn't have embedded in the first place. Before tuning anything, open your data and look at it.
+
+## Post 2 — Measure your paragraphs before you pick a chunk size
+
+"Chunk size 1000, overlap 200" is the default in half the tutorials. I wanted to know whether it fits my data instead of trusting it. So before writing a chunker, I measured the cleaned corpus: 1,306 paragraphs from the Adi Parva.
+
+| | Characters |
+|---|---|
+| Median | 653 |
+| Mean | 1,021 |
+| 90th percentile | 2,334 |
+| Longest | 10,838 |
+
+The mean is far above the median, so the distribution has a long tail. 35% of paragraphs are longer than 1,000 characters and 31% are shorter than 400.
+
+**Why this matters.** A fixed-size chunker ignores paragraph boundaries. A 10,000-character paragraph becomes a dozen chunks, and the speaker tag lives only in the first. A one-line reply embeds poorly on its own. Where the size lands decides how often each problem shows up. For 20% overlap, I computed how each size behaves:
+
+| Chunk size | Chunks | Paragraphs that fit whole | Paragraphs needing 3+ chunks |
+|---|---|---|---|
+| 400 | ~4,200 | 31% | 33% |
+| 600 | ~2,800 | 47% | 20% |
+| 800 | ~2,100 | 57% | 12% |
+| 1000 | ~1,700 | 65% | 8% |
+| 1500 | ~1,100 | 79% | 2% |
+| 2000 | ~800 | 87% | 1% |
+
+**What the numbers say.** Below roughly 600, most paragraphs are cut apart, a third of them into three or more pieces. Above roughly 1,500, chunks mostly keep whole paragraphs but start mixing unrelated neighbours, and the many short paragraphs get swallowed. That brackets a sensible range of about 600 to 1,500.
+
+**Why I'm starting at 1000/200.** It sits inside that range, so the stats don't argue against it. It's a round, widely used value, which makes my results easy to compare with other people's. It's also typically within the input limit of common embedding models, though limits vary by model and I'll check the one I choose. And 20% overlap is a conventional safety margin for facts that straddle a boundary.
+
+**What the stats can't tell me.** They narrow the range but can't pick a winner. Whether 800 beats 1000 depends on how well each retrieves answers to real questions. So 1000/200 is a *hypothesis*, a baseline to beat, not a finding. Next I'll build a test set of questions and sweep the size one value at a time (600, 800, 1000, 1500), logging every result.
+
+The general lesson: use data statistics to rule out bad settings and justify a starting point, then let evaluation make the final call.
