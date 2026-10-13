@@ -16,18 +16,25 @@ Alternatives → Gotchas → Results.**
 7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
 8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
 9. [Phase 1 — Generation](#phase-1--generation)
-10. [Phase 1 retrospective (interim)](#phase-1-retrospective-interim)
+   - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
+10. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
 11. [Public post drafts](#public-post-drafts)
+
+---
+
+## Named problems (shared vocabulary)
+
+**The lineage and one person with more than one name problem** — the project's central challenge. Questions about who is related to whom (father, son, ancestor, descendant, how two people connect) are hard for a plain search over text, and the same person appears under several names (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava), spellings vary (Yudhishthira / Yudhisthira), and one name can belong to several people (the many Parikshits and Janamejayas, or "Bharata" as a person, a dynasty and a form of address). The baseline does not solve it, by design. Where it is measured and solved: "Known problems: where each one gets solved" (Phase 2 measure, Phase 3 mitigate, Phase 5 and 7 solve structurally). Evidence so far: Q1 to Q5 in `QUESTION_LOG.md`.
 
 ---
 
 ## The pipeline at a glance
 
 ```
-download  →  ingest/clean  →  chunk  →  embed  →  index  →  retrieve  →  generate answer
- (done)        (done)         (done:     (next)
-                              baseline)
+download → ingest/clean → chunk → embed → retrieve (numpy) → generate answer (Gemini)
+ (done)       (done)       (done)  (done)      (done)              (done)
 ```
+Phase 1 baseline is complete end to end. "Index" is just a numpy array at this size; a real index (FAISS, vector database) is a Phase 3 comparison.
 
 Rule of thumb I keep coming back to: **each stage can only pass on what the previous stage gave it.** A mistake in
 ingestion is inherited by chunking, embedding and retrieval, and nothing later can repair it.
@@ -40,6 +47,10 @@ Current data flow and files (all derived data is gitignored and can be rebuilt w
 | Ingest | raw HTML | `data/processed/paragraphs.jsonl` (1,306 paragraphs) | `scripts/run_ingest.py` |
 | Check | paragraphs | sanity report | `scripts/report_ingest.py` |
 | Chunk | paragraphs | `data/processed/chunks.jsonl` (1,670 chunks) | `scripts/run_chunking.py` |
+| Embed | chunks | `data/cache/emb_*.npy` (1,670 x 384 numbers, 2.6 MB) | `scripts/run_embedding.py` |
+| Retrieve | a question | the 5 closest chunks with scores and citations | `scripts/search.py` |
+| Generate | question + 5 chunks | a cited answer from Gemini | `scripts/ask.py` |
+| Log | a question | an entry in `QUESTION_LOG.md` | `scripts/log_question.py` |
 
 ---
 
@@ -58,6 +69,11 @@ A quick list of what I chose, so I never have to hunt for it. Details are in the
 | Chunk size / overlap | 1000 / 200 characters (20%) | Inside the range the paragraph stats support; conventional | **Hypothesis, to be tested** |
 | Embedding model | `BAAI/bge-small-en-v1.5` (384 dims, 512-token limit), run locally | Small, free, no truncation of our chunks; chosen from a list of options | Baseline |
 | Query prefix for bge | Off | Keep one variable at a time; test on/off later | Experiment pending |
+| Search method | Brute force: cosine similarity against all 1,670 vectors with numpy, top-5 | About 1.5 ms at this size; no index needed | Baseline |
+| Generator | `gemini-3.1-flash-lite` via `google-genai`, temperature 0 | Cheap, current, I hold the key | Baseline; compare newer models in Phase 3 |
+| Prompt | Answer only from numbered passages, cite `[n]`, fixed refusal wording, report disagreements, merge names only if a passage says so | Grounding for a lineage project | Baseline |
+| Passage order | Best match first | Simplest | Experiment pending |
+| Failure handling | Retry temporary Gemini errors (429, 5xx) 4 times with waits | A "high demand" 503 crashed a run | Final |
 
 ---
 
@@ -359,7 +375,7 @@ I asked the same question with two names for the same person:
 - "Who is the father of **Arjuna**?" and "Who is the father of **Partha**?" returned **0 chunks in common out of 5**.
 - The Arjuna results began with a water-vessel scene and a battle scene; the Partha results with lists of Nakshatras and descendants of Soma. Neither obviously shows the answer (judged by eye on the first 90 characters only; Phase 2 measures this properly).
 - The corpus uses "Arjuna" in about 240 chunks and "Partha" in about 64. The model does not reliably treat them as the same person.
-- This is the domain challenge "many names for one person" in action. Candidate fixes for later: query rewriting that adds known aliases, a name-alias table, keyword search (BM25) combined with vectors (hybrid), or a knowledge graph (Phase 5).
+- This is the lineage and one person with more than one name problem in action. Candidate fixes for later: query rewriting that adds known aliases, a name-alias table, keyword search (BM25) combined with vectors (hybrid), or a knowledge graph (Phase 5).
 
 ### Things retrieval cannot do
 - **Multi-hop questions** ("how are Krishna and Arjuna related through Yayati?"): no single chunk holds the answer, and top-k returns chunks similar to the question, not a chain of facts. Needs query decomposition or a knowledge graph.
@@ -453,7 +469,7 @@ The rule I follow: **measure a problem in Phase 2, mitigate it with a targeted t
 structural fixes (graphs, agents) in Phase 5 and 7 if the cheaper fixes are not enough.** Solving things in this order
 means I can prove each fix helped, and I don't build a knowledge graph to fix something a keyword index would have fixed.
 
-### 1. Many names for one person (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava)
+### 1. The lineage and one person with more than one name problem: many names for one person (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava)
 **Evidence from Phase 1:** the questions "Who is the father of Arjuna?" and "...of Partha?" shared **0 of 5** top results.
 "Arjuna" appears in about 240 chunks and "Partha" in about 64, and the model does not reliably treat them as one person.
 
@@ -501,45 +517,146 @@ picking one.
 
 ---
 
-## Phase 1 retrospective (interim)
+## Question log: observed failures (candidates for Phase 2)
+
+Informal questions I asked the baseline, with what went wrong. **The full record of every question (the answer, the five chunks with ids, scores, sections and files, which were cited, and the verdict) is in [`QUESTION_LOG.md`](QUESTION_LOG.md); `scripts/log_question.py` adds new entries.** These are **not** the evaluation set; they are leads for
+questions to write in Phase 2. The evaluation set itself is never edited to make results look better.
+
+### Q1. "Why did Bharata grow up away from his father?" (retrieval miss, correct refusal)
+- **Result:** the model answered "The provided passages do not answer this question". The book does cover it (Bharata is the son of Dushmanta and Sakuntala; the hermitage scene is Section 74). Generation behaved correctly given what it was handed; **retrieval failed**.
+- **Top 5 retrieved:** Sections 128, 123, 191-192, 129, 110-111, all about Pandu's sons or the princes' upbringing.
+- **Where the relevant text ranked (of 1,670 chunks):** chunk 580 (Section 74, mentions the childhood name Sarvadamana) **351st**; chunk 600 (Section 74, "this son shall be known as Bharata") **133rd**; the Section 68-69 chunks where Janamejaya asks about Bharata's birth and life 608th to 731st. Reworded to name Dushmanta and the hermitage: still 404th. Reworded to "Who was Sakuntala's son and where was he raised?": 33rd, still outside the top 5.
+- **"Bharata" is a weak search term:** it appears in 255 of 1,670 chunks (15%). In Sections 68 to 77 every use except chunk 600 is a form of address ("O Bharata", "of Bharata's race"). Section 76 (Kacha and Devayani) has three such chunks; one of them ranked 29th, above the real story chunk, so a shared word gave a misleading pull.
+- **Hypotheses (not yet separated by experiment):**
+  1. Alias: the key passage uses the childhood name Sarvadamana.
+  2. Same word, different meaning: "Bharata" as person, dynasty and form of address.
+  3. The question's other words ("grow up", "away from his father") resemble generic upbringing passages.
+  4. The story spans Sections 69 to 74, so no single chunk holds the answer (chunking).
+  5. A small dense model scores overall topic, not exact words, so a single name barely moves the score.
+- **Where each is tested later:** 1 and 2 in Phase 3 query transformation (add known names and context to the query) and hybrid search (keywords plus vectors); 4 in Phase 3 chunking (larger or structure-aware chunks, parent-child); 5 in Phase 3 embeddings (compare models, add keyword search); 3 in Phase 3 reranking. Entity resolution (one node per person with all names) is the structural fix in Phase 5 and 7.
+- **Lesson:** a refusal is the right output when the passages do not contain the answer, but it hides a retrieval failure from the user. In Phase 2, score retrieval separately from generation so a miss like this is visible as a miss, not as a "correct refusal".
+- **My (the learner's) observations, and what we concluded:**
+  1. I pointed at the passage that mentions "Bharata" (I called it Section 76, the number I saw on the website) and wondered why it was not picked. It is Section LXXIV (74), file `section_075.html`. Its chunk 600 explains *the name* (a voice from heaven tells Dushmanta to cherish his son, "he shall be known as Bharata, the cherished"); it says nothing about where the boy grew up. The upbringing is in chunk 580, where he is called Sarvadamana.
+  2. Conclusion: retrieval here is **semantic, not keyword**. A chunk is scored by overall meaning, so containing the word "Bharata" is neither necessary nor sufficient. It was reasonable for the name-giving chunk to rank low for an upbringing question.
+  3. Verdict: an **explainable failure, fixable later** (not a good result): none of the correct passages is in the top 5, so recall@5 = 0 for this question. The cause (the passage uses a different name for the same person) is exactly what plain semantic retrieval cannot bridge.
+- **Numbering gotcha (found in this conversation):** the same page has three numbers: the printed heading (SECTION LXXIV), the file name (`section_075.html`, always heading + 1), and the number the website shows (76; where it comes from is unverified). Citations print the heading number and the file name. Idea pending: add the page's web address to every citation so a reader can click through.
+
+### Round 2: four more questions (Q2 to Q6)
+Run through the full pipeline (retrieve 5, answer with Gemini 3.1 Flash-Lite). Each cited passage was checked by hand.
+
+| # | Question | What the system did | Check against the text | Verdict |
+|---|---|---|---|---|
+| Q2 | Who was the father of Pandu? | Refused: passages discuss Pandu's children, death and race but not his father. | The answer is in Section 106 (Krishna-Dwaipayana begot Pandu on Ambalika). Those chunks ranked **46th, 68th and 176th**; none in the top 5. | **Retrieval miss**, correct refusal |
+| Q3 | Who is the father of Arjuna? | "Son of Pandu [4][5]. Additionally son of Indra [3]." | [3] says "born as Indra's son and known as Arjuna, the mighty son of Pandu" (supports both). [5] has Arjuna saying "I am Dhananjaya, the son of Pandu and Kunti" (supports Pandu). **[4] supports neither** (it is about Subhadra). | **Right answer, one unsupported citation** |
+| Q4 | Who is the father of Partha? | Refused: passages are about the Vasus, Tansu's descendants, Kalmashapada. | Same fact as Q3; the corpus even says "Dhananjaya, the son of Pandu". Top 5 had nothing relevant. | **Retrieval miss**, correct refusal |
+| Q5 | How are Krishna and Arjuna related through Yayati? | Refused: passages cover Krishna and Arjuna's identities and exploits but not Yayati. | Expected: no single chunk holds the chain Krishna, Yadu, Yayati, Puru, Arjuna. | **Expected multi-hop failure**; refusal explanation is honest |
+| Q6 | Who killed Karna in the Kurukshetra war? | "Arjuna slew Karna in single combat [3]." | [3] is the contents summary in Section II (Parva-sangraha) of the whole epic: "Then Arjuna slew the great Karna in single combat." | **Grounded**: answered from the passage, not from memory |
+
+What this round showed:
+- **Q3 vs Q4 is the cleanest alias demonstration so far:** the same question with two names for the same person gives an answer for one and a refusal for the other.
+- **Refusals are mostly retrieval misses, not generator caution.** In Q2 and Q4 the book does contain the answer. Three of the five questions (Q2, Q4, Q5) ended in a refusal.
+- **The citation check is too weak.** It only confirms the cited passage number exists (Q3's [4] passed it). Whether a cited passage supports the claim is the faithfulness measure in Phase 2.
+- **Near-duplicate results waste top-5 slots.** In Q2 results [1] and [4] come from the same place (Section 126, `section_127.html` para 2), and in Q6 results [3] and [5] both begin at the same spot of Section II. With 200 characters of overlap, neighbouring chunks of one passage can both rank. Candidate fix in Phase 3: diversity ranking (MMR) or de-duplication.
+- **The grounding rule held:** Q6 asks about the war, which Adi Parva does not narrate, yet the system answered only because Section II summarises the later parvas. It did not use outside knowledge. The earlier cricket question (not in the book at all) was refused correctly, so both directions of the rule have now been seen.
+- **Tally (informal, 6 questions in all, not a metric):** 3 answered with support (Q1 partly, Q3, Q6), 3 retrieval misses (Q1, Q2, Q4), 1 expected multi-hop failure (Q5), 1 correct out-of-book refusal (cricket).
+
+### Operational gotcha: Gemini 503 "high demand"
+During this round Gemini returned a temporary 503 error and the run crashed. Added retry with waiting (2, 4, 8, 16 seconds) for temporary errors (429 and 5xx) in `generate_answer`; other errors (such as a bad request) are not retried. Four tests cover it. Lesson: any pipeline that calls an outside service needs retries, and temporary failures must not look like wrong answers.
+
+## Phase 1 retrospective (final)
 
 **Rule (also in `CLAUDE.md`):** at the end of every phase I write a retrospective: what worked, what did not, how it
-compares with standard RAG practice, and what that means for the next phase. This one is **interim**. It gets finalised
-when Phase 1 ends, after retrieval and answer generation are built and I have run real questions end to end.
+compares with standard RAG practice, and what that means for the next phase.
 
-**Phase 1 still to do:** baseline retrieval module and command; answer generation with a language model (prompt
-assembly, citations); a first set of end-to-end runs.
+### Verdict
+**Phase 1 is complete as a baseline.** A question goes in and a cited answer comes out, built from my own pipeline with no
+framework. It is **not scored**: everything below that sounds like quality is observation from 8 hand-checked questions,
+not measurement. Measuring is Phase 2.
 
-### What worked so far
-- **Looking at the data before building.** Measuring the HTML (1.4% story text), the paragraphs (median 653 characters) and the token counts (max 399 vs a 512 limit) removed guesswork at three separate decisions.
-- **Cleaning in ingestion with provenance kept.** Every chunk can be traced to its section, sub-parva, file and paragraph, which citations will need.
-- **Reviewing small, then testing everything.** Checking three files by eye found the page-break problem; running all 237 found the heading-case and sub-parva-spelling bugs.
-- **Caching with a fingerprint.** Re-running costs seconds, and a stale cache cannot be reused by accident.
-- **One variable at a time, baseline first.** Plain fixed-size chunks plus a small local model gives me a number to beat.
+### The pipeline in numbers
+| | |
+|---|---|
+| Source | 237 pages (preface + Sections I to CCXXXVI), 99 MB of HTML of which 1.4% is story text |
+| Paragraphs | 1,306 (385 page-break fragments glued back) |
+| Chunks | 1,670 (1000 chars, 200 overlap); 18% span more than one section; 165 to 399 tokens each, none over the 512 limit |
+| Vectors | 1,670 x 384 numbers, 2.6 MB; embedding took about 1.5 minutes on CPU |
+| Search | about 1.5 ms per question |
+| Answer | about 1,500 tokens in and under 60 out per question, roughly a tenth of a cent at blog prices (unverified) |
+| Tests | 29 checks across chunking, retrieval and generation, all passing |
+| Rebuild from scratch | `bash scripts/rebuild_all.sh`, about 6 to 8 minutes |
 
-### What did not work, or is weak so far
-- **Aliases:** 0 of 5 overlap between "Arjuna" and "Partha" queries.
-- **Ranking at the top is fragile:** top-5 scores sit within 0.02 of each other, and the passage with the actual vow ranked second for the celibacy question.
-- **Fixed-size chunks cut mid-word** and 18% span more than one section.
-- **`printed_page` is unreliable** and cannot be used in citations yet.
-- **No quality numbers at all yet.** Everything above is observation from a handful of questions, not measurement.
+### What worked
+- **Looking at the data before building.** Measuring the HTML, the paragraph lengths and the token counts removed guesswork at three separate decisions.
+- **Cleaning in ingestion, with provenance kept.** Every chunk traces back to section, sub-parva, file and paragraph, so citations are possible.
+- **Small review, then whole-corpus checks.** Three files by eye found the page-break problem; running all 237 found a mixed-case heading and sub-parva spellings, and a later check found the source's odd Roman numerals.
+- **Caching with a fingerprint** and a **one-command rebuild**: experiments are cheap to re-run and nothing depends on a particular session's disk.
+- **A deliberately simple baseline.** Plain fixed-size chunks plus a small local model gives every later change something to be measured against.
+- **Grounding held in both directions.** The model answered from passages when they held the answer (Karna, Arjuna) and declined when they did not (cricket, Yayati). It did not fall back on memory of the epic.
+- **Logging every question with the retrieved chunks** (`QUESTION_LOG.md`) turned vague impressions ("it missed Bharata") into specific ranks and causes.
+
+### What did not work, with the evidence
+- **The lineage and one person with more than one name problem is not solved by the baseline, by design.** Plain semantic search retrieves passages that *resemble* a question. It does not know that Arjuna, Partha and Dhananjaya are one person, or that "the father of Pandu" has two answers in the text (the nominal father Vichitravirya and the biological father Vyasa), or that Krishna's line (Yadu) and Arjuna's line (Puru) meet at Yayati.
+  - **Evidence:** Q3 vs Q4 (an answer for "Arjuna", a refusal for "Partha"); Q1 (the boy is "Bharata" in one passage and "Sarvadamana" in another); Q2 (the answer ranked 46th at best); Q5 (the Yayati chain exists in no single chunk).
+  - **Why I am not fixing it in Phase 1:** I cannot prove a fix helps without the Phase 2 numbers, and the cheap fixes may not be enough.
+  - **Where it is solved:** measured in Phase 2 (alias and lineage questions in the test set); mitigated in Phase 3 (alias expansion, keyword plus meaning search, query decomposition); solved structurally in Phase 5 (GraphRAG, one node per person with all their names) and Phase 7 (the lineage project, with a citation on every family link). The full plan is in "Known problems: where each one gets solved".
+- **Retrieval is the weak link, not generation.** Of the 4 refusals on questions the book can answer or that need the book, 3 were retrieval misses (Q1 Bharata, Q2 Pandu's father, Q4 Partha's father): the answer exists but ranked 46th to 351st out of 1,670. When the right passages did arrive, the generator was accurate.
+- **Aliases.** The same question gave an answer for "Arjuna" and a refusal for "Partha".
+- **Names that mean several things.** "Bharata" is in 255 of 1,670 chunks, mostly as "O Bharata", so it carries almost no signal.
+- **Multi-hop questions** (Krishna and Arjuna through Yayati) cannot be answered from any single chunk.
+- **Near-duplicate results.** Overlapping neighbouring chunks of one passage can take two of the five slots.
+- **Weak citation check.** It verifies that a cited number exists, not that the passage supports the claim (Q3 cited a Subhadra passage for "son of Pandu").
+- **Fixed-size cuts** fall mid-word and split stories (the Bharata story spans Sections 69 to 74).
+- **`printed_page` is unreliable**, so it is not used in citations.
+
+### Informal scorecard (8 questions; not a metric)
+| Outcome | Questions |
+|---|---|
+| Answered, supported | Q3 (one bad citation), Q6 |
+| Answered, supported but incomplete | Q7 |
+| Retrieval miss, refused | Q1, Q2, Q4 |
+| Expected multi-hop failure, refused | Q5 |
+| Correct refusal, not in the book | Q8 |
+
+### Mistakes made along the way (and the lesson from each)
+- I told you a new session was needed for the API key; it was not. **Lesson:** re-check before prescribing a workaround, and do not state a guess about how a platform works as fact.
+- I kept saying PR #1 was open after it had been merged, and pushed later work to an already-merged branch. **Lesson:** verify the state of a pull request before talking about it. Fixed by tidying the branch and opening PR #2.
+- My first system prompt said "Arjuna and Partha are the same person" while also forbidding outside knowledge. **Lesson:** examples inside a prompt are instructions too.
+- The "no gaps in section numbers" check had passed only because a simple converter happened to read the source's non-standard numerals. **Lesson:** a check that passes by luck is not a check.
+- A Gemini "high demand" error crashed a run. **Lesson:** anything that calls an outside service needs retries.
+- The word "section" meant three different numbers (heading, file name, website). **Lesson:** make citations unambiguous; adding the page's web address is still pending.
 
 ### How this compares with standard RAG practice
 | Standard practice | Where I am |
 |---|---|
 | Clean and parse the source properly before indexing | Done |
-| Chunk by structure, not just by character count | Not yet; baseline is deliberately naive |
 | Keep metadata on every chunk for filtering and citations | Done |
-| Use hybrid search (keywords plus vectors) | Not yet |
+| Chunk by structure, not just by character count | Not yet; baseline is deliberately naive |
+| Hybrid search (keywords plus vectors) | Not yet |
+| Query rewriting, expansion, decomposition | Not yet |
 | Rerank the shortlist | Not yet |
-| Handle queries before retrieval (rewrite, expand, decompose) | Not yet |
-| Build an evaluation set and metrics before tuning | **Not yet; this is the gap that matters most** |
-| Ground answers, cite sources, and allow "I don't know" | Not yet (generation stage) |
+| Diversity ranking (avoid near-duplicates) | Not yet |
+| Grounded answers, citations, "I don't know" | **Done**, with a weak citation check |
+| An evaluation set and metrics before tuning | **Not yet; this is the gap that matters most** |
+| Retrieval and generation scored separately | Not yet; Phase 2 |
 
-### What this leads to
-- **Phase 2 comes first, and it is measurement, not new techniques.** The evaluation set (with alias, multi-hop and unanswerable questions mixed in) turns today's impressions into numbers: recall@k, MRR, nDCG, faithfulness.
-- **Phase 3 then follows the numbers.** The weakest metric tells me which stage to deepen first (probably query transformation and hybrid retrieval, given the alias result), one change at a time, logged in `EXPERIMENTS.md`.
-- **Phases 4 to 7** only if the earlier fixes leave a measurable gap: framework comparison, advanced RAG, GraphRAG, and the lineage project.
+### What Phase 2 should do (measurement, not new techniques)
+1. **Write the question set** (you write it; I help structure it). Mix: plain facts; alias pairs asking the same thing under different names; multi-hop; unanswerable; ambiguous names. For each, record the expected answer and the **source section(s)** (heading number and file name, so retrieval can be scored).
+2. **Score retrieval separately from generation:** recall@k, MRR, nDCG, so a miss shows up as a miss and not as a "correct refusal".
+3. **Score generation:** faithfulness (does each cited passage actually support the claim?) and answer relevance, using a language model as judge. Use a different model from the generator where possible.
+4. **Never edit the set to flatter results.** Questions added later go in a clearly marked separate section. Q1 to Q8 in `QUESTION_LOG.md` are seeds, not the set.
+5. **Record the baseline numbers** in `EXPERIMENTS.md` as the reference for every Phase 3 comparison.
+
+### What Phase 3 will likely test first (hypotheses, to be ordered by the Phase 2 numbers)
+1. Query expansion with known aliases (Arjuna, Partha, Dhananjaya...) and query rewriting.
+2. Hybrid search: keywords plus vectors, merged with reciprocal rank fusion.
+3. Chunking: structure-aware and parent-child (return the surrounding passage); diversity ranking against near-duplicates.
+4. Reranking the top 20 to 50 with a cross-encoder or language model.
+5. Other embedding models, and the bge query prefix on/off.
+6. Generation: citation verification, passage order, newer Gemini models.
+Each is one change at a time, logged in `EXPERIMENTS.md`. Entity resolution (one graph node per person with all names) and multi-hop answering stay in Phases 5 and 7 unless the cheaper fixes close the gap.
+
+### Carried over
+PR #2 awaits merge; page web address in citations; the website's section numbering (unverified); `Haranaharana Parva` spelling unchecked; prices from third-party blogs unverified.
 
 ---
 

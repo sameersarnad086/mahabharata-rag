@@ -11,6 +11,7 @@ Steps:
      number that was never provided (a made-up citation).
 """
 import re
+import time
 from dataclasses import dataclass, field
 
 import config
@@ -60,13 +61,30 @@ def check_citations(answer_text: str, n_passages: int) -> tuple[list[int], list[
     return valid, invalid
 
 
+RETRY_WAITS = (2, 4, 8, 16)   # seconds to wait before each retry of a temporary failure
+
+
+def _call_with_retry(call):
+    """Run call(); on a temporary Google-side error (429 rate limit, 5xx 'high demand') wait and retry."""
+    from google.genai import errors
+    for wait in (*RETRY_WAITS, None):
+        try:
+            return call()
+        except errors.APIError as e:
+            temporary = e.code == 429 or (isinstance(e.code, int) and e.code >= 500)
+            if not temporary or wait is None:
+                raise
+            print(f"  (Gemini temporarily unavailable, code {e.code}; retrying in {wait}s)")
+            time.sleep(wait)
+
+
 def generate_answer(question: str, hits: list, client=None) -> Answer:
     from google import genai
     from google.genai import types
 
     system, user = build_prompt(question, hits)
     client = client or genai.Client()          # reads GEMINI_API_KEY from the environment
-    response = client.models.generate_content(
+    response = _call_with_retry(lambda: client.models.generate_content(
         model=config.LLM_MODEL,
         contents=user,
         config=types.GenerateContentConfig(
@@ -74,7 +92,7 @@ def generate_answer(question: str, hits: list, client=None) -> Answer:
             temperature=config.LLM_TEMPERATURE,
             max_output_tokens=config.LLM_MAX_OUTPUT_TOKENS,
         ),
-    )
+    ))
     text = (response.text or "").strip()
     valid, invalid = check_citations(text, len(hits))
     usage = response.usage_metadata
