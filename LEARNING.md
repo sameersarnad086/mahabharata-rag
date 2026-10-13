@@ -504,7 +504,7 @@ picking one.
 
 ## Question log: observed failures (candidates for Phase 2)
 
-Informal questions I asked the baseline, with what went wrong. These are **not** the evaluation set; they are leads for
+Informal questions I asked the baseline, with what went wrong. **The full record of every question (the answer, the five chunks with ids, scores, sections and files, which were cited, and the verdict) is in [`QUESTION_LOG.md`](QUESTION_LOG.md); `scripts/log_question.py` adds new entries.** These are **not** the evaluation set; they are leads for
 questions to write in Phase 2. The evaluation set itself is never edited to make results look better.
 
 ### Q1. "Why did Bharata grow up away from his father?" (retrieval miss, correct refusal)
