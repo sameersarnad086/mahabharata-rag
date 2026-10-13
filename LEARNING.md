@@ -14,7 +14,9 @@ Alternatives → Gotchas → Results.**
 5. [Phase 1 — Chunking](#phase-1--chunking)
 6. [Phase 1 — Embeddings](#phase-1--embeddings)
 7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
-8. [Public post drafts](#public-post-drafts)
+8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
+9. [Phase 1 retrospective (interim)](#phase-1-retrospective-interim)
+10. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -374,6 +376,102 @@ I asked the same question with two names for the same person:
 
 ### How we will judge retrieval (Phase 2)
 Not by eye. **Recall@k** (is a correct chunk in the top k?), **MRR** (how high is the first correct chunk?), **nDCG** (are better chunks ranked higher?), measured on a question set with known source sections.
+
+---
+
+## Known problems: where each one gets solved
+
+The rule I follow: **measure a problem in Phase 2, mitigate it with a targeted technique in Phase 3, and only reach for
+structural fixes (graphs, agents) in Phase 5 and 7 if the cheaper fixes are not enough.** Solving things in this order
+means I can prove each fix helped, and I don't build a knowledge graph to fix something a keyword index would have fixed.
+
+### 1. Many names for one person (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava)
+**Evidence from Phase 1:** the questions "Who is the father of Arjuna?" and "...of Partha?" shared **0 of 5** top results.
+"Arjuna" appears in about 240 chunks and "Partha" in about 64, and the model does not reliably treat them as one person.
+
+| Phase | What I do | Why then |
+|---|---|---|
+| **Phase 2 (evaluation)** | Add alias questions to the test set: the same question asked with different names for the same person, plus a metric for how much the answers differ. | Can't fix what I can't measure. This gives the before-number. |
+| **Phase 3: Embeddings** | Compare embedding models on the alias questions. Some may link names better than others. | Cheapest possible fix: swap the model. |
+| **Phase 3: Retrieval** | Hybrid search: keywords (BM25) combined with vectors. | Exact names get matched even when the vector is vague. Does not by itself connect two different names. |
+| **Phase 3: Query transformation** | Query expansion: add known aliases to the question (an alias table) or let the language model rewrite it. | Directly bridges "Partha" to "Arjuna" at search time. |
+| **Phase 3: Ingestion (optional)** | Tag each chunk with the people it mentions, using the alias table. | Moves the work to index time; enables filtering by person. |
+| **Phase 5: GraphRAG** | Extract people and relationships from the text into a graph, with one node per person and all names attached to it. | The structural fix: entity resolution (deciding "Partha" and "Arjuna" are one node). |
+| **Phase 7: Lineage project** | Curated alias table plus graph; every alias carries its source citation. | Needed anyway for the family-tree explorer. |
+
+Related name problems, same approach: **spelling variants** (Yudhishthira / Yudhisthira) go in the same alias table, and
+**same name, different people** (several Parikshits and Janamejayas) needs the graph and generation prompts that
+distinguish generations; filters on sub-parva help a little.
+
+### 2. Multi-hop questions ("how are Krishna and Arjuna related through Yayati?")
+No single chunk holds the answer; top-k returns chunks that resemble the question, not a chain of facts.
+| Phase | What I do |
+|---|---|
+| Phase 2 | Include multi-hop questions in the test set, labelled as such, so I can see recall drop on them specifically. |
+| Phase 3: Query transformation | **Decomposition** (split into sub-questions: Krishna's ancestors, Arjuna's ancestors, then find the common one) and **multi-query** (several phrasings, merge the results). |
+| Phase 5: Agentic RAG | Let the model retrieve, read, then decide what to look up next, in a loop. |
+| Phase 5 and 7: GraphRAG / knowledge graph | Answer lineage questions by walking the graph (paths, common ancestors), then use RAG for the story context. This is the real fix for lineage. |
+
+### 3. Exact names and rare words get diluted in vector space
+| Phase | What I do |
+|---|---|
+| Phase 3: Embeddings | Add a sparse / keyword index (BM25) alongside the dense one. |
+| Phase 3: Retrieval | **Hybrid search** with reciprocal rank fusion (RRF) to merge both rankings. Metadata filters (sub-parva, section) narrow the pool. |
+| Phase 3: Reranking | A cross-encoder re-reads the top 20 to 50 against the question and fixes the order. |
+
+### 4. "I don't know": retrieval always returns k chunks, even when nothing relevant exists
+| Phase | What I do |
+|---|---|
+| Phase 2 | Put **unanswerable questions** in the test set, and measure faithfulness (does the answer stick to the retrieved text?) with an LLM judge. |
+| Phase 3: Generation | Prompt rules ("answer only from the passages; otherwise say you cannot find it"), citation requirements, and possibly a minimum-score threshold (needs care: scores are not probabilities). |
+| Phase 5: Corrective RAG / Self-RAG | The system grades its own retrieved chunks and retries or abstains when they are weak. |
+
+### 5. Conflicting sources (different texts give different lineage lists)
+Needs more than one source, so it starts in **Phase 3 and 7** when the Vishnu Purana and Harivamsha are added. Every
+chunk and graph edge already carries its source, so disagreements can be reported with citations instead of silently
+picking one.
+
+---
+
+## Phase 1 retrospective (interim)
+
+**Rule (also in `CLAUDE.md`):** at the end of every phase I write a retrospective: what worked, what did not, how it
+compares with standard RAG practice, and what that means for the next phase. This one is **interim**. It gets finalised
+when Phase 1 ends, after retrieval and answer generation are built and I have run real questions end to end.
+
+**Phase 1 still to do:** baseline retrieval module and command; answer generation with a language model (prompt
+assembly, citations); a first set of end-to-end runs.
+
+### What worked so far
+- **Looking at the data before building.** Measuring the HTML (1.4% story text), the paragraphs (median 653 characters) and the token counts (max 399 vs a 512 limit) removed guesswork at three separate decisions.
+- **Cleaning in ingestion with provenance kept.** Every chunk can be traced to its section, sub-parva, file and paragraph, which citations will need.
+- **Reviewing small, then testing everything.** Checking three files by eye found the page-break problem; running all 237 found the heading-case and sub-parva-spelling bugs.
+- **Caching with a fingerprint.** Re-running costs seconds, and a stale cache cannot be reused by accident.
+- **One variable at a time, baseline first.** Plain fixed-size chunks plus a small local model gives me a number to beat.
+
+### What did not work, or is weak so far
+- **Aliases:** 0 of 5 overlap between "Arjuna" and "Partha" queries.
+- **Ranking at the top is fragile:** top-5 scores sit within 0.02 of each other, and the passage with the actual vow ranked second for the celibacy question.
+- **Fixed-size chunks cut mid-word** and 18% span more than one section.
+- **`printed_page` is unreliable** and cannot be used in citations yet.
+- **No quality numbers at all yet.** Everything above is observation from a handful of questions, not measurement.
+
+### How this compares with standard RAG practice
+| Standard practice | Where I am |
+|---|---|
+| Clean and parse the source properly before indexing | Done |
+| Chunk by structure, not just by character count | Not yet; baseline is deliberately naive |
+| Keep metadata on every chunk for filtering and citations | Done |
+| Use hybrid search (keywords plus vectors) | Not yet |
+| Rerank the shortlist | Not yet |
+| Handle queries before retrieval (rewrite, expand, decompose) | Not yet |
+| Build an evaluation set and metrics before tuning | **Not yet; this is the gap that matters most** |
+| Ground answers, cite sources, and allow "I don't know" | Not yet (generation stage) |
+
+### What this leads to
+- **Phase 2 comes first, and it is measurement, not new techniques.** The evaluation set (with alias, multi-hop and unanswerable questions mixed in) turns today's impressions into numbers: recall@k, MRR, nDCG, faithfulness.
+- **Phase 3 then follows the numbers.** The weakest metric tells me which stage to deepen first (probably query transformation and hybrid retrieval, given the alias result), one change at a time, logged in `EXPERIMENTS.md`.
+- **Phases 4 to 7** only if the earlier fixes leave a measurable gap: framework comparison, advanced RAG, GraphRAG, and the lineage project.
 
 ---
 

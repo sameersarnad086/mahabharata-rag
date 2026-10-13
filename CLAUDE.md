@@ -33,6 +33,9 @@ without being asked. For each concept or stage, add:
 - **Alternatives** — other methods/tools and when each is better.
 - **Gotchas** — mistakes I made or surprises we found.
 
+At the end of every phase, add a **retrospective** to `LEARNING.md`: what worked, what didn't, how it
+compares with standard RAG practice, and what it implies for the next phase.
+
 Maintain `EXPERIMENTS.md` as an experiment log. One entry per experiment:
 date, what changed, why, metrics before → after, and conclusion.
 
