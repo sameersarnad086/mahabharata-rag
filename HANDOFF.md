@@ -7,8 +7,8 @@ Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules),
 ## Where we are (2026-10-13, Phase 1 closed)
 - **Phase 1 (baseline RAG, no frameworks) is working end to end.** Download, ingest, fixed-size chunks (1000/200 chars), `BAAI/bge-small-en-v1.5` embeddings, numpy cosine top-5, Gemini `gemini-3.1-flash-lite` answers with `[n]` citations.
 - **Phase 1 is complete and its final retrospective is written** (`LEARNING.md`, "Phase 1 retrospective (final)"). Nothing is scored yet; everything is informal (8 questions in `QUESTION_LOG.md`). First real numbers come in Phase 2.
-- **Git:** branch `claude/vigilant-ride-83azmt`. PR #1 (ingestion) was merged. **PR #2** (chunking, embeddings, retrieval, generation, notes) is open and waits for the user to merge it. After a merge, restart the branch from the updated `main` before new work. Only the user merges.
-- **Next steps, in order:** (1) user merges PR #2; (2) plan Phase 2 (details in the retrospective's "What Phase 2 should do"): the user writes 30 to 50 test questions with expected answers and source sections, including alias, multi-hop and unanswerable ones; then build the metrics (recall@k, MRR, nDCG, faithfulness, answer relevance).
+- **Git:** branch `claude/vigilant-ride-83azmt`. PR #1 (ingestion) and PR #2 (chunking, embeddings, retrieval, generation) are both **merged**; the user tends to merge within minutes of a PR being opened. Commits made after a merge are not in `main`, so after every merge: restart the branch from the updated `main` (rebase, check the files are identical, `--force-with-lease`), then open a new PR only when asked. Only the user merges.
+- **Next steps, in order:** (1) get the post-merge commits (retry fix, question log, final retrospective, handoff) into `main` via a new PR; (2) plan Phase 2 (details in the retrospective's "What Phase 2 should do"): the user writes 30 to 50 test questions with expected answers and source sections, including alias, multi-hop and unanswerable ones; then build the metrics (recall@k, MRR, nDCG, faithfulness, answer relevance).
 
 ## How to work with the user (also in CLAUDE.md)
 - The user is **not a coder**. Claude writes all code and explains in plain language: libraries used, how the method works, trade-offs, what results mean. Name every new library.
@@ -16,6 +16,7 @@ Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules),
 - **One variable at a time** when experimenting. Log in `LEARNING.md` and `EXPERIMENTS.md`; each phase ends with a retrospective.
 - Don't state guesses as facts (I once wrongly said a new session was needed for an API key). Verify before prescribing.
 - Don't open or merge pull requests unless asked. Never paste or print secrets.
+- **Before saying anything about a pull request, check its real state with the GitHub tool** (merged? which commits?). I got this wrong twice by assuming.
 - Update this file every few steps and check with the user first (their instruction); don't add it as a per-step rule.
 
 ## Environment checklist (lives outside the repo)
