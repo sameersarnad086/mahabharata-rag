@@ -408,7 +408,7 @@ After the call, a small checker finds every `[n]` in the answer and flags any nu
 | Decision | Choice | Why |
 |---|---|---|
 | Generator | **Gemini 3.1 Flash-Lite**, planned comparison against Gemini 2.5 Flash | Cheapest current Gemini I would trust for "read 5 passages and write a short cited answer"; I already hold a Gemini key. Prices checked via third-party blogs: $0.25 in / $1.50 out per million tokens, about $0.001 per question. Verify against Google's own pricing page. |
-| Model id | `gemini-3.1-flash-lite` in `config.py`, **unverified** | Run `scripts/list_models.py` once the key is available and copy the exact id (preview models often carry a suffix). |
+| Model id | `gemini-3.1-flash-lite` in `config.py`, **verified** with `scripts/list_models.py` | The id exists exactly as written. The list also shows newer models the blogs I read did not mention (for example `gemini-3.5-flash-lite`, `gemini-3.5-flash`). Prices for those are unchecked; candidates for the Phase 3 model comparison. |
 | Library | **`google-genai`** (2.30.0), Google's current official Python SDK; the older `google-generativeai` package is being phased out | Needs the `GEMINI_API_KEY` environment variable. |
 | Temperature | 0 | As repeatable as possible, which matters when I compare runs. |
 | Passage order | Rank order (best first) | Simplest; reordering is a Phase 3 experiment. |
@@ -425,14 +425,24 @@ The dry-run prompt for "Why did Bhishma take a vow of celibacy?" put the Amba pa
 with the actual vow (Section 100) second. The model will see both, so it can still answer, but it shows that the
 generator is limited by what retrieval supplies and in what order.
 
+### First live results (informal, 2 questions; Phase 2 will measure properly)
+Setup check: key works; model `gemini-3.1-flash-lite`; about 1,500 prompt tokens and 36 to 51 output tokens per question (no thinking tokens reported), which is roughly a tenth of a cent per question at the blog prices.
+
+| Test | What happened | Verdict |
+|---|---|---|
+| "Why did Bhishma take a vow of celibacy?" | Answer: to serve his father Santanu and settle the matter of his children [2]; he pledged to renounce the three worlds rather than renounce truth [5]. | **Supported but incomplete.** Both citations are real: [2] is the vow passage and [5] contains the "renounce three worlds" pledge. But [5] is a later conversation with Satyavati, so the second sentence is true yet does not explain *why* he took the vow. The key reason (so Satyavati's sons would inherit) is only implied. |
+| "Who won the 1990 cricket world cup?" (not in the book) | "The provided passages do not answer this question." plus one sentence on what the passages do cover. | **Refusal rule works.** |
+
+What this shows: grounding and citations work mechanically, but answer *quality* depends on which 5 passages arrive and in what order (the best passage was ranked second, below the Amba passage). A citation check proves a cited passage exists, not that it answers the question; only the Phase 2 faithfulness and relevance measures can tell those apart.
+
 ### A prompt bug I caught in review
 My first system prompt said "Arjuna, Partha and Dhananjaya are the same person" while also telling the model to use only
 the passages. That quietly lets outside knowledge in and contradicts the grounding rule. Reworded so the model treats names
 as the same person only when a passage says so. Lesson: examples inside a prompt are instructions too.
 
 ### Gotchas
-- **Environment variables load when a session starts.** Adding `GEMINI_API_KEY` in the environment settings does not reach a running session; a new session is needed.
-- **A new session starts with an empty disk.** Raw pages, processed data, vectors and installed packages are all gone; only committed files remain. `scripts/rebuild_all.sh` recreates everything (about 6 to 8 minutes), which also proves the pipeline is reproducible from the code alone.
+- **I wrongly told the user a new session was needed for the key.** I had seen it unset right after it was saved and assumed environment variables only load at session start. A few minutes later the running session could see it. Lesson: re-check before prescribing a workaround, and don't state a guess about how the platform works as if it were fact.
+- **A fresh session does start with an empty disk** (this part was right). Raw pages, processed data, vectors and installed packages are all gone; only committed files remain. `scripts/rebuild_all.sh` recreates everything (about 6 to 8 minutes), which also proves the pipeline is reproducible from the code alone.
 - Google's API returned 403 "unregistered callers" when called without a key. That means the network path works; it is not a sandbox block (compare the Hugging Face block earlier, which failed at the connection).
 
 ---

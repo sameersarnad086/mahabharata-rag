@@ -16,3 +16,9 @@ _No scored experiments yet; the evaluation harness comes in Phase 2._
 - **Output:** 1,670 x 384 float32 vectors (2.6 MB), cached in `data/cache/`. Chunk token lengths min/median/max = 165/247/399; 0 chunks over the 512-token limit.
 - **Informal check only:** two Bhishma questions returned on-topic chunks, but the best passage was not always ranked first. No metrics until the Phase 2 test set exists.
 - **Next experiments (one variable each):** query prefix on/off; other embedding models; chunk-size sweep.
+
+## First end-to-end run, Phase 1 baseline (not yet scored) — 2026-10-13
+- **Pipeline:** Ganguli Adi Parva -> 1,306 paragraphs -> 1,670 chunks (fixed-size 1000/200 characters) -> bge-small-en-v1.5 vectors -> numpy cosine top-5 -> Gemini 3.1 Flash-Lite (temperature 0), answer-only-from-passages prompt with `[n]` citations.
+- **Informal checks (2 questions):** answerable question gave a supported but incomplete answer with valid citations; unanswerable question was refused correctly. About 1,500 prompt tokens and under 60 output tokens per question.
+- **Metrics:** none. Recall@k, MRR, nDCG, faithfulness and answer relevance need the Phase 2 question set.
+- **Next:** write the Phase 2 evaluation set (answerable, alias, multi-hop and unanswerable questions), then sweep one variable at a time starting from this baseline.
