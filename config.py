@@ -23,4 +23,8 @@ EMBEDDING_BATCH_SIZE = 32
 # bge models are trained to see this prefix on QUERIES (not on chunks) for retrieval. A later experiment.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 USE_QUERY_PREFIX = False  # baseline: off. Test on/off as its own one-variable experiment.
-LLM_MODEL = None
+# Generator: Gemini via the google-genai library. Key is read from the GEMINI_API_KEY environment variable.
+# The model id below is UNVERIFIED: run `python scripts/list_models.py` once the key is set and copy the exact id.
+LLM_MODEL = "gemini-3.1-flash-lite"
+LLM_TEMPERATURE = 0.0       # 0 = as repeatable as possible, which is what we want for evaluation
+LLM_MAX_OUTPUT_TOKENS = 1024

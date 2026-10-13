@@ -15,8 +15,9 @@ Alternatives → Gotchas → Results.**
 6. [Phase 1 — Embeddings](#phase-1--embeddings)
 7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
 8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
-9. [Phase 1 retrospective (interim)](#phase-1-retrospective-interim)
-10. [Public post drafts](#public-post-drafts)
+9. [Phase 1 — Generation](#phase-1--generation)
+10. [Phase 1 retrospective (interim)](#phase-1-retrospective-interim)
+11. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -386,6 +387,53 @@ Not by eye. **Recall@k** (is a correct chunk in the top k?), **MRR** (how high i
 - **Gotcha found while testing:** `argpartition` returns its picks in no guaranteed order, so tied scores could come out in a random order. Fixed by sorting the picked indices first, so ties are deterministic.
 
 First real outputs (informal): "Why did Bhishma take a vow of celibacy?" returned Section 102 (the context leading to the vow), Section 100 (the vow itself, ranked second) and an unrelated vow from Section 76. "Who was Shakuntala's son?" returned Section 74 (Dushmanta cherishing his son by Sakuntala) first and two loosely related passages after, with scores bunched at 0.69. On-topic, but best-first is not reliable. Phase 2 will put numbers on that.
+
+---
+
+## Phase 1 — Generation
+
+### Why it exists
+Retrieval hands over 5 chunks; a language model reads them and writes the answer. The model never sees the other 1,665
+chunks and does not search. Its answer can only be as good as the 5 chunks it receives, which is why retrieval quality
+caps answer quality.
+
+### How it works (in plain words)
+One call to the model with two parts:
+- **System prompt (the rules):** answer only from the numbered passages; cite every claim like `[2]`; if the passages do not contain the answer, say so in fixed wording; report disagreements between passages instead of picking one; treat two names as the same person only if a passage says so.
+- **User message:** the 5 passages, each numbered and labelled with its citation, best match first, then the question.
+
+After the call, a small checker finds every `[n]` in the answer and flags any number that was never provided (a made-up citation). That does not prove a cited passage supports the claim; that is the faithfulness check in Phase 2.
+
+### Decisions
+| Decision | Choice | Why |
+|---|---|---|
+| Generator | **Gemini 3.1 Flash-Lite**, planned comparison against Gemini 2.5 Flash | Cheapest current Gemini I would trust for "read 5 passages and write a short cited answer"; I already hold a Gemini key. Prices checked via third-party blogs: $0.25 in / $1.50 out per million tokens, about $0.001 per question. Verify against Google's own pricing page. |
+| Model id | `gemini-3.1-flash-lite` in `config.py`, **unverified** | Run `scripts/list_models.py` once the key is available and copy the exact id (preview models often carry a suffix). |
+| Library | **`google-genai`** (2.30.0), Google's current official Python SDK; the older `google-generativeai` package is being phased out | Needs the `GEMINI_API_KEY` environment variable. |
+| Temperature | 0 | As repeatable as possible, which matters when I compare runs. |
+| Passage order | Rank order (best first) | Simplest; reordering is a Phase 3 experiment. |
+| Thinking tokens | Not capped yet | Gemini's reasoning models bill hidden "thinking" as output tokens. `ask.py` prints the thinking-token count so I can see whether it matters before deciding to cap it. |
+| Rejected: a Claude model | Not chosen | Would also work (no Claude key available here); Gemini key is what I have. Can be added later as a comparison. |
+
+Code: [`src/rag/generation.py`](src/rag/generation.py) (`build_prompt`, `generate_answer`, `check_citations`),
+[`scripts/ask.py`](scripts/ask.py) (retrieve + answer; `--dry-run` shows the prompt without calling the model),
+[`scripts/list_models.py`](scripts/list_models.py), [`tests/test_generation.py`](tests/test_generation.py) (9 checks of prompt
+building and citation checking; no model call).
+
+### What I observed before the first live call
+The dry-run prompt for "Why did Bhishma take a vow of celibacy?" put the Amba passage (Section 102) first and the passage
+with the actual vow (Section 100) second. The model will see both, so it can still answer, but it shows that the
+generator is limited by what retrieval supplies and in what order.
+
+### A prompt bug I caught in review
+My first system prompt said "Arjuna, Partha and Dhananjaya are the same person" while also telling the model to use only
+the passages. That quietly lets outside knowledge in and contradicts the grounding rule. Reworded so the model treats names
+as the same person only when a passage says so. Lesson: examples inside a prompt are instructions too.
+
+### Gotchas
+- **Environment variables load when a session starts.** Adding `GEMINI_API_KEY` in the environment settings does not reach a running session; a new session is needed.
+- **A new session starts with an empty disk.** Raw pages, processed data, vectors and installed packages are all gone; only committed files remain. `scripts/rebuild_all.sh` recreates everything (about 6 to 8 minutes), which also proves the pipeline is reproducible from the code alone.
+- Google's API returned 403 "unregistered callers" when called without a key. That means the network path works; it is not a sandbox block (compare the Hugging Face block earlier, which failed at the connection).
 
 ---
 
