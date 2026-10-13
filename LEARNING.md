@@ -520,6 +520,33 @@ questions to write in Phase 2. The evaluation set itself is never edited to make
   5. A small dense model scores overall topic, not exact words, so a single name barely moves the score.
 - **Where each is tested later:** 1 and 2 in Phase 3 query transformation (add known names and context to the query) and hybrid search (keywords plus vectors); 4 in Phase 3 chunking (larger or structure-aware chunks, parent-child); 5 in Phase 3 embeddings (compare models, add keyword search); 3 in Phase 3 reranking. Entity resolution (one node per person with all names) is the structural fix in Phase 5 and 7.
 - **Lesson:** a refusal is the right output when the passages do not contain the answer, but it hides a retrieval failure from the user. In Phase 2, score retrieval separately from generation so a miss like this is visible as a miss, not as a "correct refusal".
+- **My (the learner's) observations, and what we concluded:**
+  1. I pointed at the passage that mentions "Bharata" (I called it Section 76, the number I saw on the website) and wondered why it was not picked. It is Section LXXIV (74), file `section_075.html`. Its chunk 600 explains *the name* (a voice from heaven tells Dushmanta to cherish his son, "he shall be known as Bharata, the cherished"); it says nothing about where the boy grew up. The upbringing is in chunk 580, where he is called Sarvadamana.
+  2. Conclusion: retrieval here is **semantic, not keyword**. A chunk is scored by overall meaning, so containing the word "Bharata" is neither necessary nor sufficient. It was reasonable for the name-giving chunk to rank low for an upbringing question.
+  3. Verdict: an **explainable failure, fixable later** (not a good result): none of the correct passages is in the top 5, so recall@5 = 0 for this question. The cause (the passage uses a different name for the same person) is exactly what plain semantic retrieval cannot bridge.
+- **Numbering gotcha (found in this conversation):** the same page has three numbers: the printed heading (SECTION LXXIV), the file name (`section_075.html`, always heading + 1), and the number the website shows (76; where it comes from is unverified). Citations print the heading number and the file name. Idea pending: add the page's web address to every citation so a reader can click through.
+
+### Round 2: four more questions (Q2 to Q6)
+Run through the full pipeline (retrieve 5, answer with Gemini 3.1 Flash-Lite). Each cited passage was checked by hand.
+
+| # | Question | What the system did | Check against the text | Verdict |
+|---|---|---|---|---|
+| Q2 | Who was the father of Pandu? | Refused: passages discuss Pandu's children, death and race but not his father. | The answer is in Section 106 (Krishna-Dwaipayana begot Pandu on Ambalika). Those chunks ranked **46th, 68th and 176th**; none in the top 5. | **Retrieval miss**, correct refusal |
+| Q3 | Who is the father of Arjuna? | "Son of Pandu [4][5]. Additionally son of Indra [3]." | [3] says "born as Indra's son and known as Arjuna, the mighty son of Pandu" (supports both). [5] has Arjuna saying "I am Dhananjaya, the son of Pandu and Kunti" (supports Pandu). **[4] supports neither** (it is about Subhadra). | **Right answer, one unsupported citation** |
+| Q4 | Who is the father of Partha? | Refused: passages are about the Vasus, Tansu's descendants, Kalmashapada. | Same fact as Q3; the corpus even says "Dhananjaya, the son of Pandu". Top 5 had nothing relevant. | **Retrieval miss**, correct refusal |
+| Q5 | How are Krishna and Arjuna related through Yayati? | Refused: passages cover Krishna and Arjuna's identities and exploits but not Yayati. | Expected: no single chunk holds the chain Krishna, Yadu, Yayati, Puru, Arjuna. | **Expected multi-hop failure**; refusal explanation is honest |
+| Q6 | Who killed Karna in the Kurukshetra war? | "Arjuna slew Karna in single combat [3]." | [3] is the contents summary in Section II (Parva-sangraha) of the whole epic: "Then Arjuna slew the great Karna in single combat." | **Grounded**: answered from the passage, not from memory |
+
+What this round showed:
+- **Q3 vs Q4 is the cleanest alias demonstration so far:** the same question with two names for the same person gives an answer for one and a refusal for the other.
+- **Refusals are mostly retrieval misses, not generator caution.** In Q2 and Q4 the book does contain the answer. Three of the five questions (Q2, Q4, Q5) ended in a refusal.
+- **The citation check is too weak.** It only confirms the cited passage number exists (Q3's [4] passed it). Whether a cited passage supports the claim is the faithfulness measure in Phase 2.
+- **Near-duplicate results waste top-5 slots.** In Q2 results [1] and [4] come from the same place (Section 126, `section_127.html` para 2), and in Q6 results [3] and [5] both begin at the same spot of Section II. With 200 characters of overlap, neighbouring chunks of one passage can both rank. Candidate fix in Phase 3: diversity ranking (MMR) or de-duplication.
+- **The grounding rule held:** Q6 asks about the war, which Adi Parva does not narrate, yet the system answered only because Section II summarises the later parvas. It did not use outside knowledge. The earlier cricket question (not in the book at all) was refused correctly, so both directions of the rule have now been seen.
+- **Tally (informal, 6 questions in all, not a metric):** 3 answered with support (Q1 partly, Q3, Q6), 3 retrieval misses (Q1, Q2, Q4), 1 expected multi-hop failure (Q5), 1 correct out-of-book refusal (cricket).
+
+### Operational gotcha: Gemini 503 "high demand"
+During this round Gemini returned a temporary 503 error and the run crashed. Added retry with waiting (2, 4, 8, 16 seconds) for temporary errors (429 and 5xx) in `generate_answer`; other errors (such as a bad request) are not retried. Four tests cover it. Lesson: any pipeline that calls an outside service needs retries, and temporary failures must not look like wrong answers.
 
 ## Phase 1 retrospective (interim)
 

@@ -35,3 +35,37 @@ results = [
     check("no citations at all", check_citations("The provided passages do not answer this question.", 5) == ([], [])),
 ]
 print(f"\n{sum(results)}/{len(results)} passed")
+
+# --- retry on temporary Google-side errors (no network; sleeping is stubbed out) ---
+import src.rag.generation as gen
+from google.genai import errors
+
+gen.time.sleep = lambda s: None
+calls = {"n": 0}
+
+
+def flaky(fail_times, code):
+    calls["n"] = 0
+
+    def call():
+        calls["n"] += 1
+        if calls["n"] <= fail_times:
+            raise errors.APIError(code, {"error": {"message": "temporary"}})
+        return "ok"
+    return call
+
+
+r2 = [
+    check("503 twice, then success -> returns result after 3 calls",
+          gen._call_with_retry(flaky(2, 503)) == "ok" and calls["n"] == 3),
+    check("429 once, then success", gen._call_with_retry(flaky(1, 429)) == "ok" and calls["n"] == 2),
+]
+try:
+    gen._call_with_retry(flaky(99, 503)); r2.append(check("503 forever -> raises after retries", False))
+except errors.APIError:
+    r2.append(check("503 forever -> raises after 5 attempts", calls["n"] == 5))
+try:
+    gen._call_with_retry(flaky(99, 400)); r2.append(check("400 is not retried", False))
+except errors.APIError:
+    r2.append(check("400 is not retried (1 attempt)", calls["n"] == 1))
+print(f"\nretry checks: {sum(r2)}/{len(r2)} passed")
