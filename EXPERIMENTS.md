@@ -10,3 +10,9 @@ _No scored experiments yet; the evaluation harness comes in Phase 2._
 - **Output:** 1,670 chunks; length min/median/max 661/1000/1000; 297 chunks (18%) span more than one section.
 - **Metrics:** none yet (recall@k, MRR need the Phase 2 test set).
 - **Next:** write the question set, then sweep chunk size one value at a time (600, 800, 1000, 1500).
+
+## Baseline embeddings (not yet scored) — 2026-10-13
+- **Config:** `BAAI/bge-small-en-v1.5` via sentence-transformers, 384 dims, normalised vectors, query prefix OFF, chunks from the 1000/200 fixed-size baseline.
+- **Output:** 1,670 x 384 float32 vectors (2.6 MB), cached in `data/cache/`. Chunk token lengths min/median/max = 165/247/399; 0 chunks over the 512-token limit.
+- **Informal check only:** two Bhishma questions returned on-topic chunks, but the best passage was not always ranked first. No metrics until the Phase 2 test set exists.
+- **Next experiments (one variable each):** query prefix on/off; other embedding models; chunk-size sweep.

@@ -12,7 +12,7 @@ Alternatives → Gotchas → Results.**
 3. [Phase 0 — Setup and download](#phase-0--setup-and-download)
 4. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
 5. [Phase 1 — Chunking](#phase-1--chunking)
-6. [Phase 1 — Embeddings (concept; model not chosen yet)](#phase-1--embeddings-concept-model-not-chosen-yet)
+6. [Phase 1 — Embeddings](#phase-1--embeddings)
 7. [Public post drafts](#public-post-drafts)
 
 ---
@@ -52,6 +52,8 @@ A quick list of what I chose, so I never have to hunt for it. Details are in the
 | `printed_page` | Store, but treat as approximate and do not cite | Marker meaning unclear | Revisit |
 | Chunking strategy | Pure fixed-size, characters, may cross paragraph and section boundaries | Simplest baseline that smarter methods must beat | Baseline |
 | Chunk size / overlap | 1000 / 200 characters (20%) | Inside the range the paragraph stats support; conventional | **Hypothesis, to be tested** |
+| Embedding model | `BAAI/bge-small-en-v1.5` (384 dims, 512-token limit), run locally | Small, free, no truncation of our chunks; chosen from a list of options | Baseline |
+| Query prefix for bge | Off | Keep one variable at a time; test on/off later | Experiment pending |
 
 ---
 
@@ -256,7 +258,7 @@ section. A single value would produce wrong citations.
 
 ---
 
-## Phase 1 — Embeddings (concept; model not chosen yet)
+## Phase 1 — Embeddings
 
 ### Why it exists
 A computer cannot compare chunks by meaning if they are just text. A question like "Who was Shantanu's wife?" has to find
@@ -294,7 +296,31 @@ the chunk about Ganga and Satyavati even when they share few words. Embeddings t
 
 Very large models (Qwen3-Embedding-8B, Harrier-OSS 27B) need serious hardware and do not suit this project right now.
 
-**Decision pending:** which model is the baseline. Leaning: one small local model with a roomy input limit, then compare 2 to 3 models in Phase 3, one change at a time.
+### What I decided and built
+- **Model: `BAAI/bge-small-en-v1.5`**, chosen by me from the options above. Small (33M parameters), free, runs on this machine, and its 512-token limit is comfortably above our chunks. Later (Phase 3) I compare 2 to 3 other models, one change at a time.
+- **Library: `sentence-transformers`** (version 6.1.0). It loads Hugging Face embedding models and runs them with PyTorch. It is a big install (it pulls in PyTorch plus many supporting packages) but only one new package for me to name. `numpy` holds the vectors.
+- **Vectors are scaled to length 1** ("normalised"). Then cosine similarity is just a multiply-and-add, which is what the search step will use.
+- **Disk cache.** Vectors are saved in `data/cache/`, with a file name containing a fingerprint of the model name and every chunk's text. Change the model, the chunk size or the cleaning and the fingerprint changes, so it re-embeds. A stale cache can never be reused by accident.
+- **Query prefix off.** bge models are trained to see a phrase ("Represent this sentence for searching relevant passages: ") in front of *questions* (not chunks). `config.py` has a switch, currently off, so I can test it as its own experiment.
+
+Code: [`src/rag/embedding.py`](src/rag/embedding.py), runner [`scripts/run_embedding.py`](scripts/run_embedding.py). Settings in `config.py`
+(`EMBEDDING_MODEL`, `EMBEDDING_BATCH_SIZE`, `USE_QUERY_PREFIX`).
+
+### Results (first real run)
+- Model reports **384 dimensions and a 512-token limit**, matching the third-party listings I had found. Now confirmed by the model itself.
+- **Token lengths of our chunks: min 165, median 247, max 399. Zero of 1,670 chunks exceed the limit**, so nothing is silently cut off. (My earlier estimate of 250 to 350 tokens per 1,000 characters was close.)
+- Output: **1,670 vectors x 384 numbers = 2.6 MB**, saved to the cache. Embedding took about 1.5 minutes on CPU; a second run loads the cache instantly.
+- First vector has length exactly 1.000, confirming the normalisation.
+
+**Quick sanity check** (a throwaway test, not the evaluation): for "Who was the father of Bhishma?" the top 3 chunks were all about Bhishma, Santanu and Vichitravirya (Sections CV, CI-CII, C). For "Why did Bhishma take a vow of celibacy?" the actual vow passage (Section C) came *second*, and the third result was an unrelated vow from Section LXXVI (Kacha). So the vectors capture the topic well, but "best first" is not guaranteed. That is exactly what Phase 2 measures; I should not judge quality from two questions.
+
+### Gotchas
+- **The sandbox blocked Hugging Face** (`huggingface.co`, error 403) at first. PyPI (package downloads) worked, but model files come from Hugging Face. Fix: add the host to the environment's allowed network domains. Library install and model download are separate things.
+- Token limits are in **tokens, not characters**. I checked the real numbers with the model's own tokenizer instead of trusting a rule of thumb.
+- The `pip` install pulled in large GPU libraries even though we run on CPU. Harmless here, but heavy.
+
+### Alternatives to compare later (Phase 3)
+Qwen3-Embedding-0.6B (local, long input), EmbeddingGemma-300M (local), OpenAI text-embedding-3-small (API, tiny cost), and keyword/sparse search (BM25) for exact names. Also the query-prefix switch for bge.
 
 ---
 
