@@ -18,5 +18,13 @@ NUM_SECTIONS = 240  # upper bound; downloader stops at the first 404
 CHUNK_SIZE = 1000      # characters
 CHUNK_OVERLAP = 200
 TOP_K = 5
-EMBEDDING_MODEL = None  # decided together in Phase 1
-LLM_MODEL = None
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"  # chosen with user; 384 dims, ~512-token limit (verify on model card)
+EMBEDDING_BATCH_SIZE = 32
+# bge models are trained to see this prefix on QUERIES (not on chunks) for retrieval. A later experiment.
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+USE_QUERY_PREFIX = False  # baseline: off. Test on/off as its own one-variable experiment.
+# Generator: Gemini via the google-genai library. Key is read from the GEMINI_API_KEY environment variable.
+# The model id below is UNVERIFIED: run `python scripts/list_models.py` once the key is set and copy the exact id.
+LLM_MODEL = "gemini-3.1-flash-lite"
+LLM_TEMPERATURE = 0.0       # 0 = as repeatable as possible, which is what we want for evaluation
+LLM_MAX_OUTPUT_TOKENS = 1024
