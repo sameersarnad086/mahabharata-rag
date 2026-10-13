@@ -18,7 +18,8 @@ Alternatives → Gotchas → Results.**
 9. [Phase 1 — Generation](#phase-1--generation)
    - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
 10. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
-11. [Public post drafts](#public-post-drafts)
+11. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
+12. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -657,6 +658,102 @@ Each is one change at a time, logged in `EXPERIMENTS.md`. Entity resolution (one
 
 ### Carried over
 PR #2 awaits merge; page web address in citations; the website's section numbering (unverified); `Haranaharana Parva` spelling unchecked; prices from third-party blogs unverified.
+
+---
+
+## Phase 2 — Evaluation: concepts and metrics
+
+*Status: concepts learned and decisions pending; no evaluation code or question set yet.*
+
+### Why it exists
+Until now quality was judged by reading 8 answers and forming impressions. That cannot tell me whether a change helped:
+if I change the chunk size, I cannot separate "better" from "I asked different questions". An **evaluation set** is a fixed
+list of questions with known right answers and known source sections. After every change I re-run the same list and
+compare numbers. It is what makes Phase 3 honest: each experiment either moves a number or it does not.
+
+### Score retrieval and generation separately
+| Stage | Question it answers | Example failure from Phase 1 |
+|---|---|---|
+| Retrieval | Did the right passages reach the model? | Pandu's father: the answer ranked 46th, so the model had nothing to use |
+| Generation | Given the passages, was the answer correct and honest? | Arjuna: right answer, one citation that supported nothing |
+
+If only the final answer is scored, a retrieval miss looks like a "correct refusal" (Q1, Q2, Q4). Splitting the two tells
+me which stage to fix.
+
+### Retrieval metrics
+A retrieved chunk counts as a **hit** if it comes from a labelled (gold) section.
+| Metric | Meaning | Notes |
+|---|---|---|
+| **Hit rate@k** | Did at least one relevant passage appear in the top k? (yes/no per question, averaged) | Simplest; the main number when the full relevant set is unknowable |
+| **Precision@k** | Fraction of the top k that is relevant | Q3: 2 of 5 = 0.4 |
+| **Recall@k** | Fraction of the labelled relevant passages that appeared in the top k | Only as complete as the labels |
+| **MRR** (mean reciprocal rank) | 1 divided by the rank of the first relevant passage, averaged over questions. Rank 1 = 1, rank 2 = 1/2, rank 3 = 1/3, a miss = 0 | Rewards putting the answer early; looks at the first hit only |
+| **nDCG** | Each relevant passage earns a score that shrinks with its rank: 1.00 (rank 1), 0.63, 0.50, 0.43, 0.39 (rank 5), i.e. 1 / log2(rank + 1). The sum is divided by the best possible sum for that question. 1.0 = perfect | Handles several relevant passages and graded relevance (perfect / partial) |
+
+**Worked example, Q3 ("Who is the father of Arjuna?").** Gold sections {67, 217}. Top 5 came from sections 134, 229, **67**, 95,
+**217**. Hit rate@5 = 1 (yes). Reciprocal rank = 1/3. Precision@5 = 2/5. Recall@5 = 2 of 2 = 1.0. nDCG: DCG = 0.50 + 0.39 = 0.887;
+best possible (relevant at ranks 1 and 2) = 1.00 + 0.63 = 1.631; nDCG = **0.54**. For Q1 (gold {74}, top 5 from 128, 123,
+191-192, 129, 110-111) every metric is 0.
+
+**Illustrative only** (my quick labels on 6 questions: Q1 {74}, Q2 {106}, Q3 and Q4 {67, 217}, Q6 {2}, Q7 {100}): hit rate@5 =
+3 of 6 = 50%; MRR@5 = (0 + 0 + 1/3 + 0 + 1/3 + 1/2) / 6 = about 0.19. These are not baseline numbers; the real set has 30 to 50
+questions with verified labels.
+
+### Where "relevant" comes from: the metrics do not know, we tell them
+The metrics derive nothing about relevance. They compare what retrieval returned against labels a person wrote. After that
+it is pure arithmetic.
+| Needs a person | Computed automatically |
+|---|---|
+| The questions | What retrieval returned, with ranks and scores |
+| The gold sections (and evidence phrases) for each question | Hit rate, precision, recall, MRR, nDCG, and their averages |
+| The short expected answer (for generation scoring) | Refusal detection |
+| Which questions are unanswerable | Faithfulness: a language model reads the answer plus the passages it was given (no labels needed) |
+| | Answer correctness: a language model compares the answer with the expected answer |
+
+This works because every chunk carries `section_numbers` (metadata from day one). The check "is any returned section in the gold set?" is a simple overlap test.
+
+### Traps
+- **Unlabelled correct passages count as misses.** If retrieval returns a Section 134 chunk that truly says "Arjuna, son of Pandu" but I only labelled {67, 217}, the metric blames retrieval for something it did right. Defences: label generously; read the misses of the baseline by hand once; **if labels are ever added, re-score every earlier run with the new labels** so comparisons stay fair.
+- **"All relevant passages" is unknowable for open facts.** "Arjuna is Pandu's son" is stated all over the epic. So I label a **gold minimum** (sections I verified), and treat hit rate and MRR as the main numbers, recall as secondary.
+- **Section labels are coarse and flatter the score.** A chunk from the right section but the wrong part counts as a hit.
+- **Unanswerable questions** have no gold section; they are scored on the generation side (did it refuse?).
+- **Multi-hop questions** need several sections together; score them as their own group.
+- **Label sections, not chunks.** Chunk ids change whenever chunking changes; heading numbers do not. This is also why the heading-number vs file-number confusion matters.
+
+### Ways to label (and how others do it)
+| Method | A retrieved chunk is a hit if... | Trade-off |
+|---|---|---|
+| **Section** (our current idea) | its section number is in the gold set | Easy to write, stable across re-chunking, optimistic |
+| **Evidence phrase** | its text contains a short exact phrase copied from the passage (e.g. "the mighty son of Pandu") | Strict, still stable across chunk sizes, more effort per question |
+| **Both** (leaning towards) | report both numbers | The gap shows how generous the section label is |
+
+How the wider field does it (from background knowledge, not freshly searched; verify before quoting publicly):
+| Approach | How it works | Where it appears |
+|---|---|---|
+| Relevance judgments ("qrels") | A table of question, document id, relevance grade (for example 0 to 3), filled in by human assessors | TREC evaluations; benchmarks such as BEIR and MS MARCO |
+| Document-level labels | The gold unit is a whole stable item: a help article, a support page, a contract clause | Most company RAG systems, because document ids survive re-chunking. **Our "section" is this.** |
+| Answer-string matching | A passage is a hit if it contains the known answer text | Open-domain question answering; the original dense-retrieval (DPR) paper scored top-k accuracy this way. **Our evidence phrase is this.** |
+| Span or evidence labels | The gold item is a highlighted span (character offsets); a chunk counts if it overlaps | Question-answering datasets, some chunking studies |
+| Synthetic labels | A language model writes a question from a chosen chunk; that chunk is the gold | Quick bootstrapping |
+| Judged by a model or by users | A language model, or click and feedback data, decides relevance | Production monitoring; reference-free tools such as Ragas |
+Cautions: synthetic questions flatter retrieval because they share the chunk's wording and miss exactly the alias and lineage questions that matter here, so keep the set human-written. Model-judged relevance is useful but circular if the same model also generates answers.
+
+### Generation metrics (a language model as judge)
+- **Faithfulness:** every claim follows from the passages given, and each cited passage really supports its claim. This would have caught the bad Subhadra citation in Q3.
+- **Answer relevance and correctness:** it answers the question and matches the expected answer.
+- **Refusal accuracy:** it refuses exactly when it should.
+- The judge should ideally be a different (preferably stronger) model than the generator; chosen when we build it. Later: compare my own implementation with the Ragas and DeepEval libraries, after checking they are current.
+
+### Rules that keep the evaluation honest
+- Write the set **before** looking at Phase 3 results, and **never edit it** to flatter them. New questions go in a clearly marked separate section.
+- Mix the types: plain facts, alias pairs (the same question under different names), lineage and relation questions, multi-hop, unanswerable, ambiguous names. About 40 questions. Starting target: 10 / 8 (4 pairs) / 8 / 6 / 4 / 4.
+- Q1 to Q8 in `QUESTION_LOG.md` are seeds, not part of the set.
+- The questions are mine to write (I know what I want to ask); Claude finds the source sections and phrases and drafts expected answers, and I verify them against the text.
+
+### Decisions pending
+1. Labelling method: section only, evidence phrase only, or both (leaning: both).
+2. Who writes questions and in what format (leaning: I write the questions in plain English; columns: question, type, expected answer, source sections by printed heading number, evidence phrase, notes).
+3. Final mix and size of the set.
 
 ---
 
