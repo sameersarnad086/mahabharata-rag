@@ -589,6 +589,10 @@ not measurement. Measuring is Phase 2.
 - **Logging every question with the retrieved chunks** (`QUESTION_LOG.md`) turned vague impressions ("it missed Bharata") into specific ranks and causes.
 
 ### What did not work, with the evidence
+- **The core challenge of this project is not solved by the baseline, by design: lineage, and more than one name for one person.** Plain semantic search retrieves passages that *resemble* a question. It does not know that Arjuna, Partha and Dhananjaya are one person, or that "the father of Pandu" has two answers in the text (the nominal father Vichitravirya and the biological father Vyasa), or that Krishna's line (Yadu) and Arjuna's line (Puru) meet at Yayati.
+  - **Evidence:** Q3 vs Q4 (an answer for "Arjuna", a refusal for "Partha"); Q1 (the boy is "Bharata" in one passage and "Sarvadamana" in another); Q2 (the answer ranked 46th at best); Q5 (the Yayati chain exists in no single chunk).
+  - **Why I am not fixing it in Phase 1:** I cannot prove a fix helps without the Phase 2 numbers, and the cheap fixes may not be enough.
+  - **Where it is solved:** measured in Phase 2 (alias and lineage questions in the test set); mitigated in Phase 3 (alias expansion, keyword plus meaning search, query decomposition); solved structurally in Phase 5 (GraphRAG, one node per person with all their names) and Phase 7 (the lineage project, with a citation on every family link). The full plan is in "Known problems: where each one gets solved".
 - **Retrieval is the weak link, not generation.** Of the 4 refusals on questions the book can answer or that need the book, 3 were retrieval misses (Q1 Bharata, Q2 Pandu's father, Q4 Partha's father): the answer exists but ranked 46th to 351st out of 1,670. When the right passages did arrive, the generator was accurate.
 - **Aliases.** The same question gave an answer for "Arjuna" and a refusal for "Partha".
 - **Names that mean several things.** "Bharata" is in 255 of 1,670 chunks, mostly as "O Bharata", so it carries almost no signal.
