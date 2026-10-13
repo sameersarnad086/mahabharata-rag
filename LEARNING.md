@@ -16,6 +16,7 @@ Alternatives → Gotchas → Results.**
 7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
 8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
 9. [Phase 1 — Generation](#phase-1--generation)
+   - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
 10. [Phase 1 retrospective (interim)](#phase-1-retrospective-interim)
 11. [Public post drafts](#public-post-drafts)
 
@@ -500,6 +501,25 @@ chunk and graph edge already carries its source, so disagreements can be reporte
 picking one.
 
 ---
+
+## Question log: observed failures (candidates for Phase 2)
+
+Informal questions I asked the baseline, with what went wrong. These are **not** the evaluation set; they are leads for
+questions to write in Phase 2. The evaluation set itself is never edited to make results look better.
+
+### Q1. "Why did Bharata grow up away from his father?" (retrieval miss, correct refusal)
+- **Result:** the model answered "The provided passages do not answer this question". The book does cover it (Bharata is the son of Dushmanta and Sakuntala; the hermitage scene is Section 74). Generation behaved correctly given what it was handed; **retrieval failed**.
+- **Top 5 retrieved:** Sections 128, 123, 191-192, 129, 110-111, all about Pandu's sons or the princes' upbringing.
+- **Where the relevant text ranked (of 1,670 chunks):** chunk 580 (Section 74, mentions the childhood name Sarvadamana) **351st**; chunk 600 (Section 74, "this son shall be known as Bharata") **133rd**; the Section 68-69 chunks where Janamejaya asks about Bharata's birth and life 608th to 731st. Reworded to name Dushmanta and the hermitage: still 404th. Reworded to "Who was Sakuntala's son and where was he raised?": 33rd, still outside the top 5.
+- **"Bharata" is a weak search term:** it appears in 255 of 1,670 chunks (15%). In Sections 68 to 77 every use except chunk 600 is a form of address ("O Bharata", "of Bharata's race"). Section 76 (Kacha and Devayani) has three such chunks; one of them ranked 29th, above the real story chunk, so a shared word gave a misleading pull.
+- **Hypotheses (not yet separated by experiment):**
+  1. Alias: the key passage uses the childhood name Sarvadamana.
+  2. Same word, different meaning: "Bharata" as person, dynasty and form of address.
+  3. The question's other words ("grow up", "away from his father") resemble generic upbringing passages.
+  4. The story spans Sections 69 to 74, so no single chunk holds the answer (chunking).
+  5. A small dense model scores overall topic, not exact words, so a single name barely moves the score.
+- **Where each is tested later:** 1 and 2 in Phase 3 query transformation (add known names and context to the query) and hybrid search (keywords plus vectors); 4 in Phase 3 chunking (larger or structure-aware chunks, parent-child); 5 in Phase 3 embeddings (compare models, add keyword search); 3 in Phase 3 reranking. Entity resolution (one node per person with all names) is the structural fix in Phase 5 and 7.
+- **Lesson:** a refusal is the right output when the passages do not contain the answer, but it hides a retrieval failure from the user. In Phase 2, score retrieval separately from generation so a miss like this is visible as a miss, not as a "correct refusal".
 
 ## Phase 1 retrospective (interim)
 
