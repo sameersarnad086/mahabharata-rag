@@ -39,7 +39,7 @@ All tunables are in `config.py`.
 
 ## Key facts to remember
 - Section numbers: printed heading (SECTION LXXIV = 74), file name = heading + 1 (`section_075.html`), and the website shows yet another number (unverified). Sections 190 to 199 use non-standard Roman numerals in the source; `section_number` is stored as a plain integer.
-- Known weaknesses seen in the baseline: alias problem (Arjuna vs Partha gave an answer vs a refusal), name "Bharata" appears in 255 of 1,670 chunks, multi-hop questions fail, near-duplicate chunks fill top-5 slots, citation check only verifies that a cited number exists (not that it supports the claim).
+- **The central challenge is the lineage and one person with more than one name problem** (defined in `LEARNING.md`, "Named problems"). Seen in the baseline: Arjuna vs Partha gave an answer vs a refusal; name "Bharata" appears in 255 of 1,670 chunks, multi-hop questions fail, near-duplicate chunks fill top-5 slots, citation check only verifies that a cited number exists (not that it supports the claim).
 - The Phase-to-problem map is in `LEARNING.md` ("Known problems: where each one gets solved").
 - Prices and model lineups quoted in the notes came from third-party blogs; verify on official pages.
 

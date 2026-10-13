@@ -3,6 +3,8 @@
 Informal questions asked of the Phase 1 baseline, with the full result and a human verdict.
 These are exploration notes, **not** the Phase 2 evaluation set (which is written separately and never edited to flatter results).
 
+Questions Q1 to Q5 mainly illustrate the **lineage and one person with more than one name problem** (see `LEARNING.md`, "Named problems").
+
 Setup for all entries: fixed-size chunks (1000 chars, 200 overlap), `BAAI/bge-small-en-v1.5` embeddings, top-5 cosine retrieval,
 `gemini-3.1-flash-lite` (temperature 0). Section numbers are the printed heading numbers; the file name is always heading + 1.
 Chunk ids are positions in `data/processed/chunks.jsonl` and change if chunking changes.

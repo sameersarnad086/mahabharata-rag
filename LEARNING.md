@@ -22,6 +22,12 @@ Alternatives → Gotchas → Results.**
 
 ---
 
+## Named problems (shared vocabulary)
+
+**The lineage and one person with more than one name problem** — the project's central challenge. Questions about who is related to whom (father, son, ancestor, descendant, how two people connect) are hard for a plain search over text, and the same person appears under several names (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava), spellings vary (Yudhishthira / Yudhisthira), and one name can belong to several people (the many Parikshits and Janamejayas, or "Bharata" as a person, a dynasty and a form of address). The baseline does not solve it, by design. Where it is measured and solved: "Known problems: where each one gets solved" (Phase 2 measure, Phase 3 mitigate, Phase 5 and 7 solve structurally). Evidence so far: Q1 to Q5 in `QUESTION_LOG.md`.
+
+---
+
 ## The pipeline at a glance
 
 ```
@@ -369,7 +375,7 @@ I asked the same question with two names for the same person:
 - "Who is the father of **Arjuna**?" and "Who is the father of **Partha**?" returned **0 chunks in common out of 5**.
 - The Arjuna results began with a water-vessel scene and a battle scene; the Partha results with lists of Nakshatras and descendants of Soma. Neither obviously shows the answer (judged by eye on the first 90 characters only; Phase 2 measures this properly).
 - The corpus uses "Arjuna" in about 240 chunks and "Partha" in about 64. The model does not reliably treat them as the same person.
-- This is the domain challenge "many names for one person" in action. Candidate fixes for later: query rewriting that adds known aliases, a name-alias table, keyword search (BM25) combined with vectors (hybrid), or a knowledge graph (Phase 5).
+- This is the lineage and one person with more than one name problem in action. Candidate fixes for later: query rewriting that adds known aliases, a name-alias table, keyword search (BM25) combined with vectors (hybrid), or a knowledge graph (Phase 5).
 
 ### Things retrieval cannot do
 - **Multi-hop questions** ("how are Krishna and Arjuna related through Yayati?"): no single chunk holds the answer, and top-k returns chunks similar to the question, not a chain of facts. Needs query decomposition or a knowledge graph.
@@ -463,7 +469,7 @@ The rule I follow: **measure a problem in Phase 2, mitigate it with a targeted t
 structural fixes (graphs, agents) in Phase 5 and 7 if the cheaper fixes are not enough.** Solving things in this order
 means I can prove each fix helped, and I don't build a knowledge graph to fix something a keyword index would have fixed.
 
-### 1. Many names for one person (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava)
+### 1. The lineage and one person with more than one name problem: many names for one person (Arjuna = Partha = Dhananjaya = Gudakesha; Krishna = Vasudeva = Keshava = Madhava)
 **Evidence from Phase 1:** the questions "Who is the father of Arjuna?" and "...of Partha?" shared **0 of 5** top results.
 "Arjuna" appears in about 240 chunks and "Partha" in about 64, and the model does not reliably treat them as one person.
 
@@ -589,7 +595,7 @@ not measurement. Measuring is Phase 2.
 - **Logging every question with the retrieved chunks** (`QUESTION_LOG.md`) turned vague impressions ("it missed Bharata") into specific ranks and causes.
 
 ### What did not work, with the evidence
-- **The core challenge of this project is not solved by the baseline, by design: lineage, and more than one name for one person.** Plain semantic search retrieves passages that *resemble* a question. It does not know that Arjuna, Partha and Dhananjaya are one person, or that "the father of Pandu" has two answers in the text (the nominal father Vichitravirya and the biological father Vyasa), or that Krishna's line (Yadu) and Arjuna's line (Puru) meet at Yayati.
+- **The lineage and one person with more than one name problem is not solved by the baseline, by design.** Plain semantic search retrieves passages that *resemble* a question. It does not know that Arjuna, Partha and Dhananjaya are one person, or that "the father of Pandu" has two answers in the text (the nominal father Vichitravirya and the biological father Vyasa), or that Krishna's line (Yadu) and Arjuna's line (Puru) meet at Yayati.
   - **Evidence:** Q3 vs Q4 (an answer for "Arjuna", a refusal for "Partha"); Q1 (the boy is "Bharata" in one passage and "Sarvadamana" in another); Q2 (the answer ranked 46th at best); Q5 (the Yayati chain exists in no single chunk).
   - **Why I am not fixing it in Phase 1:** I cannot prove a fix helps without the Phase 2 numbers, and the cheap fixes may not be enough.
   - **Where it is solved:** measured in Phase 2 (alias and lineage questions in the test set); mitigated in Phase 3 (alias expansion, keyword plus meaning search, query decomposition); solved structurally in Phase 5 (GraphRAG, one node per person with all their names) and Phase 7 (the lineage project, with a citation on every family link). The full plan is in "Known problems: where each one gets solved".
