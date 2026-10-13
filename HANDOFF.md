@@ -4,11 +4,11 @@ Short status file so a fresh session (or a fresh chat) can continue without the 
 Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules), `LEARNING.md` (study notes and decisions),
 `EXPERIMENTS.md` (experiment log), `QUESTION_LOG.md` (every question asked, with chunks and verdicts).
 
-## Where we are (2026-10-13)
+## Where we are (2026-10-13, Phase 1 closed)
 - **Phase 1 (baseline RAG, no frameworks) is working end to end.** Download, ingest, fixed-size chunks (1000/200 chars), `BAAI/bge-small-en-v1.5` embeddings, numpy cosine top-5, Gemini `gemini-3.1-flash-lite` answers with `[n]` citations.
-- **Not scored yet.** Everything so far is informal (8 questions in `QUESTION_LOG.md`). First real numbers come in Phase 2.
+- **Phase 1 is complete and its final retrospective is written** (`LEARNING.md`, "Phase 1 retrospective (final)"). Nothing is scored yet; everything is informal (8 questions in `QUESTION_LOG.md`). First real numbers come in Phase 2.
 - **Git:** branch `claude/vigilant-ride-83azmt`. PR #1 (ingestion) was merged. **PR #2** (chunking, embeddings, retrieval, generation, notes) is open and waits for the user to merge it. After a merge, restart the branch from the updated `main` before new work. Only the user merges.
-- **Next steps, in order:** (1) write the final Phase 1 retrospective in `LEARNING.md` (required by `CLAUDE.md`); (2) user merges PR #2; (3) plan Phase 2: the user writes 30 to 50 test questions with expected answers and source sections, including alias, multi-hop and unanswerable ones; then build the metrics (recall@k, MRR, nDCG, faithfulness, answer relevance).
+- **Next steps, in order:** (1) user merges PR #2; (2) plan Phase 2 (details in the retrospective's "What Phase 2 should do"): the user writes 30 to 50 test questions with expected answers and source sections, including alias, multi-hop and unanswerable ones; then build the metrics (recall@k, MRR, nDCG, faithfulness, answer relevance).
 
 ## How to work with the user (also in CLAUDE.md)
 - The user is **not a coder**. Claude writes all code and explains in plain language: libraries used, how the method works, trade-offs, what results mean. Name every new library.
@@ -16,6 +16,7 @@ Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules),
 - **One variable at a time** when experimenting. Log in `LEARNING.md` and `EXPERIMENTS.md`; each phase ends with a retrospective.
 - Don't state guesses as facts (I once wrongly said a new session was needed for an API key). Verify before prescribing.
 - Don't open or merge pull requests unless asked. Never paste or print secrets.
+- Update this file every few steps and check with the user first (their instruction); don't add it as a per-step rule.
 
 ## Environment checklist (lives outside the repo)
 - **Secret:** `GEMINI_API_KEY` set as an environment variable in the cloud environment settings (never in files).
@@ -45,7 +46,6 @@ All tunables are in `config.py`.
 ## Open decisions
 - Add the page web address to every citation (pending; need the website URL for the page the user sees as "76").
 - Compare newer Gemini models (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-2.5-flash`) in Phase 3; prices unchecked.
-- Whether to add a rule to `CLAUDE.md` to update this file at the end of every step.
 
 ## Starter message for a new chat
 "Read CLAUDE.md and HANDOFF.md, then LEARNING.md's decisions log. Check git status and the state of the open PR. Rebuild with scripts/rebuild_all.sh if the data folders are empty. Then continue with the next steps in HANDOFF.md."

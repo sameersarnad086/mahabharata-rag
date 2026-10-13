@@ -22,3 +22,6 @@ _No scored experiments yet; the evaluation harness comes in Phase 2._
 - **Informal checks (2 questions):** answerable question gave a supported but incomplete answer with valid citations; unanswerable question was refused correctly. About 1,500 prompt tokens and under 60 output tokens per question.
 - **Metrics:** none. Recall@k, MRR, nDCG, faithfulness and answer relevance need the Phase 2 question set.
 - **Next:** write the Phase 2 evaluation set (answerable, alias, multi-hop and unanswerable questions), then sweep one variable at a time starting from this baseline.
+
+## Phase 1 closed — 2026-10-13
+The configuration in "First end-to-end run" is the **Phase 1 baseline** and the reference for every later comparison. Informal results of 8 questions are in `QUESTION_LOG.md`; the retrospective in `LEARNING.md` lists what to measure first in Phase 2.

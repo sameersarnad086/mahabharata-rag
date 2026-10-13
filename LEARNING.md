@@ -17,7 +17,7 @@ Alternatives → Gotchas → Results.**
 8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
 9. [Phase 1 — Generation](#phase-1--generation)
    - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
-10. [Phase 1 retrospective (interim)](#phase-1-retrospective-interim)
+10. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
 11. [Public post drafts](#public-post-drafts)
 
 ---
@@ -25,10 +25,10 @@ Alternatives → Gotchas → Results.**
 ## The pipeline at a glance
 
 ```
-download  →  ingest/clean  →  chunk  →  embed  →  index  →  retrieve  →  generate answer
- (done)        (done)         (done:     (next)
-                              baseline)
+download → ingest/clean → chunk → embed → retrieve (numpy) → generate answer (Gemini)
+ (done)       (done)       (done)  (done)      (done)              (done)
 ```
+Phase 1 baseline is complete end to end. "Index" is just a numpy array at this size; a real index (FAISS, vector database) is a Phase 3 comparison.
 
 Rule of thumb I keep coming back to: **each stage can only pass on what the previous stage gave it.** A mistake in
 ingestion is inherited by chunking, embedding and retrieval, and nothing later can repair it.
@@ -41,6 +41,10 @@ Current data flow and files (all derived data is gitignored and can be rebuilt w
 | Ingest | raw HTML | `data/processed/paragraphs.jsonl` (1,306 paragraphs) | `scripts/run_ingest.py` |
 | Check | paragraphs | sanity report | `scripts/report_ingest.py` |
 | Chunk | paragraphs | `data/processed/chunks.jsonl` (1,670 chunks) | `scripts/run_chunking.py` |
+| Embed | chunks | `data/cache/emb_*.npy` (1,670 x 384 numbers, 2.6 MB) | `scripts/run_embedding.py` |
+| Retrieve | a question | the 5 closest chunks with scores and citations | `scripts/search.py` |
+| Generate | question + 5 chunks | a cited answer from Gemini | `scripts/ask.py` |
+| Log | a question | an entry in `QUESTION_LOG.md` | `scripts/log_question.py` |
 
 ---
 
@@ -59,6 +63,11 @@ A quick list of what I chose, so I never have to hunt for it. Details are in the
 | Chunk size / overlap | 1000 / 200 characters (20%) | Inside the range the paragraph stats support; conventional | **Hypothesis, to be tested** |
 | Embedding model | `BAAI/bge-small-en-v1.5` (384 dims, 512-token limit), run locally | Small, free, no truncation of our chunks; chosen from a list of options | Baseline |
 | Query prefix for bge | Off | Keep one variable at a time; test on/off later | Experiment pending |
+| Search method | Brute force: cosine similarity against all 1,670 vectors with numpy, top-5 | About 1.5 ms at this size; no index needed | Baseline |
+| Generator | `gemini-3.1-flash-lite` via `google-genai`, temperature 0 | Cheap, current, I hold the key | Baseline; compare newer models in Phase 3 |
+| Prompt | Answer only from numbered passages, cite `[n]`, fixed refusal wording, report disagreements, merge names only if a passage says so | Grounding for a lineage project | Baseline |
+| Passage order | Best match first | Simplest | Experiment pending |
+| Failure handling | Retry temporary Gemini errors (429, 5xx) 4 times with waits | A "high demand" 503 crashed a run | Final |
 
 ---
 
@@ -548,45 +557,96 @@ What this round showed:
 ### Operational gotcha: Gemini 503 "high demand"
 During this round Gemini returned a temporary 503 error and the run crashed. Added retry with waiting (2, 4, 8, 16 seconds) for temporary errors (429 and 5xx) in `generate_answer`; other errors (such as a bad request) are not retried. Four tests cover it. Lesson: any pipeline that calls an outside service needs retries, and temporary failures must not look like wrong answers.
 
-## Phase 1 retrospective (interim)
+## Phase 1 retrospective (final)
 
 **Rule (also in `CLAUDE.md`):** at the end of every phase I write a retrospective: what worked, what did not, how it
-compares with standard RAG practice, and what that means for the next phase. This one is **interim**. It gets finalised
-when Phase 1 ends, after retrieval and answer generation are built and I have run real questions end to end.
+compares with standard RAG practice, and what that means for the next phase.
 
-**Phase 1 still to do:** baseline retrieval module and command; answer generation with a language model (prompt
-assembly, citations); a first set of end-to-end runs.
+### Verdict
+**Phase 1 is complete as a baseline.** A question goes in and a cited answer comes out, built from my own pipeline with no
+framework. It is **not scored**: everything below that sounds like quality is observation from 8 hand-checked questions,
+not measurement. Measuring is Phase 2.
 
-### What worked so far
-- **Looking at the data before building.** Measuring the HTML (1.4% story text), the paragraphs (median 653 characters) and the token counts (max 399 vs a 512 limit) removed guesswork at three separate decisions.
-- **Cleaning in ingestion with provenance kept.** Every chunk can be traced to its section, sub-parva, file and paragraph, which citations will need.
-- **Reviewing small, then testing everything.** Checking three files by eye found the page-break problem; running all 237 found the heading-case and sub-parva-spelling bugs.
-- **Caching with a fingerprint.** Re-running costs seconds, and a stale cache cannot be reused by accident.
-- **One variable at a time, baseline first.** Plain fixed-size chunks plus a small local model gives me a number to beat.
+### The pipeline in numbers
+| | |
+|---|---|
+| Source | 237 pages (preface + Sections I to CCXXXVI), 99 MB of HTML of which 1.4% is story text |
+| Paragraphs | 1,306 (385 page-break fragments glued back) |
+| Chunks | 1,670 (1000 chars, 200 overlap); 18% span more than one section; 165 to 399 tokens each, none over the 512 limit |
+| Vectors | 1,670 x 384 numbers, 2.6 MB; embedding took about 1.5 minutes on CPU |
+| Search | about 1.5 ms per question |
+| Answer | about 1,500 tokens in and under 60 out per question, roughly a tenth of a cent at blog prices (unverified) |
+| Tests | 29 checks across chunking, retrieval and generation, all passing |
+| Rebuild from scratch | `bash scripts/rebuild_all.sh`, about 6 to 8 minutes |
 
-### What did not work, or is weak so far
-- **Aliases:** 0 of 5 overlap between "Arjuna" and "Partha" queries.
-- **Ranking at the top is fragile:** top-5 scores sit within 0.02 of each other, and the passage with the actual vow ranked second for the celibacy question.
-- **Fixed-size chunks cut mid-word** and 18% span more than one section.
-- **`printed_page` is unreliable** and cannot be used in citations yet.
-- **No quality numbers at all yet.** Everything above is observation from a handful of questions, not measurement.
+### What worked
+- **Looking at the data before building.** Measuring the HTML, the paragraph lengths and the token counts removed guesswork at three separate decisions.
+- **Cleaning in ingestion, with provenance kept.** Every chunk traces back to section, sub-parva, file and paragraph, so citations are possible.
+- **Small review, then whole-corpus checks.** Three files by eye found the page-break problem; running all 237 found a mixed-case heading and sub-parva spellings, and a later check found the source's odd Roman numerals.
+- **Caching with a fingerprint** and a **one-command rebuild**: experiments are cheap to re-run and nothing depends on a particular session's disk.
+- **A deliberately simple baseline.** Plain fixed-size chunks plus a small local model gives every later change something to be measured against.
+- **Grounding held in both directions.** The model answered from passages when they held the answer (Karna, Arjuna) and declined when they did not (cricket, Yayati). It did not fall back on memory of the epic.
+- **Logging every question with the retrieved chunks** (`QUESTION_LOG.md`) turned vague impressions ("it missed Bharata") into specific ranks and causes.
+
+### What did not work, with the evidence
+- **Retrieval is the weak link, not generation.** Of the 4 refusals on questions the book can answer or that need the book, 3 were retrieval misses (Q1 Bharata, Q2 Pandu's father, Q4 Partha's father): the answer exists but ranked 46th to 351st out of 1,670. When the right passages did arrive, the generator was accurate.
+- **Aliases.** The same question gave an answer for "Arjuna" and a refusal for "Partha".
+- **Names that mean several things.** "Bharata" is in 255 of 1,670 chunks, mostly as "O Bharata", so it carries almost no signal.
+- **Multi-hop questions** (Krishna and Arjuna through Yayati) cannot be answered from any single chunk.
+- **Near-duplicate results.** Overlapping neighbouring chunks of one passage can take two of the five slots.
+- **Weak citation check.** It verifies that a cited number exists, not that the passage supports the claim (Q3 cited a Subhadra passage for "son of Pandu").
+- **Fixed-size cuts** fall mid-word and split stories (the Bharata story spans Sections 69 to 74).
+- **`printed_page` is unreliable**, so it is not used in citations.
+
+### Informal scorecard (8 questions; not a metric)
+| Outcome | Questions |
+|---|---|
+| Answered, supported | Q3 (one bad citation), Q6 |
+| Answered, supported but incomplete | Q7 |
+| Retrieval miss, refused | Q1, Q2, Q4 |
+| Expected multi-hop failure, refused | Q5 |
+| Correct refusal, not in the book | Q8 |
+
+### Mistakes made along the way (and the lesson from each)
+- I told you a new session was needed for the API key; it was not. **Lesson:** re-check before prescribing a workaround, and do not state a guess about how a platform works as fact.
+- I kept saying PR #1 was open after it had been merged, and pushed later work to an already-merged branch. **Lesson:** verify the state of a pull request before talking about it. Fixed by tidying the branch and opening PR #2.
+- My first system prompt said "Arjuna and Partha are the same person" while also forbidding outside knowledge. **Lesson:** examples inside a prompt are instructions too.
+- The "no gaps in section numbers" check had passed only because a simple converter happened to read the source's non-standard numerals. **Lesson:** a check that passes by luck is not a check.
+- A Gemini "high demand" error crashed a run. **Lesson:** anything that calls an outside service needs retries.
+- The word "section" meant three different numbers (heading, file name, website). **Lesson:** make citations unambiguous; adding the page's web address is still pending.
 
 ### How this compares with standard RAG practice
 | Standard practice | Where I am |
 |---|---|
 | Clean and parse the source properly before indexing | Done |
-| Chunk by structure, not just by character count | Not yet; baseline is deliberately naive |
 | Keep metadata on every chunk for filtering and citations | Done |
-| Use hybrid search (keywords plus vectors) | Not yet |
+| Chunk by structure, not just by character count | Not yet; baseline is deliberately naive |
+| Hybrid search (keywords plus vectors) | Not yet |
+| Query rewriting, expansion, decomposition | Not yet |
 | Rerank the shortlist | Not yet |
-| Handle queries before retrieval (rewrite, expand, decompose) | Not yet |
-| Build an evaluation set and metrics before tuning | **Not yet; this is the gap that matters most** |
-| Ground answers, cite sources, and allow "I don't know" | Not yet (generation stage) |
+| Diversity ranking (avoid near-duplicates) | Not yet |
+| Grounded answers, citations, "I don't know" | **Done**, with a weak citation check |
+| An evaluation set and metrics before tuning | **Not yet; this is the gap that matters most** |
+| Retrieval and generation scored separately | Not yet; Phase 2 |
 
-### What this leads to
-- **Phase 2 comes first, and it is measurement, not new techniques.** The evaluation set (with alias, multi-hop and unanswerable questions mixed in) turns today's impressions into numbers: recall@k, MRR, nDCG, faithfulness.
-- **Phase 3 then follows the numbers.** The weakest metric tells me which stage to deepen first (probably query transformation and hybrid retrieval, given the alias result), one change at a time, logged in `EXPERIMENTS.md`.
-- **Phases 4 to 7** only if the earlier fixes leave a measurable gap: framework comparison, advanced RAG, GraphRAG, and the lineage project.
+### What Phase 2 should do (measurement, not new techniques)
+1. **Write the question set** (you write it; I help structure it). Mix: plain facts; alias pairs asking the same thing under different names; multi-hop; unanswerable; ambiguous names. For each, record the expected answer and the **source section(s)** (heading number and file name, so retrieval can be scored).
+2. **Score retrieval separately from generation:** recall@k, MRR, nDCG, so a miss shows up as a miss and not as a "correct refusal".
+3. **Score generation:** faithfulness (does each cited passage actually support the claim?) and answer relevance, using a language model as judge. Use a different model from the generator where possible.
+4. **Never edit the set to flatter results.** Questions added later go in a clearly marked separate section. Q1 to Q8 in `QUESTION_LOG.md` are seeds, not the set.
+5. **Record the baseline numbers** in `EXPERIMENTS.md` as the reference for every Phase 3 comparison.
+
+### What Phase 3 will likely test first (hypotheses, to be ordered by the Phase 2 numbers)
+1. Query expansion with known aliases (Arjuna, Partha, Dhananjaya...) and query rewriting.
+2. Hybrid search: keywords plus vectors, merged with reciprocal rank fusion.
+3. Chunking: structure-aware and parent-child (return the surrounding passage); diversity ranking against near-duplicates.
+4. Reranking the top 20 to 50 with a cross-encoder or language model.
+5. Other embedding models, and the bge query prefix on/off.
+6. Generation: citation verification, passage order, newer Gemini models.
+Each is one change at a time, logged in `EXPERIMENTS.md`. Entity resolution (one graph node per person with all names) and multi-hop answering stay in Phases 5 and 7 unless the cheaper fixes close the gap.
+
+### Carried over
+PR #2 awaits merge; page web address in citations; the website's section numbering (unverified); `Haranaharana Parva` spelling unchecked; prices from third-party blogs unverified.
 
 ---
 
