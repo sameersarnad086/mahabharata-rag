@@ -13,7 +13,8 @@ Alternatives → Gotchas → Results.**
 4. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
 5. [Phase 1 — Chunking](#phase-1--chunking)
 6. [Phase 1 — Embeddings](#phase-1--embeddings)
-7. [Public post drafts](#public-post-drafts)
+7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
+8. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -321,6 +322,58 @@ Code: [`src/rag/embedding.py`](src/rag/embedding.py), runner [`scripts/run_embed
 
 ### Alternatives to compare later (Phase 3)
 Qwen3-Embedding-0.6B (local, long input), EmbeddingGemma-300M (local), OpenAI text-embedding-3-small (API, tiny cost), and keyword/sparse search (BM25) for exact names. Also the query-prefix switch for bge.
+
+### Where the vectors are stored
+Not in a vector database. In a plain NumPy file on disk: `data/cache/emb_<model>_<fingerprint>.npy` (1,670 rows x 384 columns, 2.6 MB) plus a small `.json` label. The chunk text and labels are separate, in `data/processed/chunks.jsonl`. **Row i of the vectors is line i of the chunks file**, and that position is the only link. Both are gitignored (not on GitHub) and rebuildable. A vector database stores vectors plus an index that finds neighbours without checking all of them, and earns its place at millions of vectors, many users or live updates. At 1,670 vectors, checking all of them takes about 1.5 ms. Phase 3 steps through NumPy -> FAISS -> a vector database to see where each starts to matter.
+
+---
+
+## Phase 1 — Retrieval (concept)
+
+### Why it exists
+The language model can only read a few pages at once, and the corpus is 1,670 chunks. Retrieval picks the few chunks most likely to contain the answer, and only those go into the prompt. Everything the model says is limited by what retrieval hands it: if the right chunk is not in the top-k, the model cannot answer correctly from it, however good the model is.
+
+### What happens in the background, step by step
+**Offline (done once):** chunk -> embed -> save vectors. **Online (every question):**
+1. **Embed the question** with the same model, giving 384 numbers.
+2. **Score** it against every chunk vector. With vectors of length 1, cosine similarity is just multiplying matching positions and adding them up (a "dot product"). Done for all 1,670 chunks at once as one matrix multiplication: about 1.5 ms.
+3. **Rank** by score and keep the top-k (`TOP_K = 5`).
+4. **Look up** each winner's text and labels by row number.
+5. **Hand over** those chunks, with citations, to the language model (the generation stage).
+
+### What cosine similarity is
+Picture each vector as an arrow in 384-dimensional space. Cosine similarity measures the **angle** between two arrows: 1.0 = pointing the same way (same meaning), around 0 = unrelated. It ignores arrow length, which is why we scale vectors to length 1 first; then it equals the dot product. Alternatives (dot product on unnormalised vectors, Euclidean distance) give the same ranking for length-1 vectors but behave differently otherwise.
+
+### What the scores look like on our data (real numbers)
+For "Who was the father of Bhishma?": scores across all 1,670 chunks ranged from **0.425 to 0.751, median 0.582**. The top five were **0.751, 0.747, 0.745, 0.736, 0.735**.
+- Scores are **not probabilities** and not a percentage of "correctness". Even the median chunk scores 0.58.
+- The top results are **bunched together**, so the ranking inside the top five is fragile. A tiny change (a different model, a prefix) can reorder them.
+- So we can't set a simple "relevant if above X" rule. Choosing top-k is a trade-off: small k misses the answer if it ranks 6th; large k adds noise and uses more of the model's reading window.
+
+### Real problem seen on our data: aliases
+I asked the same question with two names for the same person:
+- "Who is the father of **Arjuna**?" and "Who is the father of **Partha**?" returned **0 chunks in common out of 5**.
+- The Arjuna results began with a water-vessel scene and a battle scene; the Partha results with lists of Nakshatras and descendants of Soma. Neither obviously shows the answer (judged by eye on the first 90 characters only; Phase 2 measures this properly).
+- The corpus uses "Arjuna" in about 240 chunks and "Partha" in about 64. The model does not reliably treat them as the same person.
+- This is the domain challenge "many names for one person" in action. Candidate fixes for later: query rewriting that adds known aliases, a name-alias table, keyword search (BM25) combined with vectors (hybrid), or a knowledge graph (Phase 5).
+
+### Things retrieval cannot do
+- **Multi-hop questions** ("how are Krishna and Arjuna related through Yayati?"): no single chunk holds the answer, and top-k returns chunks similar to the question, not a chain of facts. Needs query decomposition or a knowledge graph.
+- **Exact names and rare words** can be diluted in vector space; keyword search is better there.
+- **"I don't know":** it always returns k chunks, even when nothing relevant exists. The generation stage must judge that.
+
+### Alternatives and extensions (all planned for Phase 3)
+| Idea | What it adds |
+|---|---|
+| Metadata filters | Restrict to a sub-parva or section before ranking |
+| MMR (maximal marginal relevance) | Avoid five near-duplicate results; diversify |
+| Hybrid search (BM25 + vectors, combined with reciprocal rank fusion) | Exact names plus meaning |
+| Query transformation (rewriting, multi-query, HyDE, decomposition) | Fix aliases and multi-hop questions |
+| Reranking (cross-encoder or LLM) | Retrieve 20-50 loosely, then re-score the shortlist precisely |
+| Approximate indexes (FAISS IVF/HNSW) | Speed at millions of vectors; unnecessary at 1,670 |
+
+### How we will judge retrieval (Phase 2)
+Not by eye. **Recall@k** (is a correct chunk in the top k?), **MRR** (how high is the first correct chunk?), **nDCG** (are better chunks ranked higher?), measured on a question set with known source sections.
 
 ---
 
