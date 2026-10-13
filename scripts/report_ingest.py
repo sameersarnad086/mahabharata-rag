@@ -36,6 +36,9 @@ for f, ps in sorted(by_file.items()):
     if n != prev + 1:
         seq_gaps.append((f, h, prev))
     prev = n
+mismatch = [(f, ps[0]["heading"], ps[0].get("section_number")) for f, ps in sorted(by_file.items())
+            if int(f[8:11]) >= 2 and ps[0].get("section_number") != int(f[8:11]) - 1]
+print("section_number != file number - 1 (should be none):", mismatch)
 print("non-SECTION headings:", bad_heading)
 print("section sequence gaps:", seq_gaps, "| last section number:", prev)
 

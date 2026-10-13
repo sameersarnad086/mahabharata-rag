@@ -133,6 +133,7 @@ Code: [`src/rag/ingest.py`](src/rag/ingest.py). Helpers: [`scripts/run_ingest.py
 - **The section heading is not always in the `<h1>`.** On file 002 the `<h1>` is the book title and `SECTION I` sits in a `<div>`.
 - **Page breaks split paragraphs mid-sentence.** Markers like `p. 16` (and Roman ones like `p. xii` in the preface) fall inside paragraphs. Rule I chose: glue a fragment back to the previous paragraph if it carries the site's `[paragraph continues]` tag, or if it follows a page marker and starts with a lowercase letter. Before this, about a third of the "paragraphs" on one page were fragments. 385 fragments were merged across the corpus.
 - **Test on everything, not three files.** My rules worked on the first three pages. The full run found a heading written `Section CLXXVI` (mixed case) that broke the section sequence, and sub-parva labels spelled several ways for the same name (`Sambhava Parva`, `… continued`, `…, continued `). Normalised from 35 raw variants to 18 values. Without that, a filter on "Sambhava Parva" would have missed most of its text. This is the same class of problem as Yudhishthira / Yudhisthira.
+- **The source's Roman numerals are non-standard for Sections 190 to 199** (`SECTION CLXL`, `CLXLI`... where standard Roman is `CXC`, `CXCI`...). A citation reading "Section CLXLI" looks like a bug. I now store a plain `section_number` (191) next to the raw heading, and the report checks that it equals the file number minus one for every file. My earlier "no gaps" check had passed only because my simple converter happens to read those forms correctly, which is luck, not a test.
 - **`printed_page` is approximate.** In the preface it goes `xii` then `ix`, and it is unclear whether a marker means "page starts here" or "page ends here". Do not use it in citations yet.
 - **Source typos exist** (e.g. "sixty-tour"), so exact-match search cannot assume clean spelling.
 
@@ -376,6 +377,15 @@ I asked the same question with two names for the same person:
 
 ### How we will judge retrieval (Phase 2)
 Not by eye. **Recall@k** (is a correct chunk in the top k?), **MRR** (how high is the first correct chunk?), **nDCG** (are better chunks ranked higher?), measured on a question set with known source sections.
+
+### What I built (baseline retrieval)
+- [`src/rag/retrieval.py`](src/rag/retrieval.py): a `Retriever` that loads the chunks, the cached vectors and the model, then `search(question, k)` embeds the question, scores it against all 1,670 vectors (one matrix multiply), picks the k best with `numpy.argpartition` (faster than sorting everything, then orders just the winners), and returns each hit with its rank, score, chunk id, citation and text. Only `numpy` is used for the search.
+- [`scripts/search.py`](scripts/search.py): command-line tool, e.g. `python scripts/search.py "Who was Shakuntala's son?" -k 3`.
+- [`tests/test_retrieval.py`](tests/test_retrieval.py): 7 checks of the ranking logic (best first, k larger than the data, k of zero, empty input, ties in a stable order, and that a dot product of unit vectors equals cosine similarity).
+- **Citation format:** `Mahabharata (Ganguli), Adi Parva, Sections 191-192 (Swayamvara Parva) [section_192.html, para 1]`. It uses plain section numbers, lists the range when a chunk spans sections, and names the sub-parva.
+- **Gotcha found while testing:** `argpartition` returns its picks in no guaranteed order, so tied scores could come out in a random order. Fixed by sorting the picked indices first, so ties are deterministic.
+
+First real outputs (informal): "Why did Bhishma take a vow of celibacy?" returned Section 102 (the context leading to the vow), Section 100 (the vow itself, ranked second) and an unrelated vow from Section 76. "Who was Shakuntala's son?" returned Section 74 (Dushmanta cherishing his son by Sakuntala) first and two loosely related passages after, with scores bunched at 0.69. On-topic, but best-first is not reliable. Phase 2 will put numbers on that.
 
 ---
 

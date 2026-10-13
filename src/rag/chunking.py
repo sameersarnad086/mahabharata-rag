@@ -25,6 +25,7 @@ class Chunk:
     source: str                # e.g. "Mahabharata (Ganguli)"
     parva: str                 # "Adi Parva"
     sections: list[str]        # every section heading this chunk touches, e.g. ["SECTION II", "SECTION III"]
+    section_numbers: list[int] # same sections as plain numbers (SECTION CLXLI -> 191); used in citations
     sub_parvas: list[str]      # every sub-parva it touches (None values dropped)
     first_file: str            # file of the first paragraph touched, for citations
     first_para_index: int      # index of the first paragraph touched within that file
@@ -87,6 +88,7 @@ def build_chunks(paragraphs: list[dict], size: int = config.CHUNK_SIZE,
             source=config.SOURCE_NAME,
             parva=config.PARVA,
             sections=list(dict.fromkeys(p["heading"] for p in touched)),
+            section_numbers=list(dict.fromkeys(p["section_number"] for p in touched if p["section_number"])),
             sub_parvas=list(dict.fromkeys(p["sub_parva"] for p in touched if p["sub_parva"])),
             first_file=touched[0]["file"],
             first_para_index=touched[0]["para_index"],

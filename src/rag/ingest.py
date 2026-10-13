@@ -33,6 +33,19 @@ class Paragraph:
     printed_page: int | str | None  # most recent "p. NN" marker seen BEFORE this paragraph
     text: str
     merged: int = 0            # how many page-break fragments were glued onto this paragraph
+    section_number: int | None = None  # plain number (SECTION CLXLI -> 191); None for the preface
+
+
+ROMAN_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100}
+
+
+def roman_to_int(numeral: str) -> int:
+    """Lenient Roman numeral reader. Also reads the source's non-standard forms for
+    Sections 190-199 (e.g. 'CLXLI' for 191, where standard Roman gives 'CXCI')."""
+    total = 0
+    for cur, nxt in zip(numeral, numeral[1:] + " "):
+        total += -ROMAN_VALUES[cur] if ROMAN_VALUES.get(nxt, 0) > ROMAN_VALUES[cur] else ROMAN_VALUES[cur]
+    return total
 
 
 def _clean(text: str) -> str:
@@ -57,6 +70,9 @@ def parse_file(path: Path) -> list[Paragraph]:
     if not heading:
         h1 = article.find("h1")
         heading = _clean(h1.get_text()) if h1 else ""
+
+    m_sec = re.match(r"^SECTION ([IVXLC]+)$", heading)
+    section_number = roman_to_int(m_sec.group(1)) if m_sec else None
 
     paragraphs: list[Paragraph] = []
     sub_parva: str | None = None
@@ -88,7 +104,8 @@ def parse_file(path: Path) -> list[Paragraph]:
             paragraphs[-1].merged += 1
         else:
             paragraphs.append(
-                Paragraph(path.name, heading, sub_parva, len(paragraphs), printed_page, text)
+                Paragraph(path.name, heading, sub_parva, len(paragraphs), printed_page, text,
+                          section_number=section_number)
             )
         after_marker = False
     return paragraphs
