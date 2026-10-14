@@ -8,17 +8,21 @@ Alternatives → Gotchas → Results.**
 
 **Contents**
 1. [The pipeline at a glance](#the-pipeline-at-a-glance)
-2. [Decisions log](#decisions-log)
-3. [Phase 0 — Setup and download](#phase-0--setup-and-download)
-4. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
-5. [Phase 1 — Chunking](#phase-1--chunking)
-6. [Phase 1 — Embeddings](#phase-1--embeddings)
-7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
-8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
-9. [Phase 1 — Generation](#phase-1--generation)
-   - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
-10. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
-11. [Public post drafts](#public-post-drafts)
+2. [Code map: what is done where](#code-map-what-is-done-where)
+3. [Decisions log](#decisions-log)
+4. [Phase 0 — Setup and download](#phase-0--setup-and-download)
+5. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
+6. [Phase 1 — Chunking](#phase-1--chunking)
+7. [Phase 1 — Embeddings](#phase-1--embeddings)
+8. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
+9. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
+10. [Phase 1 — Generation](#phase-1--generation)
+    - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
+11. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
+12. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
+    - [Phase 2 retrospective (partial)](#phase-2-retrospective-partial)
+    - [How the retrieval evaluation runs, step by step](#how-the-retrieval-evaluation-runs-step-by-step)
+13. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -51,6 +55,34 @@ Current data flow and files (all derived data is gitignored and can be rebuilt w
 | Retrieve | a question | the 5 closest chunks with scores and citations | `scripts/search.py` |
 | Generate | question + 5 chunks | a cited answer from Gemini | `scripts/ask.py` |
 | Log | a question | an entry in `QUESTION_LOG.md` | `scripts/log_question.py` |
+
+---
+
+## Code map: what is done where
+
+A mental map of the project, by stage. Code that does the work lives in `src/rag/`; commands you run live in `scripts/`; checks live in `tests/`; every setting (chunk size, model names, k...) lives in `config.py`. Nothing here describes how the code is written, only what each file is for.
+
+| Stage | Does what (plain words) | Library file (`src/rag/`) | Command file (`scripts/`) | Produces |
+|---|---|---|---|---|
+| **Download** | Fetch the 237 pages from the website | | `download_adi_parva.py` | the raw web pages (`data/raw/`) |
+| **Ingest** | Read each page, keep only the story paragraphs, tag each with section and sub-parva, glue back paragraphs split by page breaks | `ingest.py` | `run_ingest.py` (runs it on all pages), `report_ingest.py` (sanity report), `inspect_ingest.py` (peek at a few pages) | the clean paragraphs file |
+| **Chunk** | Cut the text into overlapping 1,000-character pieces, each labelled with its sections | `chunking.py` | `run_chunking.py` | the chunks file |
+| **Embed** | Turn every chunk into 384 numbers; save them so they are not recomputed | `embedding.py` | `run_embedding.py` | the vectors file (`data/cache/`) |
+| **Retrieve** | Turn a question into numbers, find the 5 closest chunks | `retrieval.py` | `search.py` (show the top chunks for a question) | ranked chunks with scores and citations |
+| **Generate** | Build the prompt, ask Gemini, check the citations in its answer | `generation.py` | `ask.py` (question to cited answer), `list_models.py` (which Gemini models your key can use) | an answer |
+| **Explore** | Ask any question and write the full result into the question log | | `log_question.py` | entries in `QUESTION_LOG.md` |
+| **Evaluate retrieval** | Score how often the right passage is among the retrieved chunks | `eval_retrieval.py` (the marker), `metrics.py` (the formulas), `textnorm.py` (text matching helper) | `run_retrieval_eval.py` (the button; guards the held-out set), `make_split.py` (the practice / sealed split), `verify_labels.py` (checks every quote really is in the book) | scores in `eval/results/`, log of held-out runs |
+| **Rebuild** | Recreate every generated file from scratch in a fresh session | | `rebuild_all.sh` | everything above |
+| **Tests** | Automatic checks that each part behaves | | `tests/test_chunking.py`, `test_retrieval.py`, `test_generation.py`, `test_metrics.py` | pass or fail |
+
+**Data and notes files:**
+| File | What it is |
+|---|---|
+| `eval/retrieval_questions.csv` | the question paper with its answer key (36 questions: sections, quotes, expected answers, split) |
+| `eval/README.md`, `eval/split_info.json` | the rules for the evaluation set and the recorded split |
+| `eval/results/*.json`, `eval/heldout_runs.log` | saved scores, and the audit log of every sealed-set run |
+| `QUESTION_LOG.md` | every informal question, with the chunks returned and a verdict |
+| `LEARNING.md`, `EXPERIMENTS.md`, `HANDOFF.md`, `CLAUDE.md` | these notes; the experiment log; the status file for a new chat; the working rules |
 
 ---
 
@@ -657,6 +689,238 @@ Each is one change at a time, logged in `EXPERIMENTS.md`. Entity resolution (one
 
 ### Carried over
 PR #2 awaits merge; page web address in citations; the website's section numbering (unverified); `Haranaharana Parva` spelling unchecked; prices from third-party blogs unverified.
+
+---
+
+## Phase 2 — Evaluation: concepts and metrics
+
+*Status: concepts learned; retrieval question set (36) labelled and split; retrieval metrics built and tested; retrieval baseline scored (working set and, once, held-out); generation evaluation not started.*
+
+### Why it exists
+Until now quality was judged by reading 8 answers and forming impressions. That cannot tell me whether a change helped:
+if I change the chunk size, I cannot separate "better" from "I asked different questions". An **evaluation set** is a fixed
+list of questions with known right answers and known source sections. After every change I re-run the same list and
+compare numbers. It is what makes Phase 3 honest: each experiment either moves a number or it does not.
+
+### Score retrieval and generation separately
+| Stage | Question it answers | Example failure from Phase 1 |
+|---|---|---|
+| Retrieval | Did the right passages reach the model? | Pandu's father: the answer ranked 46th, so the model had nothing to use |
+| Generation | Given the passages, was the answer correct and honest? | Arjuna: right answer, one citation that supported nothing |
+
+If only the final answer is scored, a retrieval miss looks like a "correct refusal" (Q1, Q2, Q4). Splitting the two tells
+me which stage to fix.
+
+### Retrieval metrics
+
+Four words used below:
+- **k:** how many top results we look at. We use k = 5, written "@5".
+- **rank:** a result's position in the returned list; rank 1 is the best match.
+- **gold:** the sections (or evidence phrases) a person labelled as containing the answer to a question.
+- **hit:** a returned chunk that matches the gold label. Anything else is a miss.
+
+Every metric is worked out per question and then averaged over all questions in the set.
+
+| Metric | Meaning (plain words) | How it is calculated | Example | Notes |
+|---|---|---|---|---|
+| **Hit rate@k** | Out of all questions, how often did retrieval put at least one right passage in the top k? "Did we find anything useful at all?" | For each question: 1 if any of the top k chunks is a hit, otherwise 0. Average over all questions. | 10 questions. For 6 of them at least one of the top 5 chunks came from a gold section. Hit rate@5 = 6 / 10 = 0.6 (60%). | The easiest to read and the most robust, because it does not need the full list of relevant passages. Our headline number. It ignores how many right passages were found and how high they sit. |
+| **Precision@k** | Of the k chunks handed to the model, how many were useful? "How much noise did we send?" | (number of hits in the top k) divided by k. Average over questions. | The top 5 contains 2 hits. Precision@5 = 2 / 5 = 0.4. | Penalises noise, which matters because irrelevant passages can distract the language model. If only one passage can be right, the best possible score at k = 5 is 0.2, so a low value is not automatically a failure. |
+| **Recall@k** | Of all the relevant passages that exist, how many did we bring back? "Did we find everything we needed?" | (number of gold sections found in the top k) divided by (number of gold sections labelled for that question). Average over questions. | A question has 3 gold sections and the top 5 covers 2 of them. Recall@5 = 2 / 3 = 0.67. | Only as complete as our labels: a correct passage we did not label counts as a miss. Matters most for multi-hop questions, which need several passages together. For open facts we label a "gold minimum", so treat it as secondary to hit rate. |
+| **MRR** (mean reciprocal rank) | How near the top does the first right passage sit? "How quickly would a reader find a good one?" | Per question: 1 divided by the rank of the first hit (0 if there is no hit in the list). MRR is the average of that over all questions. | First hit at rank 1 scores 1.0, rank 2 scores 0.5, rank 4 scores 0.25, no hit scores 0. Three questions scoring 1.0, 0.5 and 0 give MRR = 0.5. | Looks only at the first hit, and the score falls steeply. Two systems with the same hit rate can differ in MRR, because one puts the answer first. Good when one passage is enough. |
+| **nDCG** (normalised discounted cumulative gain) | How good is the whole ordering? Are the relevant passages near the top, with the best ones first? | (1) Give each returned chunk a gain: 1 if relevant, 0 if not (or a grade such as 2 = perfect, 1 = partial). (2) Divide each gain by log2(rank + 1), so lower positions count less. (3) Add them up: this is DCG. (4) Divide by the DCG of the best possible ordering for that question. The result runs from 0 to 1. | Two relevant chunks. At ranks 1 and 2 the order is ideal: nDCG = 1.0. At ranks 3 and 5: DCG = 0.50 + 0.39 = 0.89, ideal DCG = 1.00 + 0.63 = 1.63, nDCG = 0.89 / 1.63 = 0.54. | The most complete score: it handles several relevant passages and partly relevant ones. Also the hardest to explain. Depends heavily on labelling quality. The position discounts are: rank 1 = 1.00, rank 2 = 0.63, rank 3 = 0.50, rank 4 = 0.43, rank 5 = 0.39. |
+
+### Where "relevant" comes from: the metrics do not know, we tell them
+The metrics derive nothing about relevance. They compare what retrieval returned against labels a person wrote. After that
+it is pure arithmetic.
+| Needs a person | Computed automatically |
+|---|---|
+| The questions | What retrieval returned, with ranks and scores |
+| The gold sections (and evidence phrases) for each question | Hit rate, precision, recall, MRR, nDCG, and their averages |
+| The short expected answer (for generation scoring) | Refusal detection |
+| Which questions are unanswerable | Faithfulness: a language model reads the answer plus the passages it was given (no labels needed) |
+| | Answer correctness: a language model compares the answer with the expected answer |
+
+This works because every chunk carries `section_numbers` (metadata from day one). The check "is any returned section in the gold set?" is a simple overlap test.
+
+### Traps
+- **Unlabelled correct passages count as misses.** If retrieval returns a Section 134 chunk that truly says "Arjuna, son of Pandu" but I only labelled {67, 217}, the metric blames retrieval for something it did right. Defences: label generously; read the misses of the baseline by hand once; **if labels are ever added, re-score every earlier run with the new labels** so comparisons stay fair.
+- **"All relevant passages" is unknowable for open facts.** "Arjuna is Pandu's son" is stated all over the epic. So I label a **gold minimum** (sections I verified), and treat hit rate and MRR as the main numbers, recall as secondary.
+- **Section labels are coarse and flatter the score.** A chunk from the right section but the wrong part counts as a hit.
+- **Unanswerable questions** have no gold section; they are scored on the generation side (did it refuse?).
+- **Multi-hop questions** need several sections together; score them as their own group.
+- **Label sections, not chunks.** Chunk ids change whenever chunking changes; heading numbers do not. This is also why the heading-number vs file-number confusion matters.
+
+### Ways to label (and how others do it)
+| Method | A retrieved chunk is a hit if... | Trade-off |
+|---|---|---|
+| **Section** (our current idea) | its section number is in the gold set | Easy to write, stable across re-chunking, optimistic |
+| **Evidence phrase** | its text contains a short exact phrase copied from the passage (e.g. "the mighty son of Pandu") | Strict, still stable across chunk sizes, more effort per question |
+| **Both** (leaning towards) | report both numbers | The gap shows how generous the section label is |
+
+How the wider field does it (from background knowledge, not freshly searched; verify before quoting publicly):
+| Approach | How it works | Where it appears |
+|---|---|---|
+| Relevance judgments ("qrels") | A table of question, document id, relevance grade (for example 0 to 3), filled in by human assessors | TREC evaluations; benchmarks such as BEIR and MS MARCO |
+| Document-level labels | The gold unit is a whole stable item: a help article, a support page, a contract clause | Most company RAG systems, because document ids survive re-chunking. **Our "section" is this.** |
+| Answer-string matching | A passage is a hit if it contains the known answer text | Open-domain question answering; the original dense-retrieval (DPR) paper scored top-k accuracy this way. **Our evidence phrase is this.** |
+| Span or evidence labels | The gold item is a highlighted span (character offsets); a chunk counts if it overlaps | Question-answering datasets, some chunking studies |
+| Synthetic labels | A language model writes a question from a chosen chunk; that chunk is the gold | Quick bootstrapping |
+| Judged by a model or by users | A language model, or click and feedback data, decides relevance | Production monitoring; reference-free tools such as Ragas |
+Cautions: synthetic questions flatter retrieval because they share the chunk's wording and miss exactly the alias and lineage questions that matter here, so keep the set human-written. Model-judged relevance is useful but circular if the same model also generates answers.
+
+### Generation metrics (a language model as judge)
+- **Faithfulness:** every claim follows from the passages given, and each cited passage really supports its claim. This would have caught the bad Subhadra citation in Q3.
+- **Answer relevance and correctness:** it answers the question and matches the expected answer.
+- **Refusal accuracy:** it refuses exactly when it should.
+- The judge should ideally be a different (preferably stronger) model than the generator; chosen when we build it. Later: compare my own implementation with the Ragas and DeepEval libraries, after checking they are current.
+
+### Rules that keep the evaluation honest
+- Write the set **before** looking at Phase 3 results, and **never edit it** to flatter them. New questions go in a clearly marked separate section.
+- Mix the types: plain facts, alias pairs (the same question under different names), lineage and relation questions, multi-hop, unanswerable, ambiguous names. About 40 questions. Starting target: 10 / 8 (4 pairs) / 8 / 6 / 4 / 4.
+- Q1 to Q8 in `QUESTION_LOG.md` are seeds, not part of the set.
+- The questions are mine to write (I know what I want to ask); Claude finds the source sections and phrases and drafts expected answers, and I verify them against the text.
+
+### Approaches to writing evaluation questions
+| Approach | How it works | Strength | Weakness |
+|---|---|---|---|
+| Read and ask | A person reads sections and writes questions | Realistic wording | Slow; clusters on famous scenes |
+| From structure | Section II lists the epic's events; use it as a checklist of episodes | Spreads questions across the book | Only headline events |
+| From our failures | Q1 to Q8 and the problem map: aliases, lineage, multi-hop | Targets known weak spots | Biased towards what already broke |
+| Same fact, different names | Take one verified fact and ask it once per name | Isolates the name problem exactly | Needs a fact in a known section |
+| Model-written from chunks | A language model writes a question from a chunk | Fast, cheap | Reuses the chunk's wording so retrieval looks better than it is; chunk-bound labels; misses the alias problem |
+| Real user questions | Collect what people ask | The truth | None exist yet |
+Chosen: a blend of the first four. No model-written questions in the main set. Real questions are added later in a separate, marked file.
+
+### Goals to keep in mind while writing questions
+1. Check the answer exists in the Adi Parva first, and note the section(s) and a short evidence phrase before the question is final.
+2. Write like someone who has not read the text; do not copy the passage's wording.
+3. One question tests one thing, so a failure is diagnosable; tag every question with a type.
+4. A difficulty ladder: easy (name and words match), medium (paraphrased), hard (aliases, lineage, multi-hop).
+5. Pair the names: ask the same fact under different names so the alias problem becomes a number.
+6. Spread across the book (early, middle, late) and include rarely mentioned facts (Ekalavya is in 2 sections, Kindama in 1).
+7. No facts that need the rest of the epic; no trick questions unless tagged ambiguous.
+8. Freeze the set and split it (below).
+9. Be modest about size: with 36 questions one question is about 2.8 points, so only large differences count; report counts as well as percentages.
+
+### The working / held-out split
+**Problem:** over many Phase 3 experiments I will tend to keep changes that happen to suit these particular questions (for example special handling for exactly the Arjuna / Partha pairs). The score rises but the system has only learned the test, like a student who rehearses one exam paper.
+**Fix:** split the set before experimenting. **Working set (24)** is used constantly: run after every change, failures studied. **Held-out set (12)** is locked: its failures are never read or tuned against, and it is run only at milestones (the baseline, the end of each phase). If a change helps both groups it is probably real; if only the working set, I have fitted the test.
+**How it was drawn (fixed before any question was scored):**
+- Held-out size fixed per type: 3 plain, 1 paraphrase, 2 alias (one pair), 1 spelling, 2 lineage, 2 multi-hop, 1 ambiguous.
+- Name pairs always stay together, otherwise one half would teach me about the other.
+- Units drawn at random within each type with a seeded generator; seeds tried in order 1, 2, 3...; the first seed giving 3 to 5 held-out questions in each third of the book was kept. Seed 1 worked: 4 early, 4 middle, 4 late.
+- Frozen: `scripts/make_split.py` refuses to reassign unless forced; `--check` verifies it. Rule and seed recorded in `eval/split_info.json`.
+**Cost:** only 12 held-out questions, so one question is about 8 points; it is a sanity check, not a precise score.
+**Held-out ids:** R02, R04, R07, R09, R17, R18, R22, R24, R27, R29, R30, R35 (the text of every question is in `eval/retrieval_questions.csv`; what is hidden is the habit of studying their failures).
+
+### The retrieval question set (36, in `eval/retrieval_questions.csv`)
+| Type | Count | Held-out | What it tests |
+|---|---|---|---|
+| plain | 8 | 3 | the name and wording match the passage |
+| paraphrase | 4 | 1 | the answer is asked without the passage's words or names |
+| alias | 8 (4 pairs) | 2 | the same fact under different names (Arjuna / Partha, Sauti / Ugrasrava, Vyasa / Dwaipayana, Arjuna / Dhananjaya) |
+| spelling | 2 | 1 | modern spelling vs the book's (Hidimba / Hidimva; Babhruvahana, not found in the text under that spelling) |
+| lineage | 6 | 2 | parents and relations |
+| multi-hop | 4 | 2 | several passages needed (Bhishma and Vichitravirya; Yudhishthira from Santanu; Astika and Vasuki; Yadu and Puru through Yayati) |
+| ambiguous | 4 | 1 | names that mean more than one person (Krishna, Parikshit, Janamejaya) |
+**Spread across the book** (early = Sections 1 to 79, middle = 80 to 158, late = 159 to 236): 12 / 14 / 10 questions; held-out 4 / 4 / 4.
+**Correction made while balancing:** the first draft had only 5 of 36 questions in the early third (the snake-sacrifice parvas: Paushya, Pauloma, Astika), although that third is a third of the book. I replaced 10 questions (dropped: Ghatotkacha's parents, Yayati's old age, a duplicate Pandu's-curse paraphrase, the warned-snakes paraphrase, the Bhima / Vrikodara pair, Baka spelling, Vidura's father, Yayati's sons by Devayani, common ancestor; added: Sarama's curse, Parikshit's death, the snake-sacrifice paraphrase, the burning-lodging paraphrase, the Sauti / Ugrasrava pair, Hidimba spelling, Jaratkaru's marriage, Ruru's parents, Astika and Vasuki) and reworded one. Lesson: a set drawn from memory leans towards famous scenes; check the spread on purpose.
+All section numbers in the file are **guesses until `gold_sections` is verified from the text**. Unanswerable questions are not in this set; they belong to the generation evaluation.
+
+### Labelling the 36 questions (done)
+**How:** for each question I searched the paragraphs, read the passages, chose the gold sections and short evidence phrases, and wrote the expected answer from the text. `scripts/verify_labels.py` then checks mechanically that every phrase appears word for word in a gold section **and** sits fully inside at least one chunk (chunks overlap by 200 characters, so a short phrase can never be cut in half by chunking). All 36 pass.
+**Limit to remember:** the labels were written by Claude and checked by script; the project owner has not independently verified them (recorded in the CSV `status` column and `eval/README.md`). A wrong or missing label would show up as a strange retrieval result and must be handled under the "no edits to flatter results" rule.
+
+**What reading the text changed (all before any scoring):**
+| Finding | Effect |
+|---|---|
+| R07: Sarama cursed Janamejaya and his brothers, not only the brothers | question reworded |
+| R26: the text names Drupada as the father and the children were born from the sacrificial fire; no mother is named in the way "parents" assumed | reworded to "Whose children were Dhrishtadyumna and Draupadi, and how were they born?" |
+| R36: every later Janamejaya also descends from Puru, so "which Janamejaya descended from Puru" had two right answers | reworded to "Who was Janamejaya, the son of Puru?" |
+| R06: I guessed Section 188; the contest condition is in 187 and the shot in 190 | gold corrected |
+| R22: the book spells the name **Vabhruvahana**; "Babhruvahana" never occurs | a genuine spelling-variant test |
+| R21: the text calls both the Rakshasa and his sister **Hidimva** (the question says Hidimba) | noted; spelling and same-name test in one |
+| R02 Pandu's curse is restated in Section 95 | gold widened to include Section 95 |
+
+**Discovery: the book contains summary passages that restate many answers.** Section 1 (the "I had no hope of success" list), Section 2 (the table of contents of the whole epic) and especially **Section 95** (one 6,000-character paragraph that retells the whole dynasty: Santanu, Bhishma, Vichitravirya, Dwaipayana's three sons, Pandu's curse and wives, Hidimva, Vaka, Draupadi, Subhadra, Parikshit, Janamejaya) answer many of our questions in a single paragraph. I added them to the gold sections wherever they truly state the answer, otherwise a correct chunk from a summary would count as a miss. Two consequences: (1) multi-hop questions R29 and R30 are partly "find the summary" tests; (2) retrieval may look better than it is simply because the summaries are easy targets. The retrospective should compare scores with and without the summary sections.
+**Other label notes:** both halves of each name pair carry identical labels so the pair is a fair test; the real spread of the answers across the book is 13 early / 13 middle / 10 late, and the held-out set is still 4 / 4 / 4.
+
+### How the retrieval evaluation runs, step by step
+This is the plain-words flow behind every score. (Retrieval evaluation only; the language model is not called, so it costs nothing.)
+1. **Take a question from the CSV.** The CSV also holds its answer key: the gold sections and the evidence phrases.
+2. **Run the retriever.** It returns the top chunks for that question (we fetch 10 and use the top 5 for the headline number).
+3. **Decide hit or miss for each chunk, in two ways:**
+   - *Section check:* every chunk already carries the section number(s) it came from (stored when the chunks were built). It is a hit if one of them is a gold section.
+   - *Phrase check:* the phrase is **not** taken from the chunk. It comes from the CSV. We do a plain text search for it inside the chunk's text. It is a hit if any evidence phrase appears word for word.
+4. **Turn the hit/miss pattern into the question's scores** (hit at 5, first hit's rank, precision, recall, nDCG). Hit or miss is decided per chunk; the scores are per question.
+5. **Average over all questions** in the group (working or held-out). Those averages are the baseline numbers.
+
+**One real example, R03 "What did Drona ask Ekalavya to give him?"** The CSV says: gold section 134; phrase "I should like then to have the thumb of thy right hand".
+| Rank | Chunk's section | Section hit? | Contains the phrase? |
+|---|---|---|---|
+| 1 | 134 | yes | yes |
+| 2 | 168 | no | no |
+| 3 | 133 | no | no |
+| 4 | 133 | no | no |
+| 5 | 134 | yes | yes |
+Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1.0; precision@5 = 2/5 = 0.4.
+
+**The generation evaluation (planned) is different:** it looks at the *answer* the model wrote. Question, then chunks, then the model's answer; then a judge compares the answer with the expected answer and with the chunks it was given (is every claim supported? is it correct? did it refuse when it should?). It needs a judge model, so it costs money.
+
+### Retrieval evaluation: what was built
+**Code:** `src/rag/metrics.py` (pure metric functions), `src/rag/eval_retrieval.py` (runs the retriever on the question set and scores it), `src/rag/textnorm.py` (shared text matching), `scripts/run_retrieval_eval.py` (command line), `tests/test_metrics.py` (18 checks, including the worked examples from the metrics table). No new libraries.
+**How a question is scored:** retrieve 10 chunks; for each chunk decide hit or miss under two checks: **section** (touches a gold section) and **phrase** (contains an evidence phrase word for word). From those hit/miss flags compute hit rate, precision, recall, MRR and nDCG at k = 1, 3, 5, 10.
+**Choices worth remembering:**
+- **Recall** is the fraction of gold sections (section check) or evidence phrases (phrase check) that appear anywhere in the top k.
+- **nDCG's "best possible ordering"** uses the number of relevant chunks that exist in the whole corpus (capped at k). For the section check a whole section holds many chunks, so the ideal is five hits and nDCG looks harsh (0.32); for the phrase check only one to three chunks qualify. nDCG therefore depends on the label definition; read hit@5 and MRR@5 first.
+- **Summary variant:** `--exclude-summaries` drops Sections 1, 2 and 95 from the labels, to show how much of the score comes from those easy targets.
+- **Held-out protection built into the tool:** the default run scores only the working set and prints per-question detail; held-out needs `--confirm-milestone "reason"`, prints aggregates only (no per-question, no per-type lines), and every run is appended to `eval/heldout_runs.log`.
+- **Verified by hand:** I recomputed three questions (R14, R03, R19) from the raw retrieval and they matched the evaluator exactly.
+
+### Retrieval baseline results (Phase 1 pipeline; full table in `EXPERIMENTS.md`)
+| Set | Check | hit@5 | MRR@5 |
+|---|---|---|---|
+| Working (24) | section | 0.92 | 0.58 |
+| Working (24) | **phrase (strict)** | **0.67** | **0.35** |
+| Working, no summaries (22) | phrase | 0.50 | 0.28 |
+| Held-out (12), one milestone run | phrase | 0.75 | 0.58 |
+
+**What the numbers say** (from the working set, which I am allowed to study):
+- **Right neighbourhood, wrong chunk.** The section check passes 92% but the phrase check only 67%: retrieval usually lands in the right section but not on the chunk that states the answer. Only 21% of questions have the answer chunk at rank 1.
+- **The summary passages flatter the score.** Without Sections 1, 2 and 95, hit@5 falls from 0.92 to 0.77 (section) and 0.67 to 0.50 (phrase). Example: "How did Partha win Subhadra?" scored a hit only because the Section 1 summary came back; the real scene in Section 222 never did.
+- **By type (phrase hit@5, working):** paraphrase 3/3, ambiguous 3/3, alias 4/6, plain 3/5, multi-hop 1/2, lineage **1/4** (MRR@5 only 0.06). "Who were X's parents?" questions retrieve narrative about X rather than the sentence that states the parentage.
+- **Name pairs (the central challenge):** Arjuna rank 1 vs Partha rank 4 (and the Partha hit came from the summary); but Sauti rank 3 vs Ugrasrava rank 1 (the rarer name did better), and the Vyasa / Dwaipayana pair failed identically. With three pairs this shows the effect exists and is not uniform; it proves nothing about size.
+- **Held-out is in the same range** as the working set (0.75 vs 0.67 phrase hit@5), which suggests the working-set result is not a fluke. With 12 questions the gap is within noise.
+**Lessons:** (1) the strict check and the summary-free variant are the honest numbers; the generous ones are ceilings; (2) always report counts (16 of 24) next to rates; (3) a metric must be tested against hand calculation before its numbers are believed.
+
+### Decisions
+Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
+
+---
+
+## Phase 2 retrospective (partial)
+
+**Status:** the **retrieval half of Phase 2 is complete**; the **generation half is designed but not built** (deferred to the next chat to save context). Finalise this retrospective after the generation evaluation.
+
+**Done:** evaluation concepts and metrics; 36 labelled questions with a frozen working / held-out split; label checker; five retrieval metrics (tested, hand-verified); retrieval baseline scored (working set, and held-out once, logged). Nothing was fixed: Phase 2 measures, Phase 3 changes things.
+
+**Baseline (strict phrase check, hit@5):** working 0.67 (0.50 without the summary passages), held-out 0.75; MRR@5 0.35 working. Full table in `EXPERIMENTS.md`.
+
+**What worked:** script checks on every label; the held-out set locked inside the tool and every run logged; recomputing metrics by hand; reporting both a generous and a strict check; spotting the summary-passage effect early.
+**What did not / surprises:** my first question draft clustered in the middle of the book (5 of 36 early); reading the text exposed wrong wording in three questions (R07, R26, R36); all labels have one author (me), script-checked only; sets are small (a held-out question is 8 points).
+
+**Generation evaluation plan (agreed in concept; waiting for the user's "go"):**
+- **Two modes:** end-to-end (real top-5 chunks) and ideal context (gold chunk guaranteed among the five). Wrong end-to-end but right with ideal context means retrieval caused it; wrong in both means generation caused it. Retrieval metrics belong to neither mode; generation metrics are computed in both.
+- **Metrics:** faithfulness (supported claims / all claims), citation support (supported citations / all citations), answer correctness (correct 1, partial 0.5, wrong 0, against the expected answer), answer relevance (yes/no), refusal accuracy (false-refusal rate on answerable, correct-refusal rate on unanswerable; plain string match, no judge). False refusals are split into retrieval-caused and generation-caused using the phrase check.
+- **Question set:** the 36 questions (same split) plus about 8 unanswerable: 3 out of the world, 3 in the epic's world but absent from the Adi Parva, 2 false-premise. Absence must be verified by scanning the corpus (note: Sections 1 and 2 summarise later events such as Karna's death, so those are NOT absent).
+- **Judge:** recommended `gemini-3.5-flash` (stronger than the Flash-Lite generator, not a preview, about $1.50 / $9 per million tokens, unverified); `gemini-3.1-pro-preview` as the second opinion. Same vendor family as the generator (only a Gemini key), so calibrate: check about a dozen judged items against my reading and the second model, report agreement. Temperature 0, rubric, evidence quote with every verdict. A full run costs roughly $2; working set only about half.
+- **Files to build:** `eval/generation_questions.csv`, `src/rag/judge.py`, `src/rag/eval_generation.py`, `scripts/run_generation_eval.py`, `tests/test_eval_generation.py`; reuse the held-out protection and logging.
+
+**Implications for Phase 3 (hypotheses from the working-set numbers; to be ordered by the generation results too):**
+1. Lineage questions are weakest (phrase hit 1 of 4): try chunking that keeps the sentence stating parentage together, sentence-level or parent-child retrieval, and hybrid keyword search.
+2. Summary passages (Sections 1, 2, 95) act as magnets: consider de-duplication or diversity ranking, and always report with and without them.
+3. Name pairs: alias expansion of the question (Arjuna, Partha, Dhananjaya...).
+4. A bigger k is not a cure: working phrase hit rate goes from 0.67 at k=5 to only 0.75 at k=10.
 
 ---
 
