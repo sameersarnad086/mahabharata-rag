@@ -1,0 +1,17 @@
+{
+  "seed": 1,
+  "rule": "(fixed before any question has been scored):\n  - Held-out size per question type is fixed below (12 of 36 in total).\n  - Questions that share a `unit` (the name pairs) always go to the same group.\n  - Draw units at random within each type with random.Random(seed), trying seeds 1, 2, 3...\n    and take the FIRST seed for which each third of the book (early/middle/late) has\n    between 3 and 5 held-out questions.\n  - Once assigned the split is frozen: rerunning does nothing unless --force is given.",
+  "held_out_per_type": {
+    "plain": 3,
+    "paraphrase": 1,
+    "alias": 2,
+    "spelling": 1,
+    "lineage": 2,
+    "multihop": 2,
+    "ambiguous": 1
+  },
+  "band_range": [
+    3,
+    5
+  ]
+}
