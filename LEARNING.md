@@ -8,18 +8,20 @@ Alternatives → Gotchas → Results.**
 
 **Contents**
 1. [The pipeline at a glance](#the-pipeline-at-a-glance)
-2. [Decisions log](#decisions-log)
-3. [Phase 0 — Setup and download](#phase-0--setup-and-download)
-4. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
-5. [Phase 1 — Chunking](#phase-1--chunking)
-6. [Phase 1 — Embeddings](#phase-1--embeddings)
-7. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
-8. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
-9. [Phase 1 — Generation](#phase-1--generation)
-   - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
-10. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
-11. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
-12. [Public post drafts](#public-post-drafts)
+2. [Code map: what is done where](#code-map-what-is-done-where)
+3. [Decisions log](#decisions-log)
+4. [Phase 0 — Setup and download](#phase-0--setup-and-download)
+5. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
+6. [Phase 1 — Chunking](#phase-1--chunking)
+7. [Phase 1 — Embeddings](#phase-1--embeddings)
+8. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
+9. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
+10. [Phase 1 — Generation](#phase-1--generation)
+    - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
+11. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
+12. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
+    - [How the retrieval evaluation runs, step by step](#how-the-retrieval-evaluation-runs-step-by-step)
+13. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -52,6 +54,34 @@ Current data flow and files (all derived data is gitignored and can be rebuilt w
 | Retrieve | a question | the 5 closest chunks with scores and citations | `scripts/search.py` |
 | Generate | question + 5 chunks | a cited answer from Gemini | `scripts/ask.py` |
 | Log | a question | an entry in `QUESTION_LOG.md` | `scripts/log_question.py` |
+
+---
+
+## Code map: what is done where
+
+A mental map of the project, by stage. Code that does the work lives in `src/rag/`; commands you run live in `scripts/`; checks live in `tests/`; every setting (chunk size, model names, k...) lives in `config.py`. Nothing here describes how the code is written, only what each file is for.
+
+| Stage | Does what (plain words) | Library file (`src/rag/`) | Command file (`scripts/`) | Produces |
+|---|---|---|---|---|
+| **Download** | Fetch the 237 pages from the website | | `download_adi_parva.py` | the raw web pages (`data/raw/`) |
+| **Ingest** | Read each page, keep only the story paragraphs, tag each with section and sub-parva, glue back paragraphs split by page breaks | `ingest.py` | `run_ingest.py` (runs it on all pages), `report_ingest.py` (sanity report), `inspect_ingest.py` (peek at a few pages) | the clean paragraphs file |
+| **Chunk** | Cut the text into overlapping 1,000-character pieces, each labelled with its sections | `chunking.py` | `run_chunking.py` | the chunks file |
+| **Embed** | Turn every chunk into 384 numbers; save them so they are not recomputed | `embedding.py` | `run_embedding.py` | the vectors file (`data/cache/`) |
+| **Retrieve** | Turn a question into numbers, find the 5 closest chunks | `retrieval.py` | `search.py` (show the top chunks for a question) | ranked chunks with scores and citations |
+| **Generate** | Build the prompt, ask Gemini, check the citations in its answer | `generation.py` | `ask.py` (question to cited answer), `list_models.py` (which Gemini models your key can use) | an answer |
+| **Explore** | Ask any question and write the full result into the question log | | `log_question.py` | entries in `QUESTION_LOG.md` |
+| **Evaluate retrieval** | Score how often the right passage is among the retrieved chunks | `eval_retrieval.py` (the marker), `metrics.py` (the formulas), `textnorm.py` (text matching helper) | `run_retrieval_eval.py` (the button; guards the held-out set), `make_split.py` (the practice / sealed split), `verify_labels.py` (checks every quote really is in the book) | scores in `eval/results/`, log of held-out runs |
+| **Rebuild** | Recreate every generated file from scratch in a fresh session | | `rebuild_all.sh` | everything above |
+| **Tests** | Automatic checks that each part behaves | | `tests/test_chunking.py`, `test_retrieval.py`, `test_generation.py`, `test_metrics.py` | pass or fail |
+
+**Data and notes files:**
+| File | What it is |
+|---|---|
+| `eval/retrieval_questions.csv` | the question paper with its answer key (36 questions: sections, quotes, expected answers, split) |
+| `eval/README.md`, `eval/split_info.json` | the rules for the evaluation set and the recorded split |
+| `eval/results/*.json`, `eval/heldout_runs.log` | saved scores, and the audit log of every sealed-set run |
+| `QUESTION_LOG.md` | every informal question, with the chunks returned and a verdict |
+| `LEARNING.md`, `EXPERIMENTS.md`, `HANDOFF.md`, `CLAUDE.md` | these notes; the experiment log; the status file for a new chat; the working rules |
 
 ---
 
@@ -813,6 +843,28 @@ All section numbers in the file are **guesses until `gold_sections` is verified 
 
 **Discovery: the book contains summary passages that restate many answers.** Section 1 (the "I had no hope of success" list), Section 2 (the table of contents of the whole epic) and especially **Section 95** (one 6,000-character paragraph that retells the whole dynasty: Santanu, Bhishma, Vichitravirya, Dwaipayana's three sons, Pandu's curse and wives, Hidimva, Vaka, Draupadi, Subhadra, Parikshit, Janamejaya) answer many of our questions in a single paragraph. I added them to the gold sections wherever they truly state the answer, otherwise a correct chunk from a summary would count as a miss. Two consequences: (1) multi-hop questions R29 and R30 are partly "find the summary" tests; (2) retrieval may look better than it is simply because the summaries are easy targets. The retrospective should compare scores with and without the summary sections.
 **Other label notes:** both halves of each name pair carry identical labels so the pair is a fair test; the real spread of the answers across the book is 13 early / 13 middle / 10 late, and the held-out set is still 4 / 4 / 4.
+
+### How the retrieval evaluation runs, step by step
+This is the plain-words flow behind every score. (Retrieval evaluation only; the language model is not called, so it costs nothing.)
+1. **Take a question from the CSV.** The CSV also holds its answer key: the gold sections and the evidence phrases.
+2. **Run the retriever.** It returns the top chunks for that question (we fetch 10 and use the top 5 for the headline number).
+3. **Decide hit or miss for each chunk, in two ways:**
+   - *Section check:* every chunk already carries the section number(s) it came from (stored when the chunks were built). It is a hit if one of them is a gold section.
+   - *Phrase check:* the phrase is **not** taken from the chunk. It comes from the CSV. We do a plain text search for it inside the chunk's text. It is a hit if any evidence phrase appears word for word.
+4. **Turn the hit/miss pattern into the question's scores** (hit at 5, first hit's rank, precision, recall, nDCG). Hit or miss is decided per chunk; the scores are per question.
+5. **Average over all questions** in the group (working or held-out). Those averages are the baseline numbers.
+
+**One real example, R03 "What did Drona ask Ekalavya to give him?"** The CSV says: gold section 134; phrase "I should like then to have the thumb of thy right hand".
+| Rank | Chunk's section | Section hit? | Contains the phrase? |
+|---|---|---|---|
+| 1 | 134 | yes | yes |
+| 2 | 168 | no | no |
+| 3 | 133 | no | no |
+| 4 | 133 | no | no |
+| 5 | 134 | yes | yes |
+Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1.0; precision@5 = 2/5 = 0.4.
+
+**The generation evaluation (planned) is different:** it looks at the *answer* the model wrote. Question, then chunks, then the model's answer; then a judge compares the answer with the expected answer and with the chunks it was given (is every claim supported? is it correct? did it refuse when it should?). It needs a judge model, so it costs money.
 
 ### Retrieval evaluation: what was built
 **Code:** `src/rag/metrics.py` (pure metric functions), `src/rag/eval_retrieval.py` (runs the retriever on the question set and scores it), `src/rag/textnorm.py` (shared text matching), `scripts/run_retrieval_eval.py` (command line), `tests/test_metrics.py` (18 checks, including the worked examples from the metrics table). No new libraries.
