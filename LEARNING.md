@@ -20,6 +20,7 @@ Alternatives → Gotchas → Results.**
     - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
 11. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
 12. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
+    - [Phase 2 retrospective (partial)](#phase-2-retrospective-partial)
     - [How the retrieval evaluation runs, step by step](#how-the-retrieval-evaluation-runs-step-by-step)
 13. [Public post drafts](#public-post-drafts)
 
@@ -894,6 +895,32 @@ Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1
 
 ### Decisions
 Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
+
+---
+
+## Phase 2 retrospective (partial)
+
+**Status:** the **retrieval half of Phase 2 is complete**; the **generation half is designed but not built** (deferred to the next chat to save context). Finalise this retrospective after the generation evaluation.
+
+**Done:** evaluation concepts and metrics; 36 labelled questions with a frozen working / held-out split; label checker; five retrieval metrics (tested, hand-verified); retrieval baseline scored (working set, and held-out once, logged). Nothing was fixed: Phase 2 measures, Phase 3 changes things.
+
+**Baseline (strict phrase check, hit@5):** working 0.67 (0.50 without the summary passages), held-out 0.75; MRR@5 0.35 working. Full table in `EXPERIMENTS.md`.
+
+**What worked:** script checks on every label; the held-out set locked inside the tool and every run logged; recomputing metrics by hand; reporting both a generous and a strict check; spotting the summary-passage effect early.
+**What did not / surprises:** my first question draft clustered in the middle of the book (5 of 36 early); reading the text exposed wrong wording in three questions (R07, R26, R36); all labels have one author (me), script-checked only; sets are small (a held-out question is 8 points).
+
+**Generation evaluation plan (agreed in concept; waiting for the user's "go"):**
+- **Two modes:** end-to-end (real top-5 chunks) and ideal context (gold chunk guaranteed among the five). Wrong end-to-end but right with ideal context means retrieval caused it; wrong in both means generation caused it. Retrieval metrics belong to neither mode; generation metrics are computed in both.
+- **Metrics:** faithfulness (supported claims / all claims), citation support (supported citations / all citations), answer correctness (correct 1, partial 0.5, wrong 0, against the expected answer), answer relevance (yes/no), refusal accuracy (false-refusal rate on answerable, correct-refusal rate on unanswerable; plain string match, no judge). False refusals are split into retrieval-caused and generation-caused using the phrase check.
+- **Question set:** the 36 questions (same split) plus about 8 unanswerable: 3 out of the world, 3 in the epic's world but absent from the Adi Parva, 2 false-premise. Absence must be verified by scanning the corpus (note: Sections 1 and 2 summarise later events such as Karna's death, so those are NOT absent).
+- **Judge:** recommended `gemini-3.5-flash` (stronger than the Flash-Lite generator, not a preview, about $1.50 / $9 per million tokens, unverified); `gemini-3.1-pro-preview` as the second opinion. Same vendor family as the generator (only a Gemini key), so calibrate: check about a dozen judged items against my reading and the second model, report agreement. Temperature 0, rubric, evidence quote with every verdict. A full run costs roughly $2; working set only about half.
+- **Files to build:** `eval/generation_questions.csv`, `src/rag/judge.py`, `src/rag/eval_generation.py`, `scripts/run_generation_eval.py`, `tests/test_eval_generation.py`; reuse the held-out protection and logging.
+
+**Implications for Phase 3 (hypotheses from the working-set numbers; to be ordered by the generation results too):**
+1. Lineage questions are weakest (phrase hit 1 of 4): try chunking that keeps the sentence stating parentage together, sentence-level or parent-child retrieval, and hybrid keyword search.
+2. Summary passages (Sections 1, 2, 95) act as magnets: consider de-duplication or diversity ranking, and always report with and without them.
+3. Name pairs: alias expansion of the question (Arjuna, Partha, Dhananjaya...).
+4. A bigger k is not a cure: working phrase hit rate goes from 0.67 at k=5 to only 0.75 at k=10.
 
 ---
 
