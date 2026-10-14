@@ -663,7 +663,7 @@ PR #2 awaits merge; page web address in citations; the website's section numberi
 
 ## Phase 2 — Evaluation: concepts and metrics
 
-*Status: concepts learned; retrieval question set drafted (36) with a frozen working / held-out split; gold sections not yet verified; no metric code yet.*
+*Status: concepts learned; retrieval question set (36) labelled with gold sections, evidence phrases and expected answers, checked by script; frozen working / held-out split; no metric code yet.*
 
 ### Why it exists
 Until now quality was judged by reading 8 answers and forming impressions. That cannot tell me whether a change helped:
@@ -796,8 +796,26 @@ Chosen: a blend of the first four. No model-written questions in the main set. R
 **Correction made while balancing:** the first draft had only 5 of 36 questions in the early third (the snake-sacrifice parvas: Paushya, Pauloma, Astika), although that third is a third of the book. I replaced 10 questions (dropped: Ghatotkacha's parents, Yayati's old age, a duplicate Pandu's-curse paraphrase, the warned-snakes paraphrase, the Bhima / Vrikodara pair, Baka spelling, Vidura's father, Yayati's sons by Devayani, common ancestor; added: Sarama's curse, Parikshit's death, the snake-sacrifice paraphrase, the burning-lodging paraphrase, the Sauti / Ugrasrava pair, Hidimba spelling, Jaratkaru's marriage, Ruru's parents, Astika and Vasuki) and reworded one. Lesson: a set drawn from memory leans towards famous scenes; check the spread on purpose.
 All section numbers in the file are **guesses until `gold_sections` is verified from the text**. Unanswerable questions are not in this set; they belong to the generation evaluation.
 
+### Labelling the 36 questions (done)
+**How:** for each question I searched the paragraphs, read the passages, chose the gold sections and short evidence phrases, and wrote the expected answer from the text. `scripts/verify_labels.py` then checks mechanically that every phrase appears word for word in a gold section **and** sits fully inside at least one chunk (chunks overlap by 200 characters, so a short phrase can never be cut in half by chunking). All 36 pass.
+**Limit to remember:** the labels were written by Claude and checked by script; the project owner has not independently verified them (recorded in the CSV `status` column and `eval/README.md`). A wrong or missing label would show up as a strange retrieval result and must be handled under the "no edits to flatter results" rule.
+
+**What reading the text changed (all before any scoring):**
+| Finding | Effect |
+|---|---|
+| R07: Sarama cursed Janamejaya and his brothers, not only the brothers | question reworded |
+| R26: the text names Drupada as the father and the children were born from the sacrificial fire; no mother is named in the way "parents" assumed | reworded to "Whose children were Dhrishtadyumna and Draupadi, and how were they born?" |
+| R36: every later Janamejaya also descends from Puru, so "which Janamejaya descended from Puru" had two right answers | reworded to "Who was Janamejaya, the son of Puru?" |
+| R06: I guessed Section 188; the contest condition is in 187 and the shot in 190 | gold corrected |
+| R22: the book spells the name **Vabhruvahana**; "Babhruvahana" never occurs | a genuine spelling-variant test |
+| R21: the text calls both the Rakshasa and his sister **Hidimva** (the question says Hidimba) | noted; spelling and same-name test in one |
+| R02 Pandu's curse is restated in Section 95 | gold widened to include Section 95 |
+
+**Discovery: the book contains summary passages that restate many answers.** Section 1 (the "I had no hope of success" list), Section 2 (the table of contents of the whole epic) and especially **Section 95** (one 6,000-character paragraph that retells the whole dynasty: Santanu, Bhishma, Vichitravirya, Dwaipayana's three sons, Pandu's curse and wives, Hidimva, Vaka, Draupadi, Subhadra, Parikshit, Janamejaya) answer many of our questions in a single paragraph. I added them to the gold sections wherever they truly state the answer, otherwise a correct chunk from a summary would count as a miss. Two consequences: (1) multi-hop questions R29 and R30 are partly "find the summary" tests; (2) retrieval may look better than it is simply because the summaries are easy targets. The retrospective should compare scores with and without the summary sections.
+**Other label notes:** both halves of each name pair carry identical labels so the pair is a fair test; the real spread of the answers across the book is 13 early / 13 middle / 10 late, and the held-out set is still 4 / 4 / 4.
+
 ### Decisions
-Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
+Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
 
 ---
 
