@@ -10,8 +10,8 @@ A separate generation set (including unanswerable questions) comes later.
 | `unit` | questions that share a unit are the same fact asked with different names; they always stay in the same split |
 | `type` | plain, paraphrase, alias, spelling, lineage, multihop, ambiguous |
 | `band`, `anchor_section` | rough place in the book (early = Sections 1-79, middle = 80-158, late = 159-236); a best guess, used only to spread the questions evenly |
-| `approx_sections` | where I expect the answer to be; **a guess until `gold_sections` is filled** |
-| `gold_sections` | sections verified from the text to contain the answer (printed heading numbers, not file numbers) |
+| `approx_sections` | my original guess of where the answer is (kept for the record; `gold_sections` is the truth) |
+| `gold_sections` | sections that state the answer, found by reading the text (printed heading numbers, not file numbers). Includes the book's summary passages (Sections 1, 2 and 95) where they restate the answer, so a correct summary chunk is not scored as a miss |
 | `evidence_phrases` | short exact phrases copied from those passages |
 | `expected_answer` | the short correct answer, checked against the text |
 | `split` | `working` (used during experiments) or `held-out` (only at milestones) |
@@ -23,3 +23,8 @@ A separate generation set (including unanswerable questions) comes later.
 3. **Do not edit questions or gold labels to flatter a result.** Fixing a label before scoring begins is fine. After scoring has begun, any change needs a logged reason and every earlier run must be re-scored with the new labels.
 4. **New questions go in a separate, clearly marked file** (not in this one).
 5. Q1 to Q8 in `QUESTION_LOG.md` are exploration notes, not part of this set.
+
+## How the labels were made, and what they are not
+- Written by Claude from reading the text, then checked by `python scripts/verify_labels.py`: every evidence phrase must appear word for word in a gold section and sit fully inside at least one chunk. **They have not been independently checked by the project owner**, so a wrong or missing label is possible; any error found later must be handled under rule 3.
+- A chunk counts as a hit if its section is gold (section check) and, more strictly, if it contains any one of the evidence phrases (phrase check).
+- Identical labels were given to both halves of each name pair, so the pair is a fair test of the name problem.
