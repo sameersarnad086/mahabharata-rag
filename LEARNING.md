@@ -681,23 +681,22 @@ If only the final answer is scored, a retrieval miss looks like a "correct refus
 me which stage to fix.
 
 ### Retrieval metrics
-A retrieved chunk counts as a **hit** if it comes from a labelled (gold) section.
-| Metric | Meaning | Notes |
-|---|---|---|
-| **Hit rate@k** | Did at least one relevant passage appear in the top k? (yes/no per question, averaged) | Simplest; the main number when the full relevant set is unknowable |
-| **Precision@k** | Fraction of the top k that is relevant | Q3: 2 of 5 = 0.4 |
-| **Recall@k** | Fraction of the labelled relevant passages that appeared in the top k | Only as complete as the labels |
-| **MRR** (mean reciprocal rank) | 1 divided by the rank of the first relevant passage, averaged over questions. Rank 1 = 1, rank 2 = 1/2, rank 3 = 1/3, a miss = 0 | Rewards putting the answer early; looks at the first hit only |
-| **nDCG** | Each relevant passage earns a score that shrinks with its rank: 1.00 (rank 1), 0.63, 0.50, 0.43, 0.39 (rank 5), i.e. 1 / log2(rank + 1). The sum is divided by the best possible sum for that question. 1.0 = perfect | Handles several relevant passages and graded relevance (perfect / partial) |
 
-**Worked example, Q3 ("Who is the father of Arjuna?").** Gold sections {67, 217}. Top 5 came from sections 134, 229, **67**, 95,
-**217**. Hit rate@5 = 1 (yes). Reciprocal rank = 1/3. Precision@5 = 2/5. Recall@5 = 2 of 2 = 1.0. nDCG: DCG = 0.50 + 0.39 = 0.887;
-best possible (relevant at ranks 1 and 2) = 1.00 + 0.63 = 1.631; nDCG = **0.54**. For Q1 (gold {74}, top 5 from 128, 123,
-191-192, 129, 110-111) every metric is 0.
+Four words used below:
+- **k:** how many top results we look at. We use k = 5, written "@5".
+- **rank:** a result's position in the returned list; rank 1 is the best match.
+- **gold:** the sections (or evidence phrases) a person labelled as containing the answer to a question.
+- **hit:** a returned chunk that matches the gold label. Anything else is a miss.
 
-**Illustrative only** (my quick labels on 6 questions: Q1 {74}, Q2 {106}, Q3 and Q4 {67, 217}, Q6 {2}, Q7 {100}): hit rate@5 =
-3 of 6 = 50%; MRR@5 = (0 + 0 + 1/3 + 0 + 1/3 + 1/2) / 6 = about 0.19. These are not baseline numbers; the real set has 30 to 50
-questions with verified labels.
+Every metric is worked out per question and then averaged over all questions in the set.
+
+| Metric | Meaning (plain words) | How it is calculated | Example | Notes |
+|---|---|---|---|---|
+| **Hit rate@k** | Out of all questions, how often did retrieval put at least one right passage in the top k? "Did we find anything useful at all?" | For each question: 1 if any of the top k chunks is a hit, otherwise 0. Average over all questions. | 10 questions. For 6 of them at least one of the top 5 chunks came from a gold section. Hit rate@5 = 6 / 10 = 0.6 (60%). | The easiest to read and the most robust, because it does not need the full list of relevant passages. Our headline number. It ignores how many right passages were found and how high they sit. |
+| **Precision@k** | Of the k chunks handed to the model, how many were useful? "How much noise did we send?" | (number of hits in the top k) divided by k. Average over questions. | The top 5 contains 2 hits. Precision@5 = 2 / 5 = 0.4. | Penalises noise, which matters because irrelevant passages can distract the language model. If only one passage can be right, the best possible score at k = 5 is 0.2, so a low value is not automatically a failure. |
+| **Recall@k** | Of all the relevant passages that exist, how many did we bring back? "Did we find everything we needed?" | (number of gold sections found in the top k) divided by (number of gold sections labelled for that question). Average over questions. | A question has 3 gold sections and the top 5 covers 2 of them. Recall@5 = 2 / 3 = 0.67. | Only as complete as our labels: a correct passage we did not label counts as a miss. Matters most for multi-hop questions, which need several passages together. For open facts we label a "gold minimum", so treat it as secondary to hit rate. |
+| **MRR** (mean reciprocal rank) | How near the top does the first right passage sit? "How quickly would a reader find a good one?" | Per question: 1 divided by the rank of the first hit (0 if there is no hit in the list). MRR is the average of that over all questions. | First hit at rank 1 scores 1.0, rank 2 scores 0.5, rank 4 scores 0.25, no hit scores 0. Three questions scoring 1.0, 0.5 and 0 give MRR = 0.5. | Looks only at the first hit, and the score falls steeply. Two systems with the same hit rate can differ in MRR, because one puts the answer first. Good when one passage is enough. |
+| **nDCG** (normalised discounted cumulative gain) | How good is the whole ordering? Are the relevant passages near the top, with the best ones first? | (1) Give each returned chunk a gain: 1 if relevant, 0 if not (or a grade such as 2 = perfect, 1 = partial). (2) Divide each gain by log2(rank + 1), so lower positions count less. (3) Add them up: this is DCG. (4) Divide by the DCG of the best possible ordering for that question. The result runs from 0 to 1. | Two relevant chunks. At ranks 1 and 2 the order is ideal: nDCG = 1.0. At ranks 3 and 5: DCG = 0.50 + 0.39 = 0.89, ideal DCG = 1.00 + 0.63 = 1.63, nDCG = 0.89 / 1.63 = 0.54. | The most complete score: it handles several relevant passages and partly relevant ones. Also the hardest to explain. Depends heavily on labelling quality. The position discounts are: rank 1 = 1.00, rank 2 = 0.63, rank 3 = 0.50, rank 4 = 0.43, rank 5 = 0.39. |
 
 ### Where "relevant" comes from: the metrics do not know, we tell them
 The metrics derive nothing about relevance. They compare what retrieval returned against labels a person wrote. After that
