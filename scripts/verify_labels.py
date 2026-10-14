@@ -18,12 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-
-
-def norm(s: str) -> str:
-    s = s.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
-    s = s.replace("–", "-").replace("—", "-")
-    return re.sub(r"\s+", " ", s).strip().lower()
+from src.rag.textnorm import norm  # noqa: E402
 
 
 def main() -> int:

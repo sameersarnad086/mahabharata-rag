@@ -663,7 +663,7 @@ PR #2 awaits merge; page web address in citations; the website's section numberi
 
 ## Phase 2 — Evaluation: concepts and metrics
 
-*Status: concepts learned; retrieval question set (36) labelled with gold sections, evidence phrases and expected answers, checked by script; frozen working / held-out split; no metric code yet.*
+*Status: concepts learned; retrieval question set (36) labelled and split; retrieval metrics built and tested; retrieval baseline scored (working set and, once, held-out); generation evaluation not started.*
 
 ### Why it exists
 Until now quality was judged by reading 8 answers and forming impressions. That cannot tell me whether a change helped:
@@ -813,6 +813,32 @@ All section numbers in the file are **guesses until `gold_sections` is verified 
 
 **Discovery: the book contains summary passages that restate many answers.** Section 1 (the "I had no hope of success" list), Section 2 (the table of contents of the whole epic) and especially **Section 95** (one 6,000-character paragraph that retells the whole dynasty: Santanu, Bhishma, Vichitravirya, Dwaipayana's three sons, Pandu's curse and wives, Hidimva, Vaka, Draupadi, Subhadra, Parikshit, Janamejaya) answer many of our questions in a single paragraph. I added them to the gold sections wherever they truly state the answer, otherwise a correct chunk from a summary would count as a miss. Two consequences: (1) multi-hop questions R29 and R30 are partly "find the summary" tests; (2) retrieval may look better than it is simply because the summaries are easy targets. The retrospective should compare scores with and without the summary sections.
 **Other label notes:** both halves of each name pair carry identical labels so the pair is a fair test; the real spread of the answers across the book is 13 early / 13 middle / 10 late, and the held-out set is still 4 / 4 / 4.
+
+### Retrieval evaluation: what was built
+**Code:** `src/rag/metrics.py` (pure metric functions), `src/rag/eval_retrieval.py` (runs the retriever on the question set and scores it), `src/rag/textnorm.py` (shared text matching), `scripts/run_retrieval_eval.py` (command line), `tests/test_metrics.py` (18 checks, including the worked examples from the metrics table). No new libraries.
+**How a question is scored:** retrieve 10 chunks; for each chunk decide hit or miss under two checks: **section** (touches a gold section) and **phrase** (contains an evidence phrase word for word). From those hit/miss flags compute hit rate, precision, recall, MRR and nDCG at k = 1, 3, 5, 10.
+**Choices worth remembering:**
+- **Recall** is the fraction of gold sections (section check) or evidence phrases (phrase check) that appear anywhere in the top k.
+- **nDCG's "best possible ordering"** uses the number of relevant chunks that exist in the whole corpus (capped at k). For the section check a whole section holds many chunks, so the ideal is five hits and nDCG looks harsh (0.32); for the phrase check only one to three chunks qualify. nDCG therefore depends on the label definition; read hit@5 and MRR@5 first.
+- **Summary variant:** `--exclude-summaries` drops Sections 1, 2 and 95 from the labels, to show how much of the score comes from those easy targets.
+- **Held-out protection built into the tool:** the default run scores only the working set and prints per-question detail; held-out needs `--confirm-milestone "reason"`, prints aggregates only (no per-question, no per-type lines), and every run is appended to `eval/heldout_runs.log`.
+- **Verified by hand:** I recomputed three questions (R14, R03, R19) from the raw retrieval and they matched the evaluator exactly.
+
+### Retrieval baseline results (Phase 1 pipeline; full table in `EXPERIMENTS.md`)
+| Set | Check | hit@5 | MRR@5 |
+|---|---|---|---|
+| Working (24) | section | 0.92 | 0.58 |
+| Working (24) | **phrase (strict)** | **0.67** | **0.35** |
+| Working, no summaries (22) | phrase | 0.50 | 0.28 |
+| Held-out (12), one milestone run | phrase | 0.75 | 0.58 |
+
+**What the numbers say** (from the working set, which I am allowed to study):
+- **Right neighbourhood, wrong chunk.** The section check passes 92% but the phrase check only 67%: retrieval usually lands in the right section but not on the chunk that states the answer. Only 21% of questions have the answer chunk at rank 1.
+- **The summary passages flatter the score.** Without Sections 1, 2 and 95, hit@5 falls from 0.92 to 0.77 (section) and 0.67 to 0.50 (phrase). Example: "How did Partha win Subhadra?" scored a hit only because the Section 1 summary came back; the real scene in Section 222 never did.
+- **By type (phrase hit@5, working):** paraphrase 3/3, ambiguous 3/3, alias 4/6, plain 3/5, multi-hop 1/2, lineage **1/4** (MRR@5 only 0.06). "Who were X's parents?" questions retrieve narrative about X rather than the sentence that states the parentage.
+- **Name pairs (the central challenge):** Arjuna rank 1 vs Partha rank 4 (and the Partha hit came from the summary); but Sauti rank 3 vs Ugrasrava rank 1 (the rarer name did better), and the Vyasa / Dwaipayana pair failed identically. With three pairs this shows the effect exists and is not uniform; it proves nothing about size.
+- **Held-out is in the same range** as the working set (0.75 vs 0.67 phrase hit@5), which suggests the working-set result is not a fluke. With 12 questions the gap is within noise.
+**Lessons:** (1) the strict check and the summary-free variant are the honest numbers; the generous ones are ceilings; (2) always report counts (16 of 24) next to rates; (3) a metric must be tested against hand calculation before its numbers are believed.
 
 ### Decisions
 Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).

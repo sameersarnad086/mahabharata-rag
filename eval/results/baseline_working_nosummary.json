@@ -1,0 +1,1645 @@
+{
+  "config": {
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "query_prefix": false,
+    "k_retrieved": 10,
+    "exclude_summaries": true,
+    "commit": "02a9e84",
+    "date": "2026-10-14"
+  },
+  "split": "working",
+  "summary": {
+    "n": 22,
+    "section": {
+      "hit@1": 0.4090909090909091,
+      "precision@1": 0.4090909090909091,
+      "recall@1": 0.3409090909090909,
+      "mrr@1": 0.4090909090909091,
+      "ndcg@1": 0.4090909090909091,
+      "hit@3": 0.6363636363636364,
+      "precision@3": 0.28787878787878785,
+      "recall@3": 0.5151515151515151,
+      "mrr@3": 0.5075757575757576,
+      "ndcg@3": 0.31538897509297786,
+      "hit@5": 0.7727272727272727,
+      "precision@5": 0.2545454545454546,
+      "recall@5": 0.6439393939393939,
+      "mrr@5": 0.5393939393939394,
+      "ndcg@5": 0.2938645312183433,
+      "hit@10": 0.8181818181818182,
+      "precision@10": 0.2,
+      "recall@10": 0.7727272727272727,
+      "mrr@10": 0.5458874458874459,
+      "ndcg@10": 0.26716112852824364,
+      "hits_at_5": 17
+    },
+    "phrase": {
+      "hit@1": 0.18181818181818182,
+      "precision@1": 0.18181818181818182,
+      "recall@1": 0.11363636363636363,
+      "mrr@1": 0.18181818181818182,
+      "ndcg@1": 0.18181818181818182,
+      "hit@3": 0.3181818181818182,
+      "precision@3": 0.10606060606060605,
+      "recall@3": 0.19696969696969696,
+      "mrr@3": 0.23484848484848486,
+      "ndcg@3": 0.18331218099607482,
+      "hit@5": 0.5,
+      "precision@5": 0.10909090909090911,
+      "recall@5": 0.32575757575757575,
+      "mrr@5": 0.28030303030303033,
+      "ndcg@5": 0.24531845609875613,
+      "hit@10": 0.5909090909090909,
+      "precision@10": 0.07727272727272728,
+      "recall@10": 0.4318181818181818,
+      "mrr@10": 0.29247835497835495,
+      "ndcg@10": 0.2784871012531597,
+      "hits_at_5": 11
+    }
+  },
+  "questions": [
+    {
+      "id": "R01",
+      "type": "plain",
+      "first_rank": {
+        "section": 1,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 0.5,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.6666666666666666,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.7039180890341347,
+          "hit@5": 1.0,
+          "precision@5": 0.6,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.639945385422766,
+          "hit@10": 1.0,
+          "precision@10": 0.5,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.5670429581667766
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          74
+        ],
+        [
+          95
+        ],
+        [
+          72
+        ],
+        [
+          95
+        ],
+        [
+          74
+        ]
+      ]
+    },
+    {
+      "id": "R03",
+      "type": "plain",
+      "first_rank": {
+        "section": 1,
+        "phrase": 1
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.46927872602275644,
+          "hit@5": 1.0,
+          "precision@5": 0.4,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.4703652827859579,
+          "hit@10": 1.0,
+          "precision@10": 0.4,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.4448530294934502
+        },
+        "phrase": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 0.5,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.6131471927654584,
+          "hit@5": 1.0,
+          "precision@5": 0.4,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.8503449055347546,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.8503449055347546
+        }
+      },
+      "top_sections": [
+        [
+          134
+        ],
+        [
+          168
+        ],
+        [
+          133
+        ],
+        [
+          133
+        ],
+        [
+          134
+        ]
+      ]
+    },
+    {
+      "id": "R05",
+      "type": "plain",
+      "first_rank": {
+        "section": 1,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.46927872602275644,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.3391602052736161,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.22009176629808017
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          225,
+          226
+        ],
+        [
+          228
+        ],
+        [
+          228
+        ],
+        [
+          230
+        ],
+        [
+          230
+        ]
+      ]
+    },
+    {
+      "id": "R06",
+      "type": "plain",
+      "first_rank": {
+        "section": 2,
+        "phrase": 2
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 0.5,
+          "ndcg@3": 0.2960819109658652,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 0.5,
+          "ndcg@5": 0.21398626473452756,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.21726071285222986
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.3333333333333333,
+          "mrr@3": 0.5,
+          "ndcg@3": 0.38685280723454163,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.3333333333333333,
+          "mrr@5": 0.5,
+          "ndcg@5": 0.38685280723454163,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.3333333333333333,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.38685280723454163
+        }
+      },
+      "top_sections": [
+        [
+          2
+        ],
+        [
+          187
+        ],
+        [
+          223
+        ],
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ]
+    },
+    {
+      "id": "R08",
+      "type": "plain",
+      "first_rank": {
+        "section": 3,
+        "phrase": 4
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 0.3333333333333333,
+          "ndcg@3": 0.23463936301137822,
+          "hit@5": 1.0,
+          "precision@5": 0.4,
+          "recall@5": 0.5,
+          "mrr@5": 0.3333333333333333,
+          "ndcg@5": 0.3156484524795145,
+          "hit@10": 1.0,
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "mrr@10": 0.3333333333333333,
+          "ndcg@10": 0.2781981696179509
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 0.25,
+          "ndcg@5": 0.2640681225725909,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.5,
+          "mrr@10": 0.25,
+          "ndcg@10": 0.2640681225725909
+        }
+      },
+      "top_sections": [
+        [
+          49
+        ],
+        [
+          95
+        ],
+        [
+          44
+        ],
+        [
+          43,
+          44
+        ],
+        [
+          51
+        ]
+      ]
+    },
+    {
+      "id": "R10",
+      "type": "paraphrase",
+      "first_rank": {
+        "section": 1,
+        "phrase": 3
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 1.0,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 1.0,
+          "hit@5": 1.0,
+          "precision@5": 1.0,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 1.0,
+          "hit@10": 1.0,
+          "precision@10": 0.6,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.7151857987862356
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 0.3333333333333333,
+          "ndcg@3": 0.3065735963827292,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 0.3333333333333333,
+          "ndcg@5": 0.3065735963827292,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 0.3333333333333333,
+          "ndcg@10": 0.4911492931622974
+        }
+      },
+      "top_sections": [
+        [
+          100
+        ],
+        [
+          100
+        ],
+        [
+          100
+        ],
+        [
+          100
+        ],
+        [
+          100
+        ]
+      ]
+    },
+    {
+      "id": "R11",
+      "type": "paraphrase",
+      "first_rank": {
+        "section": 1,
+        "phrase": 1
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 0.5,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.6666666666666666,
+          "recall@3": 0.5,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.7653606369886217,
+          "hit@5": 1.0,
+          "precision@5": 0.4,
+          "recall@5": 0.5,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.5531464700081437,
+          "hit@10": 1.0,
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.42838543210841196
+        },
+        "phrase": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 0.5,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.6131471927654584,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.6131471927654584,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.5,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.6131471927654584
+        }
+      },
+      "top_sections": [
+        [
+          51
+        ],
+        [
+          51,
+          52
+        ],
+        [
+          53
+        ],
+        [
+          42
+        ],
+        [
+          43,
+          44
+        ]
+      ]
+    },
+    {
+      "id": "R12",
+      "type": "paraphrase",
+      "first_rank": {
+        "section": 1,
+        "phrase": 1
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 0.5,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.46927872602275644,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.3391602052736161,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 0.5,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.3133940658859805
+        },
+        "phrase": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 0.5,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.5,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.6131471927654584,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.6131471927654584,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.5,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.6131471927654584
+        }
+      },
+      "top_sections": [
+        [
+          150
+        ],
+        [
+          211
+        ],
+        [
+          228
+        ],
+        [
+          233,
+          234
+        ],
+        [
+          146
+        ]
+      ]
+    },
+    {
+      "id": "R13",
+      "type": "alias",
+      "first_rank": {
+        "section": null,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          1
+        ],
+        [
+          61
+        ],
+        [
+          134
+        ],
+        [
+          1
+        ],
+        [
+          230
+        ]
+      ]
+    },
+    {
+      "id": "R14",
+      "type": "alias",
+      "first_rank": {
+        "section": null,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          221
+        ],
+        [
+          223
+        ],
+        [
+          178
+        ],
+        [
+          1
+        ],
+        [
+          224
+        ]
+      ]
+    },
+    {
+      "id": "R15",
+      "type": "alias",
+      "first_rank": {
+        "section": 3,
+        "phrase": 3
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 0.3333333333333333,
+          "ndcg@3": 0.23463936301137822,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 0.3333333333333333,
+          "ndcg@5": 0.23463936301137822,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 0.3333333333333333,
+          "ndcg@10": 0.370291336443826
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 0.3333333333333333,
+          "ndcg@3": 0.5,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 0.3333333333333333,
+          "ndcg@5": 0.5,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 0.3333333333333333,
+          "ndcg@10": 0.5
+        }
+      },
+      "top_sections": [
+        [
+          95
+        ],
+        [
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          72
+        ],
+        [
+          39,
+          40
+        ]
+      ]
+    },
+    {
+      "id": "R16",
+      "type": "alias",
+      "first_rank": {
+        "section": 1,
+        "phrase": 1
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.46927872602275644,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.46927872602275644,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.46927872602275644
+        },
+        "phrase": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 1.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 1.0,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 1.0
+        }
+      },
+      "top_sections": [
+        [
+          3,
+          4
+        ],
+        [
+          1
+        ],
+        [
+          180
+        ],
+        [
+          180
+        ],
+        [
+          193
+        ]
+      ]
+    },
+    {
+      "id": "R19",
+      "type": "alias",
+      "first_rank": {
+        "section": 1,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.46927872602275644,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.3391602052736161,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.3543334123470583
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          106
+        ],
+        [
+          63
+        ],
+        [
+          180
+        ],
+        [
+          105
+        ],
+        [
+          63
+        ]
+      ]
+    },
+    {
+      "id": "R20",
+      "type": "alias",
+      "first_rank": {
+        "section": 1,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 1.0,
+          "precision@1": 1.0,
+          "recall@1": 1.0,
+          "mrr@1": 1.0,
+          "ndcg@1": 1.0,
+          "hit@3": 1.0,
+          "precision@3": 0.6666666666666666,
+          "recall@3": 1.0,
+          "mrr@3": 1.0,
+          "ndcg@3": 0.7653606369886217,
+          "hit@5": 1.0,
+          "precision@5": 0.4,
+          "recall@5": 1.0,
+          "mrr@5": 1.0,
+          "ndcg@5": 0.5531464700081437,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 1.0,
+          "ndcg@10": 0.44830398990253034
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          106
+        ],
+        [
+          106
+        ],
+        [
+          119
+        ],
+        [
+          144,
+          145
+        ],
+        [
+          83
+        ]
+      ]
+    },
+    {
+      "id": "R21",
+      "type": "spelling",
+      "first_rank": {
+        "section": 2,
+        "phrase": 4
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 0.3333333333333333,
+          "mrr@3": 0.5,
+          "ndcg@3": 0.2960819109658652,
+          "hit@5": 1.0,
+          "precision@5": 0.4,
+          "recall@5": 0.6666666666666666,
+          "mrr@5": 0.5,
+          "ndcg@5": 0.36005461457723403,
+          "hit@10": 1.0,
+          "precision@10": 0.4,
+          "recall@10": 1.0,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.3693362536342716
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.3333333333333333,
+          "mrr@5": 0.25,
+          "ndcg@5": 0.16812753627111746,
+          "hit@10": 1.0,
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "mrr@10": 0.25,
+          "ndcg@10": 0.4087948353979096
+        }
+      },
+      "top_sections": [
+        [
+          155
+        ],
+        [
+          154
+        ],
+        [
+          200
+        ],
+        [
+          157
+        ],
+        [
+          171
+        ]
+      ]
+    },
+    {
+      "id": "R23",
+      "type": "lineage",
+      "first_rank": {
+        "section": 5,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 0.2,
+          "ndcg@5": 0.13120507751234178,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 0.2,
+          "ndcg@10": 0.08514311764162098
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          105
+        ],
+        [
+          101,
+          102
+        ],
+        [
+          102
+        ],
+        [
+          105
+        ],
+        [
+          100
+        ]
+      ]
+    },
+    {
+      "id": "R25",
+      "type": "lineage",
+      "first_rank": {
+        "section": 2,
+        "phrase": 8
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 1.0,
+          "precision@3": 0.3333333333333333,
+          "recall@3": 1.0,
+          "mrr@3": 0.5,
+          "ndcg@3": 0.2960819109658652,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 0.5,
+          "ndcg@5": 0.21398626473452756,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "mrr@10": 0.5,
+          "ndcg@10": 0.2601414854823592
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.5,
+          "mrr@10": 0.125,
+          "ndcg@10": 0.1480409554829326
+        }
+      },
+      "top_sections": [
+        [
+          66
+        ],
+        [
+          111
+        ],
+        [
+          115,
+          116
+        ],
+        [
+          138
+        ],
+        [
+          157
+        ]
+      ]
+    },
+    {
+      "id": "R26",
+      "type": "lineage",
+      "first_rank": {
+        "section": 7,
+        "phrase": 7
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 0.14285714285714285,
+          "ndcg@10": 0.07336392209936005
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.6666666666666666,
+          "mrr@10": 0.14285714285714285,
+          "ndcg@10": 0.15642624200758548
+        }
+      },
+      "top_sections": [
+        [
+          223,
+          224
+        ],
+        [
+          63
+        ],
+        [
+          63
+        ],
+        [
+          223
+        ],
+        [
+          67
+        ]
+      ]
+    },
+    {
+      "id": "R28",
+      "type": "lineage",
+      "first_rank": {
+        "section": 4,
+        "phrase": 4
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 0.25,
+          "ndcg@5": 0.14606834984270645,
+          "hit@10": 1.0,
+          "precision@10": 0.2,
+          "recall@10": 0.5,
+          "mrr@10": 0.25,
+          "ndcg@10": 0.1681522864689108
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 0.5,
+          "mrr@5": 0.25,
+          "ndcg@5": 0.2640681225725909,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 0.5,
+          "mrr@10": 0.25,
+          "ndcg@10": 0.2640681225725909
+        }
+      },
+      "top_sections": [
+        [
+          1
+        ],
+        [
+          124
+        ],
+        [
+          63
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          94
+        ]
+      ]
+    },
+    {
+      "id": "R31",
+      "type": "multihop",
+      "first_rank": {
+        "section": null,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          128
+        ],
+        [
+          58
+        ],
+        [
+          48
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          48,
+          49
+        ]
+      ]
+    },
+    {
+      "id": "R32",
+      "type": "multihop",
+      "first_rank": {
+        "section": null,
+        "phrase": null
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 0.0,
+          "precision@5": 0.0,
+          "recall@5": 0.0,
+          "mrr@5": 0.0,
+          "ndcg@5": 0.0,
+          "hit@10": 0.0,
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "mrr@10": 0.0,
+          "ndcg@10": 0.0
+        }
+      },
+      "top_sections": [
+        [
+          85
+        ],
+        [
+          85,
+          86
+        ],
+        [
+          95
+        ],
+        [
+          93,
+          94
+        ],
+        [
+          85
+        ]
+      ]
+    },
+    {
+      "id": "R33",
+      "type": "ambiguous",
+      "first_rank": {
+        "section": 4,
+        "phrase": 4
+      },
+      "scores": {
+        "section": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 0.25,
+          "ndcg@5": 0.14606834984270645,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 0.25,
+          "ndcg@10": 0.09478836436955078
+        },
+        "phrase": {
+          "hit@1": 0.0,
+          "precision@1": 0.0,
+          "recall@1": 0.0,
+          "mrr@1": 0.0,
+          "ndcg@1": 0.0,
+          "hit@3": 0.0,
+          "precision@3": 0.0,
+          "recall@3": 0.0,
+          "mrr@3": 0.0,
+          "ndcg@3": 0.0,
+          "hit@5": 1.0,
+          "precision@5": 0.2,
+          "recall@5": 1.0,
+          "mrr@5": 0.25,
+          "ndcg@5": 0.43067655807339306,
+          "hit@10": 1.0,
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "mrr@10": 0.25,
+          "ndcg@10": 0.43067655807339306
+        }
+      },
+      "top_sections": [
+        [
+          223
+        ],
+        [
+          63
+        ],
+        [
+          67
+        ],
+        [
+          169,
+          170
+        ],
+        [
+          167,
+          168
+        ]
+      ]
+    }
+  ]
+}
