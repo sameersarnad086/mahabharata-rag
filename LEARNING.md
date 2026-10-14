@@ -663,7 +663,7 @@ PR #2 awaits merge; page web address in citations; the website's section numberi
 
 ## Phase 2 — Evaluation: concepts and metrics
 
-*Status: concepts learned and decisions pending; no evaluation code or question set yet.*
+*Status: concepts learned; retrieval question set drafted (36) with a frozen working / held-out split; gold sections not yet verified; no metric code yet.*
 
 ### Why it exists
 Until now quality was judged by reading 8 answers and forming impressions. That cannot tell me whether a change helped:
@@ -749,10 +749,55 @@ Cautions: synthetic questions flatter retrieval because they share the chunk's w
 - Q1 to Q8 in `QUESTION_LOG.md` are seeds, not part of the set.
 - The questions are mine to write (I know what I want to ask); Claude finds the source sections and phrases and drafts expected answers, and I verify them against the text.
 
-### Decisions pending
-1. Labelling method: section only, evidence phrase only, or both (leaning: both).
-2. Who writes questions and in what format (leaning: I write the questions in plain English; columns: question, type, expected answer, source sections by printed heading number, evidence phrase, notes).
-3. Final mix and size of the set.
+### Approaches to writing evaluation questions
+| Approach | How it works | Strength | Weakness |
+|---|---|---|---|
+| Read and ask | A person reads sections and writes questions | Realistic wording | Slow; clusters on famous scenes |
+| From structure | Section II lists the epic's events; use it as a checklist of episodes | Spreads questions across the book | Only headline events |
+| From our failures | Q1 to Q8 and the problem map: aliases, lineage, multi-hop | Targets known weak spots | Biased towards what already broke |
+| Same fact, different names | Take one verified fact and ask it once per name | Isolates the name problem exactly | Needs a fact in a known section |
+| Model-written from chunks | A language model writes a question from a chunk | Fast, cheap | Reuses the chunk's wording so retrieval looks better than it is; chunk-bound labels; misses the alias problem |
+| Real user questions | Collect what people ask | The truth | None exist yet |
+Chosen: a blend of the first four. No model-written questions in the main set. Real questions are added later in a separate, marked file.
+
+### Goals to keep in mind while writing questions
+1. Check the answer exists in the Adi Parva first, and note the section(s) and a short evidence phrase before the question is final.
+2. Write like someone who has not read the text; do not copy the passage's wording.
+3. One question tests one thing, so a failure is diagnosable; tag every question with a type.
+4. A difficulty ladder: easy (name and words match), medium (paraphrased), hard (aliases, lineage, multi-hop).
+5. Pair the names: ask the same fact under different names so the alias problem becomes a number.
+6. Spread across the book (early, middle, late) and include rarely mentioned facts (Ekalavya is in 2 sections, Kindama in 1).
+7. No facts that need the rest of the epic; no trick questions unless tagged ambiguous.
+8. Freeze the set and split it (below).
+9. Be modest about size: with 36 questions one question is about 2.8 points, so only large differences count; report counts as well as percentages.
+
+### The working / held-out split
+**Problem:** over many Phase 3 experiments I will tend to keep changes that happen to suit these particular questions (for example special handling for exactly the Arjuna / Partha pairs). The score rises but the system has only learned the test, like a student who rehearses one exam paper.
+**Fix:** split the set before experimenting. **Working set (24)** is used constantly: run after every change, failures studied. **Held-out set (12)** is locked: its failures are never read or tuned against, and it is run only at milestones (the baseline, the end of each phase). If a change helps both groups it is probably real; if only the working set, I have fitted the test.
+**How it was drawn (fixed before any question was scored):**
+- Held-out size fixed per type: 3 plain, 1 paraphrase, 2 alias (one pair), 1 spelling, 2 lineage, 2 multi-hop, 1 ambiguous.
+- Name pairs always stay together, otherwise one half would teach me about the other.
+- Units drawn at random within each type with a seeded generator; seeds tried in order 1, 2, 3...; the first seed giving 3 to 5 held-out questions in each third of the book was kept. Seed 1 worked: 4 early, 4 middle, 4 late.
+- Frozen: `scripts/make_split.py` refuses to reassign unless forced; `--check` verifies it. Rule and seed recorded in `eval/split_info.json`.
+**Cost:** only 12 held-out questions, so one question is about 8 points; it is a sanity check, not a precise score.
+**Held-out ids:** R02, R04, R07, R09, R17, R18, R22, R24, R27, R29, R30, R35 (the text of every question is in `eval/retrieval_questions.csv`; what is hidden is the habit of studying their failures).
+
+### The retrieval question set (36, in `eval/retrieval_questions.csv`)
+| Type | Count | Held-out | What it tests |
+|---|---|---|---|
+| plain | 8 | 3 | the name and wording match the passage |
+| paraphrase | 4 | 1 | the answer is asked without the passage's words or names |
+| alias | 8 (4 pairs) | 2 | the same fact under different names (Arjuna / Partha, Sauti / Ugrasrava, Vyasa / Dwaipayana, Arjuna / Dhananjaya) |
+| spelling | 2 | 1 | modern spelling vs the book's (Hidimba / Hidimva; Babhruvahana, not found in the text under that spelling) |
+| lineage | 6 | 2 | parents and relations |
+| multi-hop | 4 | 2 | several passages needed (Bhishma and Vichitravirya; Yudhishthira from Santanu; Astika and Vasuki; Yadu and Puru through Yayati) |
+| ambiguous | 4 | 1 | names that mean more than one person (Krishna, Parikshit, Janamejaya) |
+**Spread across the book** (early = Sections 1 to 79, middle = 80 to 158, late = 159 to 236): 12 / 14 / 10 questions; held-out 4 / 4 / 4.
+**Correction made while balancing:** the first draft had only 5 of 36 questions in the early third (the snake-sacrifice parvas: Paushya, Pauloma, Astika), although that third is a third of the book. I replaced 10 questions (dropped: Ghatotkacha's parents, Yayati's old age, a duplicate Pandu's-curse paraphrase, the warned-snakes paraphrase, the Bhima / Vrikodara pair, Baka spelling, Vidura's father, Yayati's sons by Devayani, common ancestor; added: Sarama's curse, Parikshit's death, the snake-sacrifice paraphrase, the burning-lodging paraphrase, the Sauti / Ugrasrava pair, Hidimba spelling, Jaratkaru's marriage, Ruru's parents, Astika and Vasuki) and reworded one. Lesson: a set drawn from memory leans towards famous scenes; check the spread on purpose.
+All section numbers in the file are **guesses until `gold_sections` is verified from the text**. Unanswerable questions are not in this set; they belong to the generation evaluation.
+
+### Decisions
+Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
 
 ---
 
