@@ -773,6 +773,7 @@ Cautions: synthetic questions flatter retrieval because they share the chunk's w
 - **Answer relevance and correctness:** it answers the question and matches the expected answer.
 - **Refusal accuracy:** it refuses exactly when it should.
 - The judge should ideally be a different (preferably stronger) model than the generator; chosen when we build it. Later: compare my own implementation with the Ragas and DeepEval libraries, after checking they are current.
+- **Fixed step (not optional): run Ragas against my own metrics.** After my generation metrics are baselined, run the same questions, answers and passages through Ragas with the same Gemini judge. Record a side-by-side table in `EXPERIMENTS.md` and read each disagreement to decide who was right. Add a "Ragas vs my own metrics" section here. Purpose: be able to explain, in interviews, how faithfulness is computed (split the answer into claims, check each against the passages), why a single judge is biased, and give a real example from our data where the two disagreed. DeepEval comes after Ragas if time allows. Check both libraries are current and work with Gemini first.
 
 ### Rules that keep the evaluation honest
 - Write the set **before** looking at Phase 3 results, and **never edit it** to flatter them. New questions go in a clearly marked separate section.
