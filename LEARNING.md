@@ -894,6 +894,50 @@ Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1
 - **Held-out is in the same range** as the working set (0.75 vs 0.67 phrase hit@5), which suggests the working-set result is not a fluke. With 12 questions the gap is within noise.
 **Lessons:** (1) the strict check and the summary-free variant are the honest numbers; the generous ones are ceilings; (2) always report counts (16 of 24) next to rates; (3) a metric must be tested against hand calculation before its numbers are believed.
 
+### How the generation evaluation will run, step by step (lesson before the build)
+
+**One-line idea:** for each question, produce an answer, then grade the answer from several angles. Some grades are plain code (exact checks); the rest are given by a second model, the judge, which is told exactly what to look at and must reply in a fixed format.
+
+**The run, per question:**
+1. **Get the passages.** End-to-end mode: use the real retriever (top 5). Ideal-context mode: hand over the gold passage(s) directly.
+2. **Generate the answer** with the same `generate_answer` as the real system (same prompt, same model, temperature 0).
+3. **Grade it** (below). Each grade is saved with the question, answer, passages and judge reply, so every score can be audited.
+4. **Average** per group (answerable / unanswerable, per question type, working vs held-out) and compare the two modes.
+
+**How each metric is computed:**
+
+| Metric | Who grades | What the judge sees | How the score is formed |
+|---|---|---|---|
+| Faithfulness | judge | the passages and the answer | Judge splits the answer into single claims, marks each supported / not supported by the passages. Score = supported claims / all claims |
+| Citation support | code, then judge | the sentence and only the passage it cites | Code first checks the `[n]` exists (`check_citations`). Judge then says whether passage n backs that sentence. Score = backed citations / all citations |
+| Answer correctness | judge | question, expected answer, the answer | 1 = matches, 0.5 = partly, 0 = wrong or missing. The judge does not see the passages, so it cannot be fooled by fluent but wrong text |
+| Answer relevance | judge | question and answer only | Does it address what was asked? Refusals are left out of this score |
+| Refusal accuracy | code | the answer text | String match on the fixed refusal sentence. A 2x2: answerable or not, refused or not |
+
+**Worked example (illustrative; real numbers come from the run):**
+
+| Question | What happened | Faithful | Cites | Correct | Verdict |
+|---|---|---|---|---|---|
+| A. "Who was Bharata's father?" | Gold passage retrieved; "Dushyanta [2]" | 1/1 | 1/1 | 1 | all good |
+| B. answerable, but retrieval missed the gold | Model refuses | n/a | n/a | 0 | **false refusal**. With the gold passage handed over (ideal context) it answers correctly, so the fault is **retrieval** |
+| C. answerable, gold retrieved | Right answer, but one extra claim comes from outside knowledge, and one `[3]` sits on a sentence passage 3 does not say | 3/4 | 1/2 | 1 | correct but **unfaithful**. Same result in ideal context, so the fault is **generation** |
+| D. unanswerable (absent from the corpus) | Model refuses | n/a | n/a | n/a | **correct refusal** |
+
+**Reading the scores together (the real skill):**
+- Faithfulness high, correctness low: honest but wrong or incomplete. Usually the passages lacked the answer, so look at retrieval.
+- Correctness high, faithfulness low: right answer, but from the model's memory. Dangerous here, because citations then mean nothing.
+- Citation support low with good faithfulness: claims are true, but the `[n]` marks are misplaced.
+- False refusals: split into retrieval-caused (ideal context answers) and generation-caused (even ideal context refuses).
+- Correct refusals on unanswerable questions but false refusals on answerable ones: the model is too cautious. Tune the prompt, not the retriever.
+
+**Why the two modes:** end-to-end tells the user-facing truth. Ideal context removes retrieval from the picture, so a bad answer there is the generator's fault. The gap between them is the cost of imperfect retrieval.
+
+**The judge is itself a model, so it needs checking:**
+- Calibration: I (the user) label about 12 answers by hand; we compare with the judge. Agreement under about 80% means the judge instructions get fixed before we trust any score.
+- Same-vendor bias: a Gemini judge may be generous to Gemini answers. We note it, and Ragas later gives a second opinion.
+- The judge must reply in a fixed format (JSON), so scores are read by code, not guessed from prose.
+- Keep the judge instructions fixed once calibrated; changing them mid-experiment breaks comparisons.
+
 ### Decisions
 Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
 
