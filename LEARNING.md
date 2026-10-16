@@ -894,49 +894,121 @@ Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1
 - **Held-out is in the same range** as the working set (0.75 vs 0.67 phrase hit@5), which suggests the working-set result is not a fluke. With 12 questions the gap is within noise.
 **Lessons:** (1) the strict check and the summary-free variant are the honest numbers; the generous ones are ceilings; (2) always report counts (16 of 24) next to rates; (3) a metric must be tested against hand calculation before its numbers are believed.
 
-### How the generation evaluation will run, step by step (lesson before the build)
+### Generation evaluation: what it is and how it runs (lesson written before the build)
 
-**One-line idea:** for each question, produce an answer, then grade the answer from several angles. Some grades are plain code (exact checks); the rest are given by a second model, the judge, which is told exactly what to look at and must reply in a fixed format.
+Status: **designed and explained, not built yet.** The worked example below uses R01 with an *illustrative* answer; the numbers are not from a real run.
 
-**The run, per question:**
-1. **Get the passages.** End-to-end mode: use the real retriever (top 5). Ideal-context mode: hand over the gold passage(s) directly.
-2. **Generate the answer** with the same `generate_answer` as the real system (same prompt, same model, temperature 0).
-3. **Grade it** (below). Each grade is saved with the question, answer, passages and judge reply, so every score can be audited.
-4. **Average** per group (answerable / unanswerable, per question type, working vs held-out) and compare the two modes.
+#### 1. What generation evaluation is, and how we do it
+- **Concept:** retrieval evaluation asks "did we fetch the right passages?". Generation evaluation asks "given those passages, did the model write a good answer?". The two are scored separately so we know which half to fix.
+- **How, in one line:** for each question we produce an answer with the real system, then grade it from several angles. Some grades are plain code. The rest come from a second model, the **judge**, which gets a narrow job, only the information that job needs, and must reply in a fixed format (JSON) so code can read the score.
+- **Questions:** the same 36 as retrieval, plus about 8 **unanswerable** ones (see section 4.1).
 
-**How each metric is computed:**
+#### 2. The two ways to run it
+| Mode | Passages given to the generator | What a result tells us |
+|---|---|---|
+| **End-to-end** | What the real retriever returns (top 5) | The user-facing truth: retrieval and generation together |
+| **Ideal context** (also called oracle retrieval) | The gold passage(s) handed over directly | The generator alone. A bad answer here is the generator's fault |
 
-| Metric | Who grades | What the judge sees | How the score is formed |
-|---|---|---|---|
-| Faithfulness | judge | the passages and the answer | Judge splits the answer into single claims, marks each supported / not supported by the passages. Score = supported claims / all claims |
-| Citation support | code, then judge | the sentence and only the passage it cites | Code first checks the `[n]` exists (`check_citations`). Judge then says whether passage n backs that sentence. Score = backed citations / all citations |
-| Answer correctness | judge | question, expected answer, the answer | 1 = matches, 0.5 = partly, 0 = wrong or missing. The judge does not see the passages, so it cannot be fooled by fluent but wrong text |
-| Answer relevance | judge | question and answer only | Does it address what was asked? Refusals are left out of this score |
-| Refusal accuracy | code | the answer text | String match on the fixed refusal sentence. A 2x2: answerable or not, refused or not |
+- **Reading the pair:** good in ideal context but bad end-to-end means fix retrieval. Bad in both means fix the prompt or model. The gap between them is the cost of imperfect retrieval.
+- Only the passage-fetching step differs. Everything after it is identical.
+- The ideal-context idea exists in research as "oracle retrieval". Libraries do not ship it as a feature, so it is our own design choice.
 
-**Worked example (illustrative; real numbers come from the run):**
+#### 3. The metrics: what they mean, how they are calculated
+| Metric | Meaning | Graded by | Judge sees | Score |
+|---|---|---|---|---|
+| **Correctness** | Matches the expected answer | judge | question, expected answer, the answer (**no passages**, so fluent but wrong text cannot fool it) | 1 / 0.5 / 0 |
+| **Faithfulness** | Every claim is backed by the retrieved text. Not "true in the world", but "the text says it" | judge, 2 stages | A: the answer only (list the claims). B: passages plus claims (supported or not) | supported claims / all claims |
+| **Citation support** | Each `[n]` really backs the sentence it sits on | code, then judge | the one sentence and **only** passage n | backed citations / all citations |
+| **Relevance** | The answer addresses the question asked | judge | question and answer only | 1 / 0, refusals left out |
+| **Refusal accuracy** | Refuses exactly when it should | code | the answer text | 2x2 table: answerable or not, refused or not |
 
+**Reading them together:**
+- Faithfulness high, correctness low: honest but wrong or incomplete. The passages usually lacked the answer, so look at retrieval.
+- Correctness high, faithfulness low: right from the model's memory. Dangerous for this project, because the citations then mean nothing.
+- Citation support low, faithfulness fine: the claims are true, but the `[n]` marks are misplaced.
+- False refusals: split into retrieval-caused (ideal context answers) and generation-caused (even ideal context refuses).
+- Correct refusals on unanswerable questions but false refusals on answerable ones: the model is too cautious, so tune the prompt, not the retriever.
+- Faithfulness and citation support overlap (one unsupported claim can lower both) but are not the same. Faithfulness counts claims. Citation support asks whether the marker is honest.
+
+**Worked example across four situations (illustrative):**
 | Question | What happened | Faithful | Cites | Correct | Verdict |
 |---|---|---|---|---|---|
-| A. "Who was Bharata's father?" | Gold passage retrieved; "Dushyanta [2]" | 1/1 | 1/1 | 1 | all good |
-| B. answerable, but retrieval missed the gold | Model refuses | n/a | n/a | 0 | **false refusal**. With the gold passage handed over (ideal context) it answers correctly, so the fault is **retrieval** |
-| C. answerable, gold retrieved | Right answer, but one extra claim comes from outside knowledge, and one `[3]` sits on a sentence passage 3 does not say | 3/4 | 1/2 | 1 | correct but **unfaithful**. Same result in ideal context, so the fault is **generation** |
-| D. unanswerable (absent from the corpus) | Model refuses | n/a | n/a | n/a | **correct refusal** |
+| A. "Who was Bharata's father?" | Gold retrieved, "Dushyanta [2]" | 1/1 | 1/1 | 1 | all good |
+| B. answerable, retrieval missed the gold | Model refuses | n/a | n/a | 0 | false refusal. Ideal context answers, so fault is **retrieval** |
+| C. answerable, gold retrieved | Right answer plus one outside-knowledge claim and one misplaced `[3]` | 3/4 | 1/2 | 1 | correct but unfaithful. Same in ideal context, so fault is **generation** |
+| D. unanswerable | Model refuses | n/a | n/a | n/a | correct refusal |
 
-**Reading the scores together (the real skill):**
-- Faithfulness high, correctness low: honest but wrong or incomplete. Usually the passages lacked the answer, so look at retrieval.
-- Correctness high, faithfulness low: right answer, but from the model's memory. Dangerous here, because citations then mean nothing.
-- Citation support low with good faithfulness: claims are true, but the `[n]` marks are misplaced.
-- False refusals: split into retrieval-caused (ideal context answers) and generation-caused (even ideal context refuses).
-- Correct refusals on unanswerable questions but false refusals on answerable ones: the model is too cautious. Tune the prompt, not the retriever.
+#### 4. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
+Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Menaka a daughter named Sakuntala" and "the lewd Menaka is thy mother"; expected answer "Menaka, the celestial Apsara (her father was the sage Viswamitra)."
 
-**Why the two modes:** end-to-end tells the user-facing truth. Ideal context removes retrieval from the picture, so a bad answer there is the generator's fault. The gap between them is the cost of imperfect retrieval.
+**4.1 The input part**
+- `eval/retrieval_questions.csv` (the 36; **never edited** for this): `question`, `expected_answer` (the truth for correctness), `gold_sections` and `evidence_phrases` (which chunks to hand over in ideal-context mode, and the "gold found" flag in end-to-end mode), `type` and `split` (grouping, working or held-out protection).
+- **`eval/generation_questions.csv` (planned, does not exist yet):** the ~8 unanswerable questions: `answerable` = no, no gold section, expected result is a refusal, plus a note that a corpus scan confirmed the answer is absent.
+- **Why unanswerable questions are needed:** all 36 have answers, so we could only test how well the model answers, never whether it knows **when not to**. A model that always answers (and invents facts when the passages say nothing) would look fine on the 36. A model that refuses too easily would show only on answerable ones. Unanswerable questions are the only way to measure refusal accuracy and catch hallucination. For the lineage project, a made-up parentage is worse than "I don't know".
+- **Candidate types (none verified):** later events from other parvas; false premises; details the book never states; things outside the text.
+- **The catch:** the book's summary passages (Sections 1, 2, 95) mention events from the whole epic, so a "later events" question may be answerable after all. Each one needs a corpus scan before it counts.
+- **System under test:** chunks, embedding cache and retriever (end-to-end passages); generator settings from `config.py` (gemini-3.1-flash-lite, temperature 0, top 5) and the system prompt in `src/rag/generation.py`.
+- **The judge (new):** model name in `config.py` (`gemini-3.5-flash`), plus one fixed instruction per job in `src/rag/judge.py`: correctness, faithfulness, citation support, relevance. Each says what to look at, what to ignore, and the exact reply format.
+- **Calibration set (new):** about 12 answers the user grades by hand, used only to check the judge.
+- **Access:** `GEMINI_API_KEY` in the environment (never printed or committed).
+- **Output:** one saved result file per run in `eval/results/`, with the answer, judge replies and scores per question.
+- **Size of a run:** about 44 questions x 2 modes x 4 judge jobs gives roughly 350 to 500 judge calls (the faithfulness and citation jobs scale with answer length). Check the price first.
 
-**The judge is itself a model, so it needs checking:**
-- Calibration: I (the user) label about 12 answers by hand; we compare with the judge. Agreement under about 80% means the judge instructions get fixed before we trust any score.
-- Same-vendor bias: a Gemini judge may be generous to Gemini answers. We note it, and Ragas later gives a second opinion.
-- The judge must reply in a fixed format (JSON), so scores are read by code, not guessed from prose.
-- Keep the judge instructions fixed once calibrated; changing them mid-experiment breaks comparisons.
+**4.2 The steps that do NOT use the judge (plain code)**
+1. **Load the question.** Keep the question and expected answer. Gold sections and phrases are used only to see whether retrieval found the right text. The generator never sees any label.
+2. **Retrieve** the top 5 chunks (end-to-end). Also check by string match whether they contain the evidence phrases, giving a "gold found: yes or no" flag. No model involved. Needed later to explain failures.
+3. **Generate** with the real prompt and `gemini-3.1-flash-lite`. This is the **generator**, the model being tested, not the judge. Illustrative answer: *"Sakuntala's mother was Menaka, an Apsara sent by Indra to disturb Viswamitra's penance [2]. She was born to them and left in the forest [2]."*
+4. **Cheap checks.** Did the answer contain the exact refusal sentence ("The provided passages do not answer this question.")? Does every `[n]` point at an existing passage (the existing `check_citations`)? Code does everything it can before we pay for a model call.
+5. Later: **save** one record per question, then **average** by group (answerable or not, type, working or held-out) and compare the two modes.
+
+**4.3 The steps that use the judge**
+The judge is called only after the generator has answered, and only for work code cannot do ("is this claim supported?"). Four separate calls, each a fresh conversation with only the slice it needs.
+
+*Assumption for this example: passage [2] says Menaka was sent by Indra, that Viswamitra and Menaka had a daughter, and that she was left in the forest. It never uses the word "Apsara".*
+
+1. **Correctness.** Sees question, expected answer, generated answer. Replies: score 1, reason "names Menaka as mother, mentions Viswamitra". Score used as is; the metric is the average of these.
+2. **Faithfulness.** Stage A: from the answer alone, list the claims: (1) mother was Menaka, (2) Menaka was an Apsara, (3) Indra sent her to disturb the penance, (4) born to Menaka and Viswamitra, (5) left in the forest. Stage B: sees passages plus claims, marks each supported or not, with the sentence relied on. Claims 1, 3, 4, 5 supported; claim 2 **not supported** (the word is nowhere in the passages). Score 4/5 = **0.8**. This is how "right from memory" is caught: claim 2 may be true, but the text does not say it.
+3. **Citation support.** Code splits the answer into sentences and finds each `[n]`. Each sentence goes to the judge with only its cited passage. Sentence 1 (cites [2], contains "Apsara"): **no**. Sentence 2: yes. The rule given to the judge: a sentence counts as backed only if everything in it is backed. Score 1/2 = **0.5**.
+4. **Relevance.** Sees question and answer only. Yes, score 1. Refusals are skipped ("I don't know" is not irrelevant, just not an answer).
+
+**Saved record for R01:** correctness 1; faithfulness 0.8 (claim 2 flagged); citation support 0.5 (sentence 1 flagged); relevance 1; not refused and answerable, so fine. Reading: right and relevant, but one outside fact sneaked in and the first citation overreaches. A plain "is it correct?" check would miss exactly this.
+
+**4.4 How does the judge know what is right? (a question the user asked)**
+The judge does **not** decide from its own knowledge and does **not** write an answer of its own. It compares the generator's answer with something we hand it:
+| Check | The "truth" given to the judge | Source |
+|---|---|---|
+| Correctness | the expected answer | our label (Claude-written, script-checked); the only place real-world truth enters |
+| Faithfulness | the five passages | retrieved text: "does the text say this", not "is it true" |
+| Citation support | the one cited passage | same idea, narrower slice |
+| Relevance | nothing but the question | needs language understanding, not facts |
+| Refusal | no judge | string match in code |
+
+- **Risk: the judge's pre-trained knowledge.** It knows the Mahabharata, so it can be too generous (knows Menaka is an Apsara, marks the claim supported although the passages do not say it) or too harsh (remembers a different version of the story and disagrees with our expected answer).
+- **Reducing it:** (1) instructions say use only the material given; (2) the narrowest slice per call; (3) calibration on about 12 answers the user grades, to expose disagreement.
+- **Why not let the judge write its own reference answer:** a second error source we cannot check. Our written expected answers are fixed, so any disagreement can be traced.
+
+**4.5 Keeping the judge honest**
+- Calibration: agreement with the user under about 80% means fix the judge instructions before trusting any score.
+- Same-vendor bias: a Gemini judge may be generous to Gemini answers. Ragas gives a second opinion later.
+- Fixed reply format (JSON) so scores are read by code, not guessed from prose.
+- Judge instructions are frozen once calibrated. Changing them mid-experiment breaks comparisons.
+
+#### Alternatives: how other RAG projects do it
+- **Same everywhere:** the judge recipe (narrow job, right slice, structured reply); faithfulness by splitting into claims (Ragas, DeepEval, TruLens do essentially this, from memory, to be confirmed at the Ragas step); cheap checks in code; averaging by group.
+- **Reference-based vs reference-free:** we check correctness against expected answers we wrote (more careful, costs labelling). Many teams cannot afford that and use reference-free metrics (faithfulness, relevance) plus correctness on a small set.
+- **Answer relevance:** in Ragas, as remembered, it generates questions from the answer and compares them with the original by embedding similarity, not a direct rating. Ours is simpler and more transparent. Confirm when we run Ragas.
+- **Citation support:** less common in general libraries. Research benchmarks for cited answers (for example ALCE) measure it. We need it because lineage claims must be traceable.
+- **Pairwise judging:** "which of these two answers is better?" is often more reliable for comparing versions. Ours scores single answers, which fits one-change-at-a-time.
+- **Cheaper faithfulness checkers:** small trained natural-language-inference models instead of a big LLM judge.
+- **Production monitoring:** sampling live traffic and user feedback. Phase 6.
+
+#### Gotchas and open design choices
+- Whether faithfulness Stage A and B are two calls (more reliable, slower) or one.
+- Whether the citation judge gives yes/no or yes/partly/no.
+- Judge pre-trained knowledge leaking in (4.4).
+- Unanswerable questions can be answerable through the summary passages, so scan first (4.1).
+- Unanswerable questions are drafted by Claude and must be reviewed by the user.
+- Price and availability of `gemini-3.5-flash` still to be checked before building.
 
 ### Decisions
 Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
