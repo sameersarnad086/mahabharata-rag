@@ -15,6 +15,14 @@ Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules),
 - **The user asked to keep answers short (context was nearly full).** The user is not a coder: explain in plain language, name files not code.
 - **Open:** whether the user adds questions of their own (separate file).
 
+## Update 2026-10-16: generation evaluation is BUILT; blocked on a paid key, then needs a trial
+- **Built and pushed (tip `29001b4`):** `src/rag/judge.py` (4 judge jobs, JSON replies, checked), `src/rag/eval_generation.py` (scoring logic, ideal-context passages, refusal and citation handling, summaries), `src/rag/evalcache.py` (disk cache so reruns are free and crashed runs resume), `scripts/run_generation_eval.py` (modes, working/held-out protection, `--ids`, `--save`), `scripts/verify_unanswerable.py`, `eval/generation_questions.csv` (8 unanswerable questions G01-G08, absence scan-checked; **not yet reviewed by the user**), `tests/test_eval_generation.py` (28 pass; all other test files pass). The lesson is in `LEARNING.md` ("Generation evaluation: what it is and how it runs").
+- **Judge:** `gemini-3.5-flash` (user approved; available to the key). Prices (unofficial) $1.50 in / $9.00 out per million tokens; thinking tokens bill as output and run several times the visible output. Rough estimate $3 to $5 per full run, uncertain.
+- **Blocker found:** the key was on the free tier, allowing 20 requests/day for the judge model (429). The user then set a PAID key in the environment variable `GEMINI_API_KEY`; it only reaches a NEW session. Gemini 503 "high demand" errors are common; the runner waits longer (`EVAL_RETRY_WAITS`) and caches.
+- **Not yet seen:** no question has been fully scored end to end. The first complete record (R01, R03) is the trial: `python scripts/run_generation_eval.py --ids R01,R03 --mode end-to-end`. Check the judge's JSON, verdicts, token use and cost before anything bigger.
+- **Next, in order:** trial and review with the user; user reviews G01-G08; user hand-grades about 12 answers to calibrate the judge (agree under about 80% means fix the judge instructions first); baseline run on the working set, both modes; held-out run once with `--confirm-milestone`; record in `EXPERIMENTS.md` and `LEARNING.md`; run Ragas side by side with our metrics (fixed step); finalise the Phase 2 retrospective; then Phase 3.
+- **Git:** PR #4 merged. This branch has no open PR; it is ahead of `main` with the Ragas note, the lesson and the build. Open a PR only if the user asks.
+
 ## How to work with the user (also in CLAUDE.md)
 - The user is **not a coder**. Claude writes all code and explains in plain language: libraries used, how the method works, trade-offs, what results mean. Name every new library.
 - **Teach the concept first**, then build. Present options and let the user decide (model choices etc.). Check that tools and models are current before recommending.
