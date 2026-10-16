@@ -45,3 +45,21 @@ The configuration in "First end-to-end run" is the **Phase 1 baseline** and the 
 - **Headline for comparisons in Phase 3:** the strict *phrase* check on the working set, hit@5 and MRR@5, reported with and without the summary sections. **0.67 / 0.35 (0.50 / 0.28 without summaries).** The held-out set is run only at milestones (this baseline is one; both variants were run once and logged in `eval/heldout_runs.log`).
 - **Conclusion:** in about a third of questions (half, without the summary passages) the chunk that actually contains the answer is not among the five handed to the model; and only 21% of working questions have it at rank 1. The gap between the section check (0.92) and the phrase check (0.67) says that retrieval usually reaches the right neighbourhood but not the right chunk. Details and per-type reading in `LEARNING.md`.
 - **Caveats:** 24 and 12 questions (one working question moves hit rate by 4 points, one held-out question by 8); labels written by Claude and script-checked, not independently verified; set written by Claude (with the owner's approval), so it reflects my idea of what to ask.
+
+## Generation baseline, PROVISIONAL (judge not yet calibrated) — 2026-10-16
+- **Configuration:** Phase 1 pipeline unchanged (1000/200 chunks, bge-small, top-5, generator `gemini-3.1-flash-lite`); judge `gemini-3.5-flash`; working set = 24 answerable + 6 unanswerable (the other 2 unanswerable are held-out). Saved: `eval/results/gen_baseline_working.json`. Commit before this entry's code changes: 29001b4.
+- **Two modes:** end-to-end (real retrieval) and ideal-context (gold passages handed over, answerable questions only).
+
+| Metric (working set) | End-to-end | Ideal context |
+|---|---|---|
+| Correctness (refusals count 0) | 0.81 | 0.96 |
+| Correctness when it answered | 0.85 | 0.96 |
+| Faithfulness | 0.93 | 0.88 |
+| Citation support | 0.83 | 0.75 |
+| Relevance | 1.00 | 1.00 |
+| Gold text among the passages | 0.67 | 1.00 |
+| Correct refusals / false refusals | 6/6 / 1/24 | - / 0/24 |
+
+- **Reading (provisional):** handing the model the right passages lifts correctness from 0.81 to 0.96, so most wrong answers come from retrieval, not from the generator. Faithfulness and citation support do not improve in ideal mode (they are slightly lower), so those are generator or judge behaviour, not retrieval. This is exactly what the calibration must test: low faithfulness in ideal mode (e.g. R33 = 0.00, R12 = 0.33) may be real over-claiming or judge strictness.
+- **Caveats:** the judge is not calibrated against the owner's grading yet; numbers are not final until it is. Cost of this run about $1.39 (judge, including thinking tokens). Held-out not run.
+- **Next:** the owner grades `eval/calibration_sheet.md` blind; compare with `eval/results/calibration_key.json`; fix the judge if agreement is under about 80%.

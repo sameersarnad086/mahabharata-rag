@@ -1,0 +1,381 @@
+[
+ {
+  "item": 1,
+  "id": "R25",
+  "outcome": "false_refusal_retrieval",
+  "judge": {
+   "correctness": 0.0,
+   "faithfulness": null,
+   "citation_support": null,
+   "relevance": null
+  },
+  "judge_claims": null,
+  "judge_citations": null
+ },
+ {
+  "item": 2,
+  "id": "G01",
+  "outcome": "correct_refusal",
+  "judge": {
+   "correctness": null,
+   "faithfulness": null,
+   "citation_support": null,
+   "relevance": null
+  },
+  "judge_claims": null,
+  "judge_citations": null
+ },
+ {
+  "item": 3,
+  "id": "G02",
+  "outcome": "correct_refusal",
+  "judge": {
+   "correctness": null,
+   "faithfulness": null,
+   "citation_support": null,
+   "relevance": null
+  },
+  "judge_claims": null,
+  "judge_citations": null
+ },
+ {
+  "item": 4,
+  "id": "R05",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 0.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Agni is also known as Havyavahana.",
+    "supported": true,
+    "evidence": "Then Havyavahana (Agni) in anger and disappointment"
+   },
+   {
+    "claim": "Agni was the deity burning the creatures within the Khandava forest.",
+    "supported": true,
+    "evidence": "Why, O lord of immortals, doth Agni burn these creatures below?"
+   },
+   {
+    "claim": "The denizens of the Khandava forest made efforts to extinguish the fire.",
+    "supported": true,
+    "evidence": "the dwellers (in the forest) that were there, made great efforts to extinguish the conflagration."
+   },
+   {
+    "claim": "Krishna and Arjuna took actions during the conflagration in the Khandava forest.",
+    "supported": true,
+    "evidence": "riding in their cars and placing themselves on opposite sides of that forest, began a great slaughter"
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "The provided passages do not state who set the fire to the Khandava forest, though they identify Agni (also called Havyavahana) as the deity who was burning the creatures within it [1][3].",
+    "backed": true,
+    "reason": "The sentence accurately reflects that the passages do not state who initially set the fire, while confirming that Agni (also referred to as Havyavahana) was burning the creatures within Khandava."
+   },
+   {
+    "sentence": "The passages focus on the efforts of the forest's denizens to extinguish the fire and the subsequent actions of Krishna and Arjuna during the conflagration [1][2][4].",
+    "backed": true,
+    "reason": "The cited passages detail the efforts of the forest's inhabitants to extinguish the fire as well as the actions of Krishna and Arjuna while the forest was burning."
+   }
+  ]
+ },
+ {
+  "item": 5,
+  "id": "R08",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 0.5,
+   "faithfulness": 1.0,
+   "citation_support": 0.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "King Parikshit died after being bitten by the snake Takshaka.",
+    "supported": true,
+    "evidence": "I must avenge myself on the wretch Takshaka who killed my father."
+   },
+   {
+    "claim": "The poison of the snake Takshaka caused King Parikshit to fall down as if struck by lightning.",
+    "supported": true,
+    "evidence": "And the king himself fell down, as if struck by lightning."
+   },
+   {
+    "claim": "The poison of the snake Takshaka set King Parikshit's mansion ablaze.",
+    "supported": true,
+    "evidence": "And the mansion in which the king was living blazed up with Takshaka's poison."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "King Parikshit died after being bitten by the snake Takshaka, whose poison caused the king to fall down as if struck by lightning and set his mansion ablaze [3][4].",
+    "backed": false,
+    "reason": "The cited passages mention 'the king' and 'the deceased monarch' dying from Takshaka's poison, but do not explicitly state that this king's name was Parikshit."
+   }
+  ]
+ },
+ {
+  "item": 6,
+  "id": "R12",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 0.5,
+   "faithfulness": 0.0,
+   "citation_support": 1.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "The five brothers set the house on fire.",
+    "supported": false,
+    "evidence": ""
+   },
+   {
+    "claim": "The five brothers entered a subterranean passage.",
+    "supported": false,
+    "evidence": ""
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "The passages describe the brothers entering a subterranean passage after setting the house on fire [1].",
+    "backed": true,
+    "reason": "The cited passage explicitly states that after Bhima set fire to the mansion in several parts, the sons of Pandu entered the subterranean passage."
+   }
+  ]
+ },
+ {
+  "item": 7,
+  "id": "R21",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 0.6666666666666666,
+   "citation_support": 0.6666666666666666,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Hidimba was a female Rakshasa (cannibal).",
+    "supported": true,
+    "evidence": "Hidimva, the female cannibal, at the command of her brother, went, O bull of Bharata's race, to the spot where the Pandavas were."
+   },
+   {
+    "claim": "Hidimba was the sister of the Rakshasa Hidimva.",
+    "supported": true,
+    "evidence": "becoming angry with his sister, the Rakshasa dilated his eyes and addressing her said, 'What senseless creature wishes to throw obstacles in my path now that I am so hungry? Hast thou become so senseless, O Hidimva"
+   },
+   {
+    "claim": "Hidimba was sent by her brother to kill the Pandavas.",
+    "supported": true,
+    "evidence": "Do my bidding soon, for we shall then together eat their flesh, tearing off their bodies at pleasure. And after feasting to our fill on human flesh we shall then dance together to various measures!' Thus addressed by Hidimva in those woods, Hidimva, the female cannibal, at the command of her brother, went, O bull of Bharata's race, to the spot where the Pandavas were."
+   },
+   {
+    "claim": "Hidimba fell in love with Bhimasena after seeing Bhimasena.",
+    "supported": true,
+    "evidence": "And beholding Bhimasena unrivalled on earth for beauty and like unto a vigorous Sala tree, the Rakshasa woman immediately fell in love with him"
+   },
+   {
+    "claim": "Hidimba married Bhimasena.",
+    "supported": false,
+    "evidence": ""
+   },
+   {
+    "claim": "Hidimba and Bhimasena had a son named Ghatotkacha.",
+    "supported": false,
+    "evidence": ""
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Hidimba was a female Rakshasa (cannibal) who was the sister of the Rakshasa Hidimva [1][2].",
+    "backed": true,
+    "reason": "The passages state that she was a female cannibal and Rakshasa woman who was the sister of the Rakshasa Hidimva."
+   },
+   {
+    "sentence": "She fell in love with Bhimasena after seeing him while she was sent by her brother to kill the Pandavas [2].",
+    "backed": true,
+    "reason": "The passage confirms she was sent by her brother to eat the flesh of the Pandavas and fell in love with Bhimasena upon seeing him."
+   },
+   {
+    "sentence": "She married Bhimasena, and they had a son named Ghatotkacha [4].",
+    "backed": false,
+    "reason": "Passage [4] mentions her husband and their son Ghatotkacha, but it does not state or mention that her husband was Bhimasena."
+   }
+  ]
+ },
+ {
+  "item": 8,
+  "id": "R20",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 0.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Dwaipayana begot a son on Ambalika.",
+    "supported": true,
+    "evidence": "In the soil of that lustful king, the illustrious Rishi Krishna-Dwaipayana himself, of truthful speech, begot me."
+   },
+   {
+    "claim": "The son begotten by Dwaipayana on Ambalika had a pale complexion.",
+    "supported": true,
+    "evidence": "Ambalika, then, when her time came, brought forth a son of pale complexion."
+   },
+   {
+    "claim": "The son begotten by Dwaipayana on Ambalika was known by the name of Pandu.",
+    "supported": true,
+    "evidence": "e of pale complexion and known by the name of Pandu."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Dwaipayana begot a son of pale complexion on Ambalika, who was known by the name of Pandu [1].",
+    "backed": false,
+    "reason": "The cited passage refers to the father as 'the Rishi' and 'Vyasa', but does not mention the name 'Dwaipayana'."
+   }
+  ]
+ },
+ {
+  "item": 9,
+  "id": "R01",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Sakuntala's mother was Menaka.",
+    "supported": true,
+    "evidence": "Those vultures protected the daughter of Menaka."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Sakuntala's mother was Menaka [3].",
+    "backed": true,
+    "reason": "The passage explicitly refers to Sakuntala as the daughter of Menaka."
+   }
+  ]
+ },
+ {
+  "item": 10,
+  "id": "R03",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Drona asked Ekalavya for the thumb of Ekalavya's right hand as Drona's tuition fee.",
+    "supported": true,
+    "evidence": "Drona answered, 'O Ekalavya, if thou art really intent on making me a gift, I should like then to have the thumb of thy right hand.'"
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][5].",
+    "backed": true,
+    "reason": "The cited passages explicitly state that Drona asked Ekalavya for the thumb of his right hand as his tuition fee."
+   }
+  ]
+ },
+ {
+  "item": 11,
+  "id": "R06",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Arjuna won Draupadi.",
+    "supported": true,
+    "evidence": "Arjuna by the exercise of Kshatriya virtues, won Draupadi for wife."
+   },
+   {
+    "claim": "Arjuna successfully strung a stiff bow.",
+    "supported": true,
+    "evidence": "He that will string this bow and with these well-adorned arrows shoot the mark above the machine shall obtain my daughter."
+   },
+   {
+    "claim": "Arjuna shot a mark attached to machinery erected in the sky.",
+    "supported": true,
+    "evidence": "Causing some machinery to be erected in the sky, the king set up a mark attached to that machinery."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Arjuna won Draupadi by successfully stringing a stiff bow and shooting a mark attached to machinery erected in the sky [2][5].",
+    "backed": true,
+    "reason": "Passage 2 describes the requirement set by Drupada of stringing a stiff bow and shooting a mark attached to machinery in the sky to obtain his daughter, and passage 5 confirms that Arjuna acquired Draupadi after successfully piercing the mark."
+   }
+  ]
+ },
+ {
+  "item": 12,
+  "id": "R10",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 0.6666666666666666,
+   "relevance": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "The fisherman demanded that the son born of the fisherman's daughter be installed on the throne as the king's successor.",
+    "supported": true,
+    "evidence": "the son born of this maiden shall be installed by thee on thy throne and none else shall thou make thy successor."
+   },
+   {
+    "claim": "Devavrata promised that the son born of the maiden would be king.",
+    "supported": true,
+    "evidence": "The son that may be born of this maiden shall be our king."
+   },
+   {
+    "claim": "Devavrata took a vow of Brahmacharya (celibacy).",
+    "supported": true,
+    "evidence": "from this day I adopt the vow of Brahmacharya (study and meditation in celibacy)."
+   },
+   {
+    "claim": "The vow of Brahmacharya was taken to ensure that Devavrata would have no children of Devavrata's own who could claim the throne.",
+    "supported": true,
+    "evidence": "quished my right to the throne, I shall now settle the matter of my children. O fisherman, from this day I adopt the vow of Brahmacharya"
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "The fisherman demanded that the son born of his daughter be installed on the throne as the king's successor [2].",
+    "backed": true,
+    "reason": "The cited passage directly states that the fisherman asked that the son born of the maiden be installed on the throne as the king's successor."
+   },
+   {
+    "sentence": "To secure this, Devavrata promised that the son born of the maiden would be king [4].",
+    "backed": true,
+    "reason": "The passage confirms that Devavrata promised that the son born of the maiden would be king."
+   },
+   {
+    "sentence": "Furthermore, Devavrata took a vow of Brahmacharya (celibacy) to ensure that he would have no children of his own who could claim the throne [3].",
+    "backed": false,
+    "reason": "The cited passage mentions that Devavrata took the vow of Brahmacharya to settle the matter of his children and die sonless, but it does not state or directly imply that this was to prevent them from claiming the throne."
+   }
+  ]
+ }
+]

@@ -55,3 +55,8 @@ All tunables are in `config.py`.
 
 ## Starter message for a new chat
 "Read CLAUDE.md and HANDOFF.md, then LEARNING.md's decisions log. Check git status and the state of the open PR. Rebuild with scripts/rebuild_all.sh if the data folders are empty. Then continue with the next steps in HANDOFF.md."
+
+## Update 2026-10-16 (generation eval run)
+- Paid Gemini key works. Trial R01/R03 fine. **Provisional baseline** (working set, both modes) is in `EXPERIMENTS.md` and `eval/results/gen_baseline_working.json`; judge NOT yet calibrated.
+- **Waiting on the user:** grade `eval/calibration_sheet.md` (12 items, blind). Do not open or show `eval/results/calibration_key.json` (judge's scores) before they finish. Then compare, fix judge if agreement < ~80%, freeze judge prompt, re-score.
+- Unanswerable split: 6 working + 2 held-out. Held-out generation run still not done (needs --confirm-milestone). `scripts/rebuild_all.sh` pipe bug fixed.
