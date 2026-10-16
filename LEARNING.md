@@ -1008,7 +1008,10 @@ The judge does **not** decide from its own knowledge and does **not** write an a
 - Judge pre-trained knowledge leaking in (4.4).
 - Unanswerable questions can be answerable through the summary passages, so scan first (4.1).
 - Unanswerable questions are drafted by Claude and must be reviewed by the user.
-- Price and availability of `gemini-3.5-flash` still to be checked before building.
+- **Free-tier quota (found while building):** the Gemini key is on the free tier, which allowed only 20 requests per day for the judge model (error 429, "limit: 20", retry in about 13 hours). A full run needs roughly 400 or more judge calls, so the free tier cannot carry this evaluation. The error named `gemini-3.6-flash` although we asked for `gemini-3.5-flash`; unexplained.
+- **Capacity errors (503 "high demand"):** common on both the generator and the judge model; a single call once stayed unavailable for about four minutes. The runner now waits longer between retries (`EVAL_RETRY_WAITS` in `config.py`), and cached replies make a crashed run resumable.
+- **Thinking tokens:** the judge model spends several times more thinking tokens than visible output (3 trial calls: 78 output, 410 thinking), and thinking is billed as output. Costs are higher than the visible reply suggests.
+- **Alias trap in the absence scan:** "Krishna" is also one of Draupadi's own names ("born Krishna (Draupadi)", Section 63), so searching for Krishna-related text finds Draupadi paragraphs. Use Vasudeva, Kesava, Madhava for the god.
 
 ### Decisions
 Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).

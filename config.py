@@ -28,3 +28,13 @@ USE_QUERY_PREFIX = False  # baseline: off. Test on/off as its own one-variable e
 LLM_MODEL = "gemini-3.1-flash-lite"
 LLM_TEMPERATURE = 0.0       # 0 = as repeatable as possible, which is what we want for evaluation
 LLM_MAX_OUTPUT_TOKENS = 1024
+
+# --- Phase 2: generation evaluation ---
+# The judge is a second model that grades answers. Chosen with the user; verified available to the key.
+JUDGE_MODEL = "gemini-3.5-flash"
+JUDGE_TEMPERATURE = 0.0
+JUDGE_MAX_OUTPUT_TOKENS = 8192     # generous: thinking tokens may count against this limit
+JUDGE_THINKING_LEVEL = None        # None = model default. Try "low" if judge calls prove slow or costly.
+JUDGE_PRICE_PER_M_TOKENS = (1.50, 9.00)   # (input, output) USD per million tokens, from third-party price pages; verify
+GEN_EVAL_CACHE_DIR = CACHE_DIR / "gen_eval"   # generator answers and judge replies, so reruns are free
+EVAL_RETRY_WAITS = (5, 15, 30, 60, 120)   # seconds; patient on Gemini 503/429, since a failed run costs time
