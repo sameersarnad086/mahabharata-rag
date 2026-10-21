@@ -32,11 +32,12 @@ PREFACE = (
 )
 
 NAMES_RULE = (
-    "Names: one person often has several names, titles and epithets (for example Arjuna, Partha and Dhananjaya; "
-    "or 'the king' and 'the Rishi' for a person the passage is clearly about). Treat different names for the same "
-    "person as a match when the passage makes the identity clear, or when it is a well-known alternative name of that "
-    "person. Do not merge two different people who merely share a name. Names are the only thing this rule relaxes; "
-    "every other fact must still be stated or directly implied by the passages.\n"
+    "Names: one person often has several names, titles and epithets (for example Arjuna, Partha and Dhananjaya). "
+    "Treat two different names as the same person ONLY when the passages themselves show it, for example a passage "
+    "that says 'Vyasa, also called Dwaipayana', or a passage where 'the king' or 'the Rishi' is clearly the person "
+    "being discussed. Do NOT use what you know about who is who from anywhere else. If the passages do not make the "
+    "identity clear, the names do not match. Never merge two different people who merely share a name. Names are the "
+    "only thing this rule relaxes; every other fact must still be stated or directly implied by the passages.\n"
 )
 
 CORRECTNESS_TASK = (
