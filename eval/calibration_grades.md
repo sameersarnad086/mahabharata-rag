@@ -1,6 +1,7 @@
 # Calibration grades (human), 2026-10-21
 
 Graded blind by the project owner using `eval/calibration_form.html` (12 items from `gen_baseline_working.json`, end-to-end mode).
+Verbatim as submitted. The same grades inside the full sheet (question, answer, passages) are in `eval/calibration_sheet_filled.md`.
 Verbatim as submitted. Do not edit; these are the reference for judging the judge.
 Standards used: Correct? = against the expected answer (owner's knowledge of the text); Supported? and Citation ok? = against the shown passages only.
 
