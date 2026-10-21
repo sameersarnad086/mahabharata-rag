@@ -1,0 +1,604 @@
+{
+  "config": {
+    "generator": "gemini-3.1-flash-lite",
+    "judge": "gemini-3.5-flash",
+    "k": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "split": "working",
+    "commit": "c8d0ef3",
+    "date": "2026-10-21"
+  },
+  "summaries": {
+    "end-to-end": {
+      "n": 12,
+      "n_errors": 0,
+      "n_answerable": 10,
+      "n_unanswerable": 2,
+      "correctness": 0.7,
+      "correctness_when_answered": 0.7777777777777778,
+      "faithfulness": 0.8240740740740741,
+      "citation_support": 0.925925925925926,
+      "relevance": 1.0,
+      "gold_found_rate": 0.6,
+      "outcomes": {
+        "answered": 9,
+        "false_refusal_retrieval": 1,
+        "correct_refusal": 2
+      },
+      "refusal": {
+        "correct_refusals": 2,
+        "unanswerable": 2,
+        "false_refusals": 1,
+        "answerable": 10
+      }
+    }
+  },
+  "records": {
+    "end-to-end": [
+      {
+        "id": "R01",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Sakuntala's mother?",
+        "answer": "Sakuntala's mother was Menaka [3].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Menaka as Sakuntala's mother, which is the key fact required."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Sakuntala's mother as requested by the question."
+          },
+          "claims": [
+            {
+              "claim": "Sakuntala's mother was Menaka.",
+              "supported": true,
+              "evidence": "Those vultures protected the daughter of Menaka."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Sakuntala's mother was Menaka [3].",
+              "backed": true,
+              "reason": "The passage states that vultures protected the daughter of Menaka, who was subsequently named Sakuntala."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R03",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "What did Drona ask Ekalavya to give him?",
+        "answer": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states that Drona asked Ekalavya for the thumb of his right hand as his tuition fee."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly states what Drona asked Ekalavya to give him."
+          },
+          "claims": [
+            {
+              "claim": "Drona asked Ekalavya for the thumb of Ekalavya's right hand as Drona's tuition fee.",
+              "supported": true,
+              "evidence": "Drona answered, 'O Ekalavya, if thou art really intent on making me a gift, I should like then to have the thumb of thy right hand.'"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][5].",
+              "backed": true,
+              "reason": "The cited passages explicitly state that Drona asked Ekalavya for the thumb of his right hand as his tuition-fee."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R05",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who set fire to the Khandava forest, and why?",
+        "answer": "The provided passages do not state who set the fire to the Khandava forest, though they identify Agni (also called Havyavahana) as the deity who was burning the creatures within it [1][3]. The passages focus on the efforts of the forest's denizens to extinguish the fire and the subsequent actions of Krishna and Arjuna during the conflagration [1][2][4].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 0.0,
+            "reason": "The answer incorrectly claims that it is not stated who set fire to the forest and fails to provide the reason why."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by explaining what the provided text states regarding who set fire to the Khandava forest and why."
+          },
+          "claims": [
+            {
+              "claim": "Agni is also known as Havyavahana.",
+              "supported": true,
+              "evidence": "Then Havyavahana (Agni) in anger and disappointment"
+            },
+            {
+              "claim": "Agni was the deity burning the creatures within the Khandava forest.",
+              "supported": true,
+              "evidence": "Approaching Indra, the celestial said, 'Why, O lord of immortals, doth Agni burn these creatures below?'"
+            },
+            {
+              "claim": "The denizens of the Khandava forest made efforts to extinguish the fire.",
+              "supported": true,
+              "evidence": "Beholding Khandava on fire the dwellers (in the forest) that were there, made great efforts to extinguish the conflagration."
+            },
+            {
+              "claim": "Krishna and Arjuna took actions during the conflagration in the Khandava forest.",
+              "supported": true,
+              "evidence": "Then those foremost of car-warriors (Krishna and Arjuna), riding in their cars and placing themselves on opposite sides of that forest, began a great slaughter"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The provided passages do not state who set the fire to the Khandava forest, though they identify Agni (also called Havyavahana) as the deity who was burning the creatures within it [1][3].",
+              "backed": true,
+              "reason": "The cited passages mention Agni (also named Havyavahana) burning the creatures and blazing forth, without stating who initially set the fire."
+            },
+            {
+              "sentence": "The passages focus on the efforts of the forest's denizens to extinguish the fire and the subsequent actions of Krishna and Arjuna during the conflagration [1][2][4].",
+              "backed": true,
+              "reason": "Passage 1 describes the efforts of the forest dwellers to extinguish the fire, while passages 2 and 4 detail the actions of Krishna and Arjuna during the conflagration."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R06",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did Arjuna win Draupadi at her swayamvara?",
+        "answer": "Arjuna won Draupadi by successfully stringing a stiff bow and shooting a mark attached to machinery erected in the sky [2][5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states the key facts that Arjuna won Draupadi by stringing the stiff bow and shooting the mark attached to the machinery."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains how Arjuna won Draupadi by describing the bow-stringing and target-shooting feat he performed."
+          },
+          "claims": [
+            {
+              "claim": "Arjuna won Draupadi.",
+              "supported": true,
+              "evidence": "Arjuna by the exercise of Kshatriya virtues, won Draupadi for wife."
+            },
+            {
+              "claim": "Arjuna successfully strung a stiff bow.",
+              "supported": true,
+              "evidence": "the king of Panchala thinking of Arjuna caused a very stiff bow to be made that was incapable of being bent by any except Arjuna."
+            },
+            {
+              "claim": "Arjuna shot a mark attached to machinery erected in the sky.",
+              "supported": true,
+              "evidence": "Causing some machinery to be erected in the sky, the king set up a mark attached to that machinery."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Arjuna won Draupadi by successfully stringing a stiff bow and shooting a mark attached to machinery erected in the sky [2][5].",
+              "backed": true,
+              "reason": "Passage 2 describes the condition that obtaining Draupadi required stringing a stiff bow and shooting a mark attached to machinery erected in the sky, and Passage 5 confirms that Arjuna acquired Draupadi after successfully piercing the mark."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R08",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did King Parikshit die?",
+        "answer": "King Parikshit died after being bitten by the snake Takshaka, whose poison caused the king to fall down as if struck by lightning and set his mansion ablaze [3][4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer correctly identifies that Takshaka killed King Parikshit with his poison, but it omits the crucial context of Sringin's curse."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by describing how King Parikshit died."
+          },
+          "claims": [
+            {
+              "claim": "King Parikshit died after being bitten by the snake Takshaka.",
+              "supported": true,
+              "evidence": "I must avenge myself on the wretch Takshaka who killed my father."
+            },
+            {
+              "claim": "The poison of the snake Takshaka caused King Parikshit to fall down as if struck by lightning.",
+              "supported": true,
+              "evidence": "And the king himself fell down, as if struck by lightning."
+            },
+            {
+              "claim": "The poison of the snake Takshaka set King Parikshit's mansion ablaze.",
+              "supported": true,
+              "evidence": "And the mansion in which the king was living blazed up with Takshaka's poison."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "King Parikshit died after being bitten by the snake Takshaka, whose poison caused the king to fall down as if struck by lightning and set his mansion ablaze [3][4].",
+              "backed": true,
+              "reason": "The cited passages state that Takshaka bit the king, his poison blazed up the mansion where the king was living, caused the king to fall down as if struck by lightning, and killed him (leading his councillors to perform his last rites and crown his son)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R10",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "What promise made it possible for a fisherman's daughter's sons to inherit a throne?",
+        "answer": "The fisherman demanded that the son born of his daughter be installed on the throne as the king's successor [2]. To secure this, Devavrata promised that the son born of the maiden would be king [4]. Furthermore, Devavrata took a vow of Brahmacharya (celibacy) to ensure that he would have no children of his own who could claim the throne [3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.75,
+        "citation_support": 0.6666666666666666,
+        "n_claims": 4,
+        "n_cited_sentences": 3,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Devavrata promised the maiden's son would inherit the throne and took a vow of celibacy to ensure it."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly describes the promise and vow made by Devavrata that allowed the fisherman's daughter's sons to inherit the throne."
+          },
+          "claims": [
+            {
+              "claim": "The fisherman demanded that the son born of the fisherman's daughter be installed on the throne as the king's successor.",
+              "supported": true,
+              "evidence": "the son born of this maiden shall be installed by thee on thy throne and none else shall thou make thy successor."
+            },
+            {
+              "claim": "Devavrata promised that the son born of the maiden would be king.",
+              "supported": true,
+              "evidence": "The son that may be born of this maiden shall be our king."
+            },
+            {
+              "claim": "Devavrata took a vow of Brahmacharya (celibacy).",
+              "supported": true,
+              "evidence": "from this day I adopt the vow of Brahmacharya (study and meditation in celibacy)."
+            },
+            {
+              "claim": "The vow of Brahmacharya was taken to ensure that Devavrata would have no children of Devavrata's own who could claim the throne.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The fisherman demanded that the son born of his daughter be installed on the throne as the king's successor [2].",
+              "backed": true,
+              "reason": "The cited passage directly quotes the fisherman demanding that the son born of the maiden be installed on the throne and made the successor."
+            },
+            {
+              "sentence": "To secure this, Devavrata promised that the son born of the maiden would be king [4].",
+              "backed": true,
+              "reason": "The cited passage shows Devavrata promising that the son born of the maiden shall be their king."
+            },
+            {
+              "sentence": "Furthermore, Devavrata took a vow of Brahmacharya (celibacy) to ensure that he would have no children of his own who could claim the throne [3].",
+              "backed": false,
+              "reason": "The cited passage states that Devavrata took the vow of Brahmacharya to settle the matter of his children, but it does not mention ensuring that his children could not claim the throne."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R12",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did the five brothers survive when their lodging was set on fire in a plot?",
+        "answer": "The provided passages do not explain how the five brothers survived the fire. The passages describe the brothers entering a subterranean passage after setting the house on fire [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 0.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer incorrectly claims the mechanism of survival is not explained, but partially captures the key fact by mentioning that the brothers entered a subterranean passage after setting the house on fire."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by stating what the provided text says about the brothers' escape from the fire."
+          },
+          "claims": [
+            {
+              "claim": "The five brothers set the house on fire.",
+              "supported": false,
+              "evidence": "Bhima then set fire to the house just where Purochana was sleeping. Then the son of Pandu set fire to the door of that house of lac."
+            },
+            {
+              "claim": "The five brothers entered a subterranean passage.",
+              "supported": false,
+              "evidence": "those chastisers of foes with their mother, entered the subterranean passage without losing any time."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The passages describe the brothers entering a subterranean passage after setting the house on fire [1].",
+              "backed": true,
+              "reason": "The passage explicitly states that after setting fire to the house in several parts, the sons of Pandu entered the subterranean passage with their mother."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R20",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Which son did Dwaipayana beget on Ambalika?",
+        "answer": "Dwaipayana begot a son of pale complexion on Ambalika, who was known by the name of Pandu [1].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Pandu as the son Dwaipayana begot on Ambalika, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the son that Dwaipayana begot on Ambalika as Pandu."
+          },
+          "claims": [
+            {
+              "claim": "Dwaipayana begot a son on Ambalika.",
+              "supported": true,
+              "evidence": "Satyavati again begged of the Rishi another child, and the Rishi told her in reply, 'So be it.' Ambalika, then, when her time came, brought forth a son"
+            },
+            {
+              "claim": "The son begotten by Dwaipayana on Ambalika had a pale complexion.",
+              "supported": true,
+              "evidence": "Ambalika, then, when her time came, brought forth a son of pale complexion."
+            },
+            {
+              "claim": "The son begotten by Dwaipayana on Ambalika was known by the name of Pandu.",
+              "supported": true,
+              "evidence": "e of pale complexion and known by the name of Pandu."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Dwaipayana begot a son of pale complexion on Ambalika, who was known by the name of Pandu [1].",
+              "backed": true,
+              "reason": "The passage confirms that Ambalika brought forth a son of pale complexion named Pandu begotten by the Rishi (Vyasa/Dwaipayana)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R21",
+        "type": "spelling",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Hidimba, and whom did she marry?",
+        "answer": "Hidimba was a female Rakshasa (cannibal) who was the sister of the Rakshasa Hidimva [1][2]. She fell in love with Bhimasena after seeing him while she was sent by her brother to kill the Pandavas [2]. She married Bhimasena, and they had a son named Ghatotkacha [4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.6666666666666666,
+        "citation_support": 0.6666666666666666,
+        "n_claims": 6,
+        "n_cited_sentences": 3,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Hidimba was a female Rakshasa and the sister of Hidimva, and correctly identifies Bhimasena (Bhima) as her husband."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses who Hidimba was and specifies whom she married."
+          },
+          "claims": [
+            {
+              "claim": "Hidimba was a female Rakshasa (cannibal).",
+              "supported": true,
+              "evidence": "Hidimva, the female cannibal, at the command of her brother, went, O bull of Bharata's race, to the spot where the Pandavas were."
+            },
+            {
+              "claim": "Hidimba was the sister of the Rakshasa Hidimva.",
+              "supported": true,
+              "evidence": "becoming angry with his sister, the Rakshasa dilated his eyes and addressing her said, 'What senseless creature wishes to throw obstacles in my path now that I am so hungry? Hast thou become so senseless, O Hidimva"
+            },
+            {
+              "claim": "Hidimba was sent by her brother to kill the Pandavas.",
+              "supported": true,
+              "evidence": "Do my bidding soon, for we shall then together eat their flesh, tearing off their bodies at pleasure. And after feasting to our fill on human flesh we shall then dance together to various measures!' Thus addressed by Hidimva in those woods, Hidimva, the female cannibal, at the command of her brother, went, O bull of Bharata's race, to the spot where the Pandavas were."
+            },
+            {
+              "claim": "Hidimba fell in love with Bhimasena after seeing Bhimasena.",
+              "supported": true,
+              "evidence": "And beholding Bhimasena unrivalled on earth for beauty and like unto a vigorous Sala tree, the Rakshasa woman immediately fell in love with him"
+            },
+            {
+              "claim": "Hidimba married Bhimasena.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Hidimba and Bhimasena had a son named Ghatotkacha.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Hidimba was a female Rakshasa (cannibal) who was the sister of the Rakshasa Hidimva [1][2].",
+              "backed": true,
+              "reason": "The cited passages explicitly support that Hidimva (Hidimba) was a female Rakshasa/cannibal and the sister of the Rakshasa Hidimva."
+            },
+            {
+              "sentence": "She fell in love with Bhimasena after seeing him while she was sent by her brother to kill the Pandavas [2].",
+              "backed": true,
+              "reason": "The cited passage supports that her brother sent her to tear off the bodies and eat the flesh of the Pandavas, and upon seeing Bhimasena, she immediately fell in love with him."
+            },
+            {
+              "sentence": "She married Bhimasena, and they had a son named Ghatotkacha [4].",
+              "backed": false,
+              "reason": "The cited passage mentions Hidimva's husband and her son Ghatotkacha, but it does not state or identify that Bhimasena was her husband."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R25",
+        "type": "lineage",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Karna's biological father?",
+        "answer": "The provided passages do not answer this question. The passages mention that Karna was born to Pritha (Kunti) [2] and that he was raised by a husband of the Suta caste and his wife Radha [2], but they do not identify his biological father.",
+        "refused": true,
+        "gold_found": false,
+        "outcome": "false_refusal_retrieval",
+        "invalid_citations": [],
+        "correctness": 0.0,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G01",
+        "type": "beyond_summary",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "Which of the Pandavas fell first on the final journey to the Himalayas?",
+        "answer": "The provided passages do not answer this question. The passages cover the Pandavas' escape from Varanavata, their time in Ekachakra, and their relocation to Khandavaprastha.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G02",
+        "type": "beyond_summary",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "What did Krishna say to Arjuna in the Bhagavad Gita?",
+        "answer": "The provided passages do not answer this question. The passages cover events such as the battle against Bhishma, the appointment of Dhaumya as priest, Arjuna's archery training under Drona, and the granting of weapons by Indra.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      }
+    ]
+  }
+}

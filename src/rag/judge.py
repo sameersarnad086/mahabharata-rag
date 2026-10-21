@@ -31,6 +31,14 @@ PREFACE = (
     "Reply with a single JSON object in exactly the format requested, and nothing else.\n\n"
 )
 
+NAMES_RULE = (
+    "Names: one person often has several names, titles and epithets (for example Arjuna, Partha and Dhananjaya; "
+    "or 'the king' and 'the Rishi' for a person the passage is clearly about). Treat different names for the same "
+    "person as a match when the passage makes the identity clear, or when it is a well-known alternative name of that "
+    "person. Do not merge two different people who merely share a name. Names are the only thing this rule relaxes; "
+    "every other fact must still be stated or directly implied by the passages.\n"
+)
+
 CORRECTNESS_TASK = (
     "Grade whether the answer is correct, using the expected answer as the truth.\n"
     "Score 1 = states the key fact(s) of the expected answer and nothing in it contradicts the expected "
@@ -52,6 +60,7 @@ VERIFY_TASK = (
     "For each numbered claim, decide whether the passages state it or directly imply it.\n"
     "A claim that is true in the real world but is not stated or directly implied by the passages is "
     "NOT supported. Judge each claim on its own.\n"
+    + NAMES_RULE +
     'Reply: {"verdicts": [{"claim_number": 1, "supported": true or false, "evidence": '
     '"<short quote from the passages, or empty>"}]}'
 )
@@ -61,6 +70,7 @@ CITATION_TASK = (
     "sentence cites. Judge each pair on its own, using only the passage text inside that pair.\n"
     "A sentence is backed only if EVERYTHING it states is stated or directly implied by its cited "
     "passage(s). If any part is not in them, it is not backed.\n"
+    + NAMES_RULE +
     'Reply: {"results": [{"pair": 1, "backed": true or false, "reason": "<one sentence>"}]}'
 )
 

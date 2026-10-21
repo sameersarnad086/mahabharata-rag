@@ -74,3 +74,16 @@ The configuration in "First end-to-end run" is the **Phase 1 baseline** and the 
   - R21 sentence 3 (marriage claim not in passage): owner and judge agree it is unsupported.
 - **Owner's retrieval observations (kept for Phase 3):** R25 top-1 chunk (Section 66) is irrelevant; R05, R08, R12 the key paragraphs sit in neighbouring chunks and were missed; several items show right section but wrong paragraph; the owner asks what drives retrieval (it is embedding similarity of the question to chunk text). R20 and R01: chunk boundaries cut off context. Generation judged fine apart from R21 sentence 3.
 - **Open decision:** fix the judge before trusting scores. Candidate changes, one at a time: (1) tell the citation and claim judges that names, epithets and titles of the same person may differ and to accept them when the passage context makes the identity clear; (2) require evidence quotes for "unsupported" verdicts, then re-check R12; (3) clarify correctness rubric for partial answers.
+
+## Judge fix 1 of 3: name handling — 2026-10-21
+- **Change (one variable):** added a "Names" rule to the claim-verification and citation prompts in `src/rag/judge.py` (different names, titles and epithets of the same person match when the passage makes identity clear or the alias is well known; two different people sharing a name must not be merged). Nothing else changed. Re-scored the same 12 cached answers (`eval/results/gen_calib_fix1.json`, $0.35); comparison by `scripts/compare_calibration.py`.
+- **Result vs owner's grades:**
+
+| Measure | Before | After |
+|---|---|---|
+| Correctness | 8/12 = 67% | 8/12 = 67% (not touched by this fix) |
+| All sentences supported (per answer) | 8/9 = 89% | 7/9 = 78% |
+| Citation backing (per sentence) | 11/14 = 79% | 13/14 = 93% |
+
+- **Conclusion:** the fix did what it was meant to: R08 and R20 citations are now judged backed (the judge's reason for R20 now reads "the Rishi (Vyasa/Dwaipayana)"). Side effect: R10 faithfulness dropped to 0.75 because the judge now rejects the claim "the vow was taken so that no children of his own could claim the throne" as not stated in the passage (the owner marked it supported). This looks like ordinary judge variance or strictness, not the names rule, and is a candidate for fix 2/3 discussion.
+- **Still open:** correctness (R25, R05, R08, R12 disagree) and R12 faithfulness ("the five brothers" vs the passage's "sons of Pandu" / "Bhima set fire").
