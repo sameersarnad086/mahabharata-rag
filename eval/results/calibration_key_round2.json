@@ -1,0 +1,327 @@
+[
+ {
+  "item": 1,
+  "id": "R26",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 0.5,
+   "faithfulness": 1.0,
+   "citation_support": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Dhrishtadyumna was born from the sacrificial fire.",
+    "supported": true,
+    "evidence": "Then was born Dhrishtadyumna, of the splendour of Agni himself, from the sacrificial fire."
+   },
+   {
+    "claim": "Draupadi was born from the sacrificial altar.",
+    "supported": true,
+    "evidence": "And from the sacrificial altar was born Krishna (Draupadi)"
+   },
+   {
+    "claim": "Draupadi is also called Krishna.",
+    "supported": true,
+    "evidence": "And from the sacrificial altar was born Krishna (Draupadi)"
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Dhrishtadyumna was born from the sacrificial fire [2].",
+    "backed": true,
+    "reason": "The passage explicitly states that Dhrishtadyumna was born from the sacrificial fire."
+   },
+   {
+    "sentence": "Draupadi (also called Krishna) was born from the sacrificial altar [2].",
+    "backed": true,
+    "reason": "The passage explicitly states that Krishna (Draupadi) was born from the sacrificial altar."
+   }
+  ]
+ },
+ {
+  "item": 2,
+  "id": "R31",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 0.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Astika was the son of the sister of the snakes.",
+    "supported": true,
+    "evidence": "the sister of the snakes, O Brahmana, gave birth to a son"
+   },
+   {
+    "claim": "Vasuki was the king of the snakes.",
+    "supported": true,
+    "evidence": "Vasuki, the king of the snakes"
+   },
+   {
+    "claim": "Vasuki was the brother of Astika's mother.",
+    "supported": true,
+    "evidence": "Vasuki, the king of the snakes, accepted those words of his sister"
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Astika was the son of the sister of the snakes [3].",
+    "backed": false,
+    "reason": "The cited passage mentions the sister of the snakes giving birth to a son, but it does not mention the name Astika."
+   },
+   {
+    "sentence": "Vasuki, the king of the snakes, was the brother of Astika's mother [3].",
+    "backed": false,
+    "reason": "The cited passage mentions Vasuki as the king of the snakes and brother to the sister of the snakes, but it does not mention Astika by name."
+   }
+  ]
+ },
+ {
+  "item": 3,
+  "id": "R34",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 0.5,
+   "faithfulness": 0.8,
+   "citation_support": 0.6666666666666666
+  },
+  "judge_claims": [
+   {
+    "claim": "Krishna-Dwaipayana is also known as the Rishi Vyasa.",
+    "supported": true,
+    "evidence": "saluted with reverence the illustrious Rishi Krishna (Dwaipayana)... Hearing these words Vyasa replied"
+   },
+   {
+    "claim": "Krishna-Dwaipayana is the son of the mother of Vichitravirya.",
+    "supported": false,
+    "evidence": ""
+   },
+   {
+    "claim": "Krishna-Dwaipayana is described as the father of Dhritarashtra.",
+    "supported": true,
+    "evidence": "from Krishna was born, in the soil of Vichitravirya, Dhritarashtra"
+   },
+   {
+    "claim": "Krishna-Dwaipayana is described as the father of Pandu.",
+    "supported": true,
+    "evidence": "and Pandu of great strength."
+   },
+   {
+    "claim": "Krishna-Dwaipayana is described as the father of Vidura.",
+    "supported": true,
+    "evidence": "the son thus begotten upon her by Krishna-Dwaipayana was afterwards known by the name of Vidura."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Krishna-Dwaipayana is also known as the Rishi Vyasa [3][4].",
+    "backed": true,
+    "reason": "The cited passages use 'Rishi Krishna (Dwaipayana)' and 'Vyasa' interchangeably to refer to the same individual."
+   },
+   {
+    "sentence": "He is the son of the mother of Vichitravirya [3][5].",
+    "backed": false,
+    "reason": "Neither cited passage states that Krishna-Dwaipayana's mother is also the mother of Vichitravirya."
+   },
+   {
+    "sentence": "He is described as the father of Dhritarashtra, Pandu, and Vidura [1][3][5].",
+    "backed": true,
+    "reason": "Passage [3] explicitly states that Krishna-Dwaipayana became the father of three boys, raising up Dhritarashtra, Pandu, and Vidura."
+   }
+  ]
+ },
+ {
+  "item": 4,
+  "id": "R36",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 0.5,
+   "faithfulness": 1.0,
+   "citation_support": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Janamejaya was the son of Puru.",
+    "supported": true,
+    "evidence": "Puru had a wife of the name of Kausalya, on whom he begat a son named Janamejaya"
+   },
+   {
+    "claim": "Janamejaya was a monarch.",
+    "supported": true,
+    "evidence": "And that best of monarchs, Janamejaya, though a child, was wise in mind."
+   },
+   {
+    "claim": "Janamejaya performed three horse-sacrifices before entering the woods.",
+    "supported": true,
+    "evidence": "Janamejaya who performed three horse-sacrifices and a sacrifice called Viswajit . And then he entered into the woods."
+   },
+   {
+    "claim": "Janamejaya performed a sacrifice called Viswajit before entering the woods.",
+    "supported": true,
+    "evidence": "Janamejaya who performed three horse-sacrifices and a sacrifice called Viswajit . And then he entered into the woods."
+   },
+   {
+    "claim": "Janamejaya married Ananta.",
+    "supported": true,
+    "evidence": "And Janamejaya had married Ananta"
+   },
+   {
+    "claim": "Ananta was the daughter of Madhava.",
+    "supported": true,
+    "evidence": "Ananta, the daughter of Madhava"
+   },
+   {
+    "claim": "Janamejaya and Ananta had a son named Prachinwat.",
+    "supported": true,
+    "evidence": "And Janamejaya had married Ananta, the daughter of Madhava, and begat upon her a son called Prachinwat."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Janamejaya, the son of Puru, was a monarch who performed three horse-sacrifices and a sacrifice called Viswajit before entering the woods [5].",
+    "backed": true,
+    "reason": "The sentence is fully supported by the passage, which states that Puru begat a son named Janamejaya who performed three horse-sacrifices and a Viswajit sacrifice before entering the woods."
+   },
+   {
+    "sentence": "He married Ananta, the daughter of Madhava, and they had a son named Prachinwat [5].",
+    "backed": true,
+    "reason": "The sentence is fully supported by the passage, which explicitly states that Janamejaya married Ananta, the daughter of Madhava, and had a son named Prachinwat with her."
+   }
+  ]
+ },
+ {
+  "item": 5,
+  "id": "R11",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "King Janamejaya held the snake-sacrifice to avenge himself on the snake Takshaka.",
+    "supported": true,
+    "evidence": "I must avenge myself on the wretch Takshaka who killed my father."
+   },
+   {
+    "claim": "Takshaka had killed King Janamejaya's father, King Parikshit.",
+    "supported": true,
+    "evidence": "the son of Parikshit, then called his priest... 'I must avenge myself on the wretch Takshaka who killed my father.'"
+   },
+   {
+    "claim": "King Janamejaya desired to burn Takshaka and Takshaka's relatives in the fire.",
+    "supported": true,
+    "evidence": "Do you know any act by which I may cast into the blazing fire the snake Takshaka with his relatives?"
+   },
+   {
+    "claim": "King Janamejaya's father had been burnt by the snake's poison.",
+    "supported": true,
+    "evidence": "I desire to burn that wretch even as he burnt, of yore, by the fire of his poison, my father."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "King Janamejaya held the snake-sacrifice to avenge himself on the snake Takshaka, who had killed his father, King Parikshit [1].",
+    "backed": true,
+    "reason": "The sentence is fully supported by the cited passage, which explicitly names Janamejaya as the son of Parikshit and mentions his desire to hold a snake-sacrifice to avenge his father who was killed by Takshaka."
+   },
+   {
+    "sentence": "He desired to burn Takshaka and his relatives in the fire just as his father had been burnt by the snake's poison [1].",
+    "backed": true,
+    "reason": "The sentence is fully supported by the passage, which explicitly states Janamejaya's desire to cast Takshaka and his relatives into the blazing fire just as Takshaka had burnt his father with the fire of his poison."
+   }
+  ]
+ },
+ {
+  "item": 6,
+  "id": "R13",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Arjuna won Subhadra through forcible seizure.",
+    "supported": true,
+    "evidence": "Subhadra of the race of Madhu had, after forcible seizure been married by Arjuna"
+   },
+   {
+    "claim": "Subhadra is identified as the younger sister of Vasudeva.",
+    "supported": true,
+    "evidence": "younger sister of Vasudeva, Subhadra by name"
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Arjuna won Subhadra through \"forcible seizure\" [1].",
+    "backed": true,
+    "reason": "The cited passage explicitly mentions that Subhadra was married by Arjuna after forcible seizure."
+   },
+   {
+    "sentence": "She is identified as the younger sister of Vasudeva [2].",
+    "backed": true,
+    "reason": "The cited passage explicitly identifies Subhadra as the younger sister of Vasudeva."
+   }
+  ]
+ },
+ {
+  "item": 7,
+  "id": "G04",
+  "outcome": "correct_refusal",
+  "judge": {
+   "correctness": null,
+   "faithfulness": null,
+   "citation_support": null
+  },
+  "judge_claims": null,
+  "judge_citations": null
+ },
+ {
+  "item": 8,
+  "id": "R14",
+  "outcome": "answered",
+  "judge": {
+   "correctness": 1.0,
+   "faithfulness": 1.0,
+   "citation_support": 1.0
+  },
+  "judge_claims": [
+   {
+    "claim": "Arjuna is also referred to as Partha.",
+    "supported": true,
+    "evidence": "Krishna, observing Partha contemplate her with absorbed attention, said with a smile, 'How is this? Can the heart of one that rangeth the woods be agitated by the god of desire? This is my sister, O Partha... Arjuna answered"
+   },
+   {
+    "claim": "Arjuna took Subhadra away by force.",
+    "supported": true,
+    "evidence": "Subhadra is a renowned girl. Partha too possesseth renown. Perhaps, thinking of all this, Arjuna hath taken her away by force."
+   },
+   {
+    "claim": "Arjuna's action of taking Subhadra away is described as a forcible seizure.",
+    "supported": true,
+    "evidence": "When I heard that Subhadra of the race of Madhu had, after forcible seizure been married by Arjuna in the city of Dwaraka"
+   },
+   {
+    "claim": "Arjuna's action of taking Subhadra away is described as taking the maiden away by force according to the ordinance.",
+    "supported": true,
+    "evidence": "I think Arjuna, seeing these faults in all the other methods took the maiden away by force, according to the ordinance."
+   }
+  ],
+  "judge_citations": [
+   {
+    "sentence": "Arjuna (also referred to as Partha) took Subhadra away by force [2][4].",
+    "backed": true,
+    "reason": "The cited passages explicitly state that Arjuna (also called Partha) took Subhadra away by force."
+   },
+   {
+    "sentence": "This action is described as a forcible seizure [4] and as taking the maiden away by force according to the ordinance [2].",
+    "backed": true,
+    "reason": "Passage 4 describes the event as a 'forcible seizure' and Passage 2 explicitly mentions Arjuna taking the maiden 'away by force, according to the ordinance.'"
+   }
+  ]
+ }
+]

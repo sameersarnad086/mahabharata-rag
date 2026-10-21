@@ -48,7 +48,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 <div class="wrap">
   <header>
     <h1>Judge Calibration Form</h1>
-    <p class="lede">12 answers from the baseline run. Grade each one yourself using only the passages shown. The AI judge's scores are hidden from you on purpose.</p>
+    <p class="lede">The answers in this round come from the baseline run. Grade each one yourself using only the passages shown. The AI judge's scores are hidden from you on purpose.</p>
   </header>
   <div class="rules">
     <p><b>Correct?</b> Compare the answer with the expected answer. A refusal on an answerable question is <i>No</i>. A refusal on a question with no answer in the text is <i>Yes</i>.</p>
@@ -69,7 +69,7 @@ button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 <div class="bar"><span class="prog" id="prog"></span><button id="copy" type="button">Copy my grades</button></div>
 <script>
 const ITEMS = __ITEMS__;
-const KEY = 'calib-v1';
+const KEY = 'calib-' + document.title;
 let S = {};
 try { S = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { S = {}; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
