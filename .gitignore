@@ -226,3 +226,6 @@ data/cache/*
 !data/processed/.gitkeep
 !data/cache/.gitkeep
 .env
+
+# Graphify output (rebuilt each session by .claude/hooks/session-start.sh)
+graphify-out/
