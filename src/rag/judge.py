@@ -33,7 +33,8 @@ PREFACE = (
 
 NAMES_RULE = (
     "Names: one person often has several names, titles and epithets (for example Arjuna, Partha and Dhananjaya). "
-    "Treat two different names as the same person ONLY when the passages themselves show it, for example a passage "
+    "Different spellings of the same name (transliteration variants such as Hidimba and Hidimva, or Yudhishthira and "
+    "Yudhisthira) always match. Treat two different names as the same person ONLY when the passages themselves show it, for example a passage "
     "that says 'Vyasa, also called Dwaipayana', or a passage where 'the king' or 'the Rishi' is clearly the person "
     "being discussed. Do NOT use what you know about who is who from anywhere else. If the passages do not make the "
     "identity clear, the names do not match. Never merge two different people who merely share a name. Names are the "

@@ -68,3 +68,10 @@ All tunables are in `config.py`.
 - Paid Gemini key works. Trial R01/R03 fine. **Provisional baseline** (working set, both modes) is in `EXPERIMENTS.md` and `eval/results/gen_baseline_working.json`; judge NOT yet calibrated.
 - **Waiting on the user:** grade `eval/calibration_sheet.md` (12 items, blind). Do not open or show `eval/results/calibration_key.json` (judge's scores) before they finish. Then compare, fix judge if agreement < ~80%, freeze judge prompt, re-score.
 - Unanswerable split: 6 working + 2 held-out. Held-out generation run still not done (needs --confirm-milestone). `scripts/rebuild_all.sh` pipe bug fixed.
+
+## Update 2026-10-28 (judge fixes done; waiting on round 2)
+- Judge fixes applied: 1 (names), 1b (passages only), 1c (spelling variants). Only the "Names" rule in `src/rag/judge.py` changed; correctness rubric untouched. Amended owner grades in `eval/calibration_grades_amended.md`; blind originals in `eval/calibration_grades.md`.
+- Agreement on round 1 items with amended grades: correctness 92%, all-supported 89%, citations 100% (consistency check only).
+- **Waiting on the user:** grade round 2 (8 fresh items) in the form https://claude.ai/artifact/TsUJZgtkcGusgWpMBPKEQu (older duplicate link: .../5xJNJ4uYqHPmbdw8s61ssr). Key with judge scores (do not show before grading): `eval/results/calibration_key_round2.json`.
+- Then: compare with `scripts/compare_calibration.py` (needs a run that includes the 8 round-2 ids re-scored with the current judge: run `run_generation_eval.py --ids ... --save calib_round2`), freeze judge if about 80% or more, rerun the official baseline (both modes), then held-out once with --confirm-milestone.
+- Dev tooling: Graphify and claude-mem configured via `.claude/hooks/session-start.sh` (cloud only).

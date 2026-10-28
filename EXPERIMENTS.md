@@ -103,3 +103,18 @@ After seeing the judge's reason, the owner agreed the judge was right on R10 sen
 - **What changed:** R08 ("the king" vs Parikshit) and R20 (Vyasa vs Dwaipayana) citations are flagged again, as the owner expected: the passages do not show those identities, so this is a retrieval gap to fix in Phase 3, not a generator fault. New side effect: R21's first citation is now flagged because the passage spells the name "Hidimva" and the answer "Hidimba". That is a spelling variant, not outside knowledge, so the rule probably should let spelling variants match (proposed fix 1c, not applied).
 - **Judge variance noted:** R10 faithfulness was 1.0 (baseline), 0.75 (fix 1), 1.0 (fix 1b) on the same answer at temperature 0. Changing the prompt text moves borderline verdicts, so single-item flips of this kind are noise; per-item comparisons need several items to mean anything.
 - **Under the passages-only standard** the owner's own R08 and R20 citation grades (given using knowledge of the aliases) would become "no"; not yet amended, awaiting the owner's confirmation.
+
+## Judge fix 1c: spelling variants match; R08/R20 grades amended — 2026-10-28
+- **Change (one variable):** added to the "Names" rule in `src/rag/judge.py`: different spellings of the same name (Hidimba/Hidimva, Yudhishthira/Yudhisthira) always match; different names still need the passages to link them. Re-scored the same 12 cached answers (`eval/results/gen_calib_fix1c.json`, $0.36).
+- **Owner grade amendment:** R08 and R20 citation grades yes→no in `eval/calibration_grades_amended.md` (blind originals untouched). Reason: the cited passages say "the king" / "Vyasa" and never name Parikshit / Dwaipayana; under the passages-only standard they are not backed. For R08 the nearby "Parikshita" in the passage is the son (a different person), so the judge's flag is also correct, and it is a worked example of the same-name-different-people trap for Phase 3.
+- **Result vs amended owner grades:** correctness 11/12 = 92%; all-supported 8/9 = 89%; citations 14/14 = 100%.
+
+| Judge version | Correctness | All supported | Citations |
+|---|---|---|---|
+| Original | 67% | 89% | 79% |
+| Fix 1 (alias knowledge) | 67% | 78% | 93% |
+| Fix 1b (passages only) | 92% | 78% | 79% |
+| **Fix 1c (+ spelling variants), amended grades** | **92%** | **89%** | **100%** |
+
+- **Still disagreeing:** R05 correctness (owner partly, judge 0) and R12 faithfulness (judge rejects "the five brothers" claims). Not changed, to avoid tuning the judge to single items.
+- **Caution:** amended grades were revised after seeing the judge, so this is a consistency check, not independent evidence. Round 2 (8 fresh blind answers) is the independent test. If agreement on round 2 is about 80% or more, the judge instructions are frozen.
