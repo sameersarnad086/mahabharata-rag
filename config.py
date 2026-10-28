@@ -38,3 +38,7 @@ JUDGE_THINKING_LEVEL = None        # None = model default. Try "low" if judge ca
 JUDGE_PRICE_PER_M_TOKENS = (1.50, 9.00)   # (input, output) USD per million tokens, from third-party price pages; verify
 GEN_EVAL_CACHE_DIR = CACHE_DIR / "gen_eval"   # generator answers and judge replies, so reruns are free
 EVAL_RETRY_WAITS = (5, 15, 30, 60, 120)   # seconds; patient on Gemini 503/429, since a failed run costs time
+
+# Fingerprint of the judge instructions frozen after calibration (2026-10-28). Runs record the current fingerprint; if it
+# differs from this one, the judge was changed and old and new scores must not be compared.
+JUDGE_FROZEN_FINGERPRINT = "2578221ecdd4"

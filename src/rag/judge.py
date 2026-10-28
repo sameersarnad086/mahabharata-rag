@@ -84,6 +84,13 @@ RELEVANCE_TASK = (
 )
 
 
+def prompt_fingerprint():
+    """Short hash of every instruction the judge is given. A run records it, so a changed judge cannot pass as the frozen one."""
+    import hashlib
+    text = "".join([PREFACE, NAMES_RULE, CORRECTNESS_TASK, CLAIMS_TASK, VERIFY_TASK, CITATION_TASK, RELEVANCE_TASK])
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
 def make_google_ask(use_cache=True):
     """Build the real `ask` function that calls the judge model (with caching and retry)."""
     from google import genai

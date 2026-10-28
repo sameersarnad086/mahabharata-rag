@@ -27,6 +27,7 @@ from src.rag import evalcache
 from src.rag import eval_generation as E
 from src.rag import generation
 from src.rag.generation import build_prompt, generate_answer
+from src.rag import judge as judge_mod
 from src.rag.judge import Judge, JudgeError, make_google_ask
 
 
@@ -113,8 +114,11 @@ def main():
 
     cfg = {"generator": config.LLM_MODEL, "judge": config.JUDGE_MODEL, "k": config.TOP_K, "chunk_size": config.CHUNK_SIZE,
            "chunk_overlap": config.CHUNK_OVERLAP, "embedding_model": config.EMBEDDING_MODEL,
-           "split": args.split, "commit": git_commit(), "date": str(datetime.date.today())}
+           "split": args.split, "commit": git_commit(), "date": str(datetime.date.today()),
+           "judge_fingerprint": judge_mod.prompt_fingerprint(), "judge_frozen": judge_mod.prompt_fingerprint() == config.JUDGE_FROZEN_FINGERPRINT}
     print("config:", json.dumps(cfg))
+    if not cfg["judge_frozen"]:
+        print("WARNING: the judge instructions differ from the frozen version; scores are not comparable with the baseline.")
 
     all_records = {}
     for mode in modes:
