@@ -991,10 +991,58 @@ Both modes ran together (`python scripts/run_generation_eval.py --mode both --sa
 
 **Why that led to calibration.** The judge is an AI grading another AI, and its scores steer every later experiment (chunking, embeddings, reranking). If it is miscalibrated we could keep a worse change or drop a better one without knowing. So before trusting the numbers we compare the judge with a human: the project owner grades a sample of answers blind (judge scores hidden), and we measure how often they agree. About 80% is our bar. The first sample was 12 answers; where they disagree we read both reasons and fix the judge's instructions, one change at a time. The calibration story and its fixes are written up next.
 
-#### 6. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
+#### 6. Judge calibration, round 1
+**Why we calibrate.** The judge is an AI grading another AI, and its scores steer every later experiment (chunking, embeddings, reranking). If it is miscalibrated we could keep a worse change or drop a better one without noticing. In the baseline, faithfulness and citation support got slightly worse with perfect passages, which made us unsure the judge was doing a good job. So before trusting any score, the project owner grades a sample blind and we measure how often owner and judge agree. Our bar is about 80%.
+
+**What we did in the first iteration**
+1. **Sample:** 12 answers from the end-to-end baseline, picked by fixed rules (a wrongful refusal, correct refusals, answers the judge scored low or partial, right answers with weak faithfulness, weak citations, and a few clean ones), so the sample is not all easy cases. Items: R25, G01, G02, R05, R08, R12, R21, R20, R01, R03, R06, R10.
+2. **Blind grading:** the owner filled in a form (`eval/calibration_form.html`, same content as `eval/calibration_sheet.md`) showing the question, expected answer, the system's answer split into sentences, and the five passages. The judge's scores were not shown; they were saved separately in `eval/results/calibration_key.json`.
+3. **Grading standards:** *Correct?* is judged against the expected answer, using the owner's knowledge of the text. *Supported?* and *Citation ok?* use **only the passages shown**; a fact that is true but not in the passages counts as not supported.
+4. **Comparison:** `scripts/compare_calibration.py` reduces both sides to something that can be matched and counts agreement. The owner's blind grades are kept unchanged in `eval/calibration_grades.md`.
+
+#### Calibration measures: what each means and how it is calculated
+Calibration compares the owner's blind grades with the judge's scores on the same 12 answers. There are three comparisons. Each reduces both sides to something that can be matched.
+
+**1. Correct? (does the answer match the expected answer)**
+- The owner answers yes, partly or no. This becomes 1, 0.5 or 0.
+- The judge gives its own 1, 0.5 or 0 for the same answer.
+- Agreement = the two numbers are exactly equal. Agreement rate = matches / items.
+- A correct refusal on an unanswerable question counts as agreement when the owner said yes.
+- **Calibration 1: 8 of 12 (67%).**
+- Example: R05. The owner said partly (0.5) and the judge gave 0, so they disagree. R01. Both said 1, so they agree.
+- The four disagreements: R25 (owner partly, judge 0), R05 (owner partly, judge 0), R08 (owner yes, judge 0.5), R12 (owner no, judge 0.5).
+
+**2. Supported? (is every claim in the answer backed by the retrieved passages)**
+- The owner graded each *sentence* of the answer, yes or no, using only the passages.
+- The judge works on *claims*, not sentences. It splits the answer into single claims on its own, which the owner never saw. One sentence can hold several claims, so the counts differ (R21: 3 sentences, 6 claims).
+- The judge's faithfulness score = supported claims / all claims.
+- Each side is reduced to one verdict per answer:
+  - "all supported": every owner sentence is yes, or the judge's faithfulness is exactly 1.0.
+  - "not all supported": at least one owner sentence is no, or the judge's faithfulness is below 1.0.
+- Agreement = the two verdicts match. The fractions are not compared (a judge score of 0.67 and of 0.0 are both "not all supported").
+- Refusals are left out because the judge does not score faithfulness for them. That is why the denominator is 9, not 12.
+- **Calibration 1: 8 of 9 (89%).**
+- Example: R21. The owner marked sentence 3 no, and the judge's faithfulness was 0.67. Both say "not all supported", so they agree. R12 was the mismatch: the owner marked every sentence yes, but the judge scored faithfulness 0.0.
+
+**3. Citations ok? (does the cited passage back the sentence)**
+- Only sentences that carry a [n] marker are graded. The owner marked each yes or no.
+- Each owner sentence is lined up, in order, with the judge's verdict on the same sentence, backed or not backed.
+- Agreement = both say backed, or both say not backed. This is counted one sentence at a time.
+- **Calibration 1: 11 of 14 sentences (79%).**
+- Example: R08. The owner said backed and the judge said not backed (the passage says "the king", the answer says "Parikshit"). R20 differed the same way (Vyasa vs Dwaipayana). R10 sentence 3 was the third mismatch.
+
+**Faithfulness vs "all sentences supported"**
+- Faithfulness is the judge's own score, supported claims / all claims.
+- "All sentences supported" is the yes/no comparison used here to check the judge's faithfulness against the owner's sentence grades.
+
+**Notes** the owner writes on each item are not scored. They are read to understand why the two sides disagreed.
+
+**What we saw and the fixes that followed:** to be written next.
+
+#### 7. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
 Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Menaka a daughter named Sakuntala" and "the lewd Menaka is thy mother"; expected answer "Menaka, the celestial Apsara (her father was the sage Viswamitra)."
 
-**6.1 The input part**
+**7.1 The input part**
 - `eval/retrieval_questions.csv` (the 36; **never edited** for this): `question`, `expected_answer` (the truth for correctness), `gold_sections` and `evidence_phrases` (which chunks to hand over in ideal-context mode, and the "gold found" flag in end-to-end mode), `type` and `split` (grouping, working or held-out protection).
 - **`eval/generation_questions.csv` (planned, does not exist yet):** the ~8 unanswerable questions: `answerable` = no, no gold section, expected result is a refusal, plus a note that a corpus scan confirmed the answer is absent.
 - **Why unanswerable questions are needed:** all 36 have answers, so we could only test how well the model answers, never whether it knows **when not to**. A model that always answers (and invents facts when the passages say nothing) would look fine on the 36. A model that refuses too easily would show only on answerable ones. Unanswerable questions are the only way to measure refusal accuracy and catch hallucination. For the lineage project, a made-up parentage is worse than "I don't know".
@@ -1007,14 +1055,14 @@ Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Mena
 - **Output:** one saved result file per run in `eval/results/`, with the answer, judge replies and scores per question.
 - **Size of a run:** about 44 questions x 2 modes x 4 judge jobs gives roughly 350 to 500 judge calls (the faithfulness and citation jobs scale with answer length). Check the price first.
 
-**6.2 The steps that do NOT use the judge (plain code)**
+**7.2 The steps that do NOT use the judge (plain code)**
 1. **Load the question.** Keep the question and expected answer. Gold sections and phrases are used only to see whether retrieval found the right text. The generator never sees any label.
 2. **Retrieve** the top 5 chunks (end-to-end). Also check by string match whether they contain the evidence phrases, giving a "gold found: yes or no" flag. No model involved. Needed later to explain failures.
 3. **Generate** with the real prompt and `gemini-3.1-flash-lite`. This is the **generator**, the model being tested, not the judge. Illustrative answer: *"Sakuntala's mother was Menaka, an Apsara sent by Indra to disturb Viswamitra's penance [2]. She was born to them and left in the forest [2]."*
 4. **Cheap checks.** Did the answer contain the exact refusal sentence ("The provided passages do not answer this question.")? Does every `[n]` point at an existing passage (the existing `check_citations`)? Code does everything it can before we pay for a model call.
 5. Later: **save** one record per question, then **average** by group (answerable or not, type, working or held-out) and compare the two modes.
 
-**6.3 The steps that use the judge**
+**7.3 The steps that use the judge**
 The judge is called only after the generator has answered, and only for work code cannot do ("is this claim supported?"). Four separate calls, each a fresh conversation with only the slice it needs.
 
 *Assumption for this example: passage [2] says Menaka was sent by Indra, that Viswamitra and Menaka had a daughter, and that she was left in the forest. It never uses the word "Apsara".*
@@ -1026,7 +1074,7 @@ The judge is called only after the generator has answered, and only for work cod
 
 **Saved record for R01:** correctness 1; faithfulness 0.8 (claim 2 flagged); citation support 0.5 (sentence 1 flagged); relevance 1; not refused and answerable, so fine. Reading: right and relevant, but one outside fact sneaked in and the first citation overreaches. A plain "is it correct?" check would miss exactly this.
 
-**6.4 How does the judge know what is right? (a question the user asked)**
+**7.4 How does the judge know what is right? (a question the user asked)**
 The judge does **not** decide from its own knowledge and does **not** write an answer of its own. It compares the generator's answer with something we hand it:
 | Check | The "truth" given to the judge | Source |
 |---|---|---|
@@ -1040,7 +1088,7 @@ The judge does **not** decide from its own knowledge and does **not** write an a
 - **Reducing it:** (1) instructions say use only the material given; (2) the narrowest slice per call; (3) calibration on about 12 answers the user grades, to expose disagreement.
 - **Why not let the judge write its own reference answer:** a second error source we cannot check. Our written expected answers are fixed, so any disagreement can be traced.
 
-**6.5 Keeping the judge honest**
+**7.5 Keeping the judge honest**
 - Calibration: agreement with the user under about 80% means fix the judge instructions before trusting any score.
 - Same-vendor bias: a Gemini judge may be generous to Gemini answers. Ragas gives a second opinion later.
 - Fixed reply format (JSON) so scores are read by code, not guessed from prose.
@@ -1058,8 +1106,8 @@ The judge does **not** decide from its own knowledge and does **not** write an a
 #### Gotchas and open design choices
 - Whether faithfulness Stage A and B are two calls (more reliable, slower) or one.
 - Whether the citation judge gives yes/no or yes/partly/no.
-- Judge pre-trained knowledge leaking in (6.4).
-- Unanswerable questions can be answerable through the summary passages, so scan first (6.1).
+- Judge pre-trained knowledge leaking in (7.4).
+- Unanswerable questions can be answerable through the summary passages, so scan first (7.1).
 - Unanswerable questions are drafted by Claude and must be reviewed by the user.
 - **Free-tier quota (found while building):** the Gemini key is on the free tier, which allowed only 20 requests per day for the judge model (error 429, "limit: 20", retry in about 13 hours). A full run needs roughly 400 or more judge calls, so the free tier cannot carry this evaluation. The error named `gemini-3.6-flash` although we asked for `gemini-3.5-flash`; unexplained.
 - **Capacity errors (503 "high demand"):** common on both the generator and the judge model; a single call once stayed unavailable for about four minutes. The runner now waits longer between retries (`EVAL_RETRY_WAITS` in `config.py`), and cached replies make a crashed run resumable.
