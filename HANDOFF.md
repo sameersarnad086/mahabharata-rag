@@ -75,3 +75,9 @@ All tunables are in `config.py`.
 - **Waiting on the user:** grade round 2 (8 fresh items) in the form https://claude.ai/artifact/TsUJZgtkcGusgWpMBPKEQu (older duplicate link: .../5xJNJ4uYqHPmbdw8s61ssr). Key with judge scores (do not show before grading): `eval/results/calibration_key_round2.json`.
 - Then: compare with `scripts/compare_calibration.py` (needs a run that includes the 8 round-2 ids re-scored with the current judge: run `run_generation_eval.py --ids ... --save calib_round2`), freeze judge if about 80% or more, rerun the official baseline (both modes), then held-out once with --confirm-milestone.
 - Dev tooling: Graphify and claude-mem configured via `.claude/hooks/session-start.sh` (cloud only).
+
+## Update 2026-10-28 (judge FROZEN, official baseline done)
+- Judge frozen (fingerprint 2578221ecdd4). Official working-set baseline: `eval/results/gen_baseline_working_frozen.json`, summary in EXPERIMENTS.md (correctness 0.81 end-to-end / 0.96 ideal; faithfulness 0.92 / 0.82; citation 0.74 / 0.71).
+- Round 2 calibration done (owner graded; amended grades in `eval/calibration_grades_round2_amended.md`).
+- **Next:** (1) held-out generation run once: `python scripts/run_generation_eval.py --split held-out --confirm-milestone "baseline" --save baseline_heldout` (needs the owner's go-ahead); (2) finish LEARNING.md: "what we saw" in calibration section 6, round 2, fixes 1/1b/1c, the freeze, results; (3) Ragas side-by-side; (4) Phase 2 retrospective; (5) Phase 3.
+- Do not change judge instructions without a new calibration (the runner warns if the fingerprint differs).

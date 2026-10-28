@@ -127,3 +127,19 @@ After seeing the judge's reason, the owner agreed the judge was right on R10 sen
   - Citation strictness on minor descriptors: R36 (judge: passage does not say Janamejaya was a "monarch"), R11 (judge: passage does not say Parikshit was "king"). Owner marked both backed.
   - R31 faithfulness: owner Supported=no; judge faithfulness 1.0 because passage 5 names Astika and his birth to the snakes' sister. The citation check (only passage [3], which does not name Astika) marked both sentences not backed, agreeing with the owner. The judge is arguably right on both: the claim holds across the five passages, but the cited passage [3] alone does not back it.
 - **Conclusion:** the judge generalises on supported and citations (above 80%, small samples: 7 and 13 items). Correctness on the 3-level scale is below 80% mainly because expected answers hold several facts and "key fact" is a judgement call; the coarse correct vs wrong view agrees 95%. Round 2 was the untouched test, so tuning the judge on these items now would remove its independence. Decision recorded below.
+
+## Judge frozen; OFFICIAL generation baseline, working set — 2026-10-28
+- **Judge frozen** at fingerprint `2578221ecdd4` (`JUDGE_FROZEN_FINGERPRINT` in `config.py`; every run records its own fingerprint and warns if it differs). Evidence: round 1 with amended grades, correctness 92%, all-supported 89%, citations 100%; round 2 (fresh, blind, with owner amendments R13/R14/R31) correctness 88%, all-supported 100%, citations 85%. Known limits: citation check is strict on minor descriptors (R36 "monarch", R11 "King"); "key fact" in partially answered questions is a judgement call (R34); R05 correctness (owner partly, judge 0) and R12 faithfulness unresolved. Amended grades: `eval/calibration_grades_amended.md`, `eval/calibration_grades_round2_amended.md`; blind originals untouched. Owner: the answers are reasonably good from an end-user view.
+- **Run:** `python scripts/run_generation_eval.py --mode both --save baseline_working_frozen` → `eval/results/gen_baseline_working_frozen.json` (24 answerable + 6 unanswerable end-to-end; 24 ideal context; $1.57). Generator answers were reused from the cache (same prompts), so only the judge scores changed.
+
+| Metric (working set) | End-to-end | Ideal context |
+|---|---|---|
+| Correctness (refusals count 0) | 0.81 | 0.96 |
+| Faithfulness | 0.92 | 0.82 |
+| Citation support | 0.74 | 0.71 |
+| Relevance | 1.00 | 1.00 |
+| Gold text in the passages | 0.67 | 1.00 |
+| Correct refusals / false refusals | 6/6 / 1/24 | n/a |
+
+- **Versus the provisional baseline:** correctness and relevance identical; faithfulness 0.93→0.92 and 0.88→0.82; citation support 0.83→0.74 and 0.75→0.71. The citation drop is the passages-only name rule at work (R08, R20 style cases are now flagged), which the owner chose.
+- **Conclusion:** this is the reference for all Phase 3 comparisons. Retrieval is still the main weakness (correctness 0.81 → 0.96 with the gold passages). Held-out not run yet (needs `--confirm-milestone`).
