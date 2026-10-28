@@ -896,7 +896,7 @@ Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1
 
 ### Generation evaluation: what it is and how it runs (lesson written before the build)
 
-Status: **built and run once (provisional baseline in `EXPERIMENTS.md`); judge calibration still in progress, so the baseline numbers are not final.** Sections 1 to 3 below are updated to match what was built. Section 4 onward is the original pre-build lesson and is still to be refined. The worked examples are *illustrative*, not from a real run.
+Status: **built, calibrated and run: the judge is frozen (sections 6a to 6c) and the official working-set baseline is in section 6d. Held-out run not done yet.** Sections 1 to 3 below are updated to match what was built. Section 4 onward is the original pre-build lesson and is still to be refined. The worked examples are *illustrative*, not from a real run.
 
 #### 1. What generation evaluation is, and how we do it
 - **Concept:** retrieval evaluation asks "did we fetch the right passages?". Generation evaluation asks "given those passages, did the model write a good answer?". The two are scored separately so we know which half to fix.
@@ -1037,7 +1037,92 @@ Calibration compares the owner's blind grades with the judge's scores on the sam
 
 **Notes** the owner writes on each item are not scored. They are read to understand why the two sides disagreed.
 
-**What we saw and the fixes that followed:** to be written next.
+#### 6a. Calibration 1: what we saw, and the judge fixes that followed
+**Result (original judge, owner's blind grades):** correctness 8 of 12 (67%), all-supported 8 of 9 (89%), citations 11 of 14 (79%). The worry that the judge was unreliable on faithfulness turned out to be mostly unfounded: it was right to flag R21's marriage sentence (the owner agreed). The problems were elsewhere.
+
+**What we saw**
+1. **Names (R08, R20):** the judge marked citations "not backed" because the passage said "the king" or "the Rishi / Vyasa" and the answer said "Parikshit" or "Dwaipayana". The owner had marked them backed using knowledge of the story. This is the *many names for one person* problem, now hitting the judge. For R08 it is worse than it looks: the cited passage mentions "Parikshita" only as the *son* ruling later, a different person, so the passages never name the dying king (the *same name, different people* trap).
+2. **R12, the judge contradicted itself:** the claim check said the claims were unsupported (no evidence quoted) while the citation check, on the same passage, said the passage "explicitly states" them. Two jobs seeing different slices of the same text can disagree.
+3. **Correctness (R25, R05, R08, R12):** the disagreements were about partial answers. Our rubric (full, partly, no) had never been written down precisely. The owner settled it: *full* = the key facts of the expected answer, including the cause when the expected answer has one (for "How did Parikshit die?" the curse is needed); *partly* = right idea or entity but a key part missing or hedged; *no* = wrong, or a refusal on an answerable question. That matches what the judge already did, so the judge's correctness instructions were not changed.
+4. **R10, a lesson in standards:** the judge rejected "the vow was taken so he would have no children who could claim the throne". The passage states the vow, not its purpose. True in the story, not in the passage. The owner agreed the judge was right. A model need not repeat a passage word for word, but a purpose or reason added on top of the stated fact goes past "directly implied".
+5. **The owner's retrieval notes (kept for Phase 3):** the right section was often retrieved with the wrong paragraph (R05, R08, R12); R25's top-1 chunk was irrelevant; chunk boundaries cut off the key line (R20, R01).
+
+**The fixes (only the "Names" rule in `src/rag/judge.py` changed; one variable at a time; the same 12 cached answers re-scored each time)**
+| Fix | Change | Why |
+|---|---|---|
+| **1** | Names rule: different names of one person match when the passage makes it clear or the alias is well known | R08, R20 |
+| **1b** (owner's decision) | Names match **only when the passages show it**; no outside knowledge | keeps "supported" meaning "the retrieved text shows it"; alias gaps become visible retrieval gaps for Phase 3 |
+| **1c** | Spelling variants of one name always match (Hidimba / Hidimva) | 1b wrongly flagged R21; spelling is transliteration, not outside knowledge |
+
+| Judge version | Correctness | All supported | Citations |
+|---|---|---|---|
+| Original | 67% | 89% | 79% |
+| Fix 1 | 67% | 78% | 93% |
+| Fix 1b | 92% | 78% | 79% |
+| **Fix 1c** | **92%** | **89%** | **100%** |
+
+*Caution:* the owner's grades were amended along the way (R25, R08, R12 correctness; R10 sentence 3; R08 and R20 citations), each time after seeing the judge's reason and with the blind originals kept (`eval/calibration_grades.md` vs `eval/calibration_grades_amended.md`). So this table is a consistency check, not independent evidence, and the columns are not strictly comparable. Also, the same answer's faithfulness flipped between 1.0, 0.75 and 1.0 (R10) just from rewording the instructions, so a single-item flip is noise.
+
+#### 6b. Calibration 2: the independent test
+**Setup:** 8 fresh answers not used in round 1 (R26, R31, R34, R36, R11, R13, G04, R14), picked by fixed rules in `scripts/pick_round2.py` (judge-flagged answers first, then clean ones, plus one refusal). The judge was fix 1c and was **not tuned on these**. The owner graded blind from `eval/calibration_sheet_round2.md`; grades in `eval/calibration_grades_round2.md`.
+
+**Result before any amendment:** correctness 5 of 8 (62%), all-supported 6 of 7 (86%), citations 11 of 13 (85%). Item 1 citations were left as "?" and excluded. If correctness is reduced to *acceptable (yes or partly) vs wrong (no)*, agreement is 8 of 8 in round 2 and 19 of 20 across both rounds.
+
+**What we saw**
+- **Correctness, the "key fact" boundary, mixed direction:** R13 and R14 (owner partly because the Yadava girl and the chariot were missing; judge 1.0 because "forcible seizure" is the key fact) and R34 (owner yes; judge 0.5 for omitting that Vyasa composed the Mahabharata). The expected answers hold several facts and nothing marks which is *the* key fact, so a 3-level score is inherently fuzzy.
+- **Citation strictness on small descriptors:** R36 ("not stated that he was a monarch") and R11 ("not stated that Parikshit was a king"). The judge's rule that *everything* in the sentence must be backed is stricter than a human reader.
+- **R31, the judge was right and the owner reconsidered:** the claim check passed because passage 5 names Astika and his birth to the snakes' sister; the citation check, seeing only the cited passage [3], marked it not backed. Both are correct: the claim holds across the five passages, but the cited passage alone does not back it.
+- **R34 sentence 2** ("son of the mother of Vichitravirya"): true in the story, but no shown passage names Vichitravirya's mother. The sentence that does was not retrieved.
+
+**Owner amendments after seeing the reasons:** R13 and R14 partly to yes (the owner had compared with the longer expected answer); R31 Supported to yes, citations stay no. R36, R11 and R34 left as disagreements. **After amendment:** correctness 7 of 8 (88%), all-supported 7 of 7 (100%), citations 11 of 13 (85%).
+
+#### 6c. Decision: freeze the judge
+- Agreement is above the 80% bar on all three measures across both rounds, with the known limits listed above (citation check fussy about minor descriptors; "key fact" is a judgement call; R05 correctness and R12 faithfulness unresolved).
+- We did **not** tune the judge on round 2, to keep it an independent test. Fixing round 2's items would require a round 3 to verify.
+- Why a stable imperfect judge is acceptable: in Phase 3 we compare experiments scored by the *same* judge, so a constant bias cancels out. What breaks a comparison is changing the judge mid-way.
+- **Mechanism:** the judge's instructions have a fingerprint (`2578221ecdd4`, `JUDGE_FROZEN_FINGERPRINT` in `config.py`). Every run records its own fingerprint and warns if it differs. Do not change the judge without a new calibration.
+
+**Lessons from calibration**
+- Define the standard before grading: *Correct?* is against the expected answer, while *Supported?* and *Citations* use only the passages. Mixing them was the root of most disagreements.
+- A judge needs explicit handling of names: aliases (only if the passages show it), spelling variants (always), and different people with one name (never merge).
+- Multi-job judges can contradict themselves because each job sees a different slice. Compare their reasons before blaming either.
+- Never let the human grade drift toward the judge unrecorded: keep blind originals and log every amendment with its reason.
+- Do not tune on the test you use to validate. Keep one set untouched.
+
+#### 6d. The official baseline (frozen judge, working set)
+`python scripts/run_generation_eval.py --mode both --save baseline_working_frozen` → `eval/results/gen_baseline_working_frozen.json`. Generator answers came from the cache (same prompts), so only the judge scores changed. Cost about $1.57.
+
+| Metric | End-to-end (30 questions) | Ideal context (24) |
+|---|---|---|
+| Correctness (refusals count 0) | 0.81 | 0.96 |
+| Faithfulness | 0.92 | 0.82 |
+| Citation support | 0.74 | 0.71 |
+| Relevance | 1.00 | 1.00 |
+| Gold text in the passages | 0.67 | 1.00 |
+| Correct refusals / false refusals | 6 of 6 / 1 of 24 | not applicable |
+
+**Versus the provisional run:** correctness and relevance identical; faithfulness 0.93 to 0.92 and 0.88 to 0.82; citation support 0.83 to 0.74 and 0.75 to 0.71. The citation drop is the passages-only name rule doing its job.
+
+**By question type (correctness / faithfulness)**
+| Type | n | End-to-end | Ideal context |
+|---|---|---|---|
+| plain | 5 | 0.70 / 1.00 | 0.80 / 0.93 |
+| paraphrase | 3 | 0.83 / 0.58 | 1.00 / 0.61 |
+| alias | 6 | 1.00 / 1.00 | 1.00 / 0.75 |
+| spelling | 1 | 1.00 / 0.67 | 1.00 / 1.00 |
+| lineage | 4 | 0.62 / 1.00 (1 refusal) | 1.00 / 1.00 |
+| multihop | 2 | 1.00 / 1.00 | 1.00 / 1.00 |
+| ambiguous | 3 | 0.67 / 0.93 | 1.00 / 0.58 |
+
+**Observations**
+1. **Retrieval is the main weakness.** With the gold passages correctness rises from 0.81 to 0.96; end-to-end the gold text reached the model in only 67% of questions. Lineage questions suffer most (0.62 against 1.00); the one false refusal (R25, Karna's father) was a retrieval fault.
+2. **Refusal behaviour is healthy:** 6 of 6 unanswerable questions refused, 1 of 24 answerable wrongly refused.
+3. **Faithfulness is lower with perfect passages (0.92 to 0.82),** concentrated in paraphrase and ambiguous questions. This is not explained yet. Untested hypotheses: with only the gold chunks the model adds claims beyond them; the judge's claim splitting is stricter on longer, richer answers; the name rule bites harder when the answer uses different names from the gold chunk. To be investigated in Phase 3, not assumed.
+4. **Citation support is the weakest metric (0.74 and 0.71).** Part of it is genuine (citations pointing at a passage that holds only part of the sentence), part is the judge's strictness about small descriptors. Read it as a relative measure across experiments, not as an absolute quality score.
+5. **From the end-user view, answers are reasonably good** (owner's reading across both calibration rounds); most failures are missing facts caused by retrieval, not invented ones.
+
+**Phase 3 notes carried from calibration:** right section but wrong paragraph; irrelevant top-1 chunks; key lines cut by chunk boundaries (R20, R01, R26 "And from Drupada wa", and the Satyavati sentence missing for R34); name traps that retrieval must handle (Parikshit vs Parikshita; Vyasa vs Dwaipayana; Hidimba vs Hidimva).
+
 
 #### 7. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
 Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Menaka a daughter named Sakuntala" and "the lewd Menaka is thy mother"; expected answer "Menaka, the celestial Apsara (her father was the sage Viswamitra)."
