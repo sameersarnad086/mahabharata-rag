@@ -81,3 +81,7 @@ All tunables are in `config.py`.
 - Round 2 calibration done (owner graded; amended grades in `eval/calibration_grades_round2_amended.md`).
 - **Next:** (1) held-out generation run once: `python scripts/run_generation_eval.py --split held-out --confirm-milestone "baseline" --save baseline_heldout` (needs the owner's go-ahead); (2) finish LEARNING.md: "what we saw" in calibration section 6, round 2, fixes 1/1b/1c, the freeze, results; (3) Ragas side-by-side; (4) Phase 2 retrospective; (5) Phase 3.
 - Do not change judge instructions without a new calibration (the runner warns if the fingerprint differs).
+
+## Update 2026-10-28 (held-out generation baseline done)
+- Held-out generation baseline run once (frozen judge), logged in `eval/heldout_runs.log` and EXPERIMENTS.md. Do NOT rerun except at a milestone with --confirm-milestone. Headline: correctness 0.67 end-to-end / 0.92 ideal; false refusals 3 of 12 / 1 of 12 (over-cautious generator).
+- Remaining in Phase 2: Ragas side-by-side (fixed step; the user wants to explain it in interviews), Phase 2 retrospective in LEARNING.md, then Phase 3.

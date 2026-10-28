@@ -1124,6 +1124,24 @@ Calibration compares the owner's blind grades with the judge's scores on the sam
 **Phase 3 notes carried from calibration:** right section but wrong paragraph; irrelevant top-1 chunks; key lines cut by chunk boundaries (R20, R01, R26 "And from Drupada wa", and the Satyavati sentence missing for R34); name traps that retrieval must handle (Parikshit vs Parikshita; Vyasa vs Dwaipayana; Hidimba vs Hidimva).
 
 
+#### 6e. Held-out generation baseline (run once)
+Run once with the frozen judge, aggregates only (the held-out set is never inspected question by question). Results, next to the working set:
+
+| Metric | Held-out end-to-end | Held-out ideal | Working end-to-end | Working ideal |
+|---|---|---|---|---|
+| Correctness (refusals count 0) | 0.67 | 0.92 | 0.81 | 0.96 |
+| Correctness when it answered | 0.89 | 1.00 | 0.85 | 0.96 |
+| Faithfulness | 0.89 | 0.97 | 0.92 | 0.82 |
+| Citation support | 0.85 | 0.86 | 0.74 | 0.71 |
+| Gold text in the passages | 0.75 | 1.00 | 0.67 | 1.00 |
+| False refusals | 3 of 12 | 1 of 12 | 1 of 24 | 0 of 24 |
+
+**Observations**
+- **The answers given are good** (correctness when it answered 0.89 end-to-end and 1.00 with gold passages). The lower headline number (0.67) comes from **false refusals**: 3 of 12 end-to-end, and 1 of 12 even when the gold passages were supplied. Retrieval was no worse than on the working set, so this is the generator being over-cautious ("The provided passages do not answer this question") on a few questions it could answer. It is a candidate for the Phase 3 stage on "I don't know" handling.
+- **Retrieval-limited correctness generalises:** ideal context beats end-to-end in both sets. The 2 unanswerable questions were both refused correctly.
+- **The faithfulness dip with gold passages did not repeat** (0.97 here against 0.82 on the working set), so the dip is probably question-specific. Keep it as an open question, not a finding.
+- **Caveat:** 12 questions means one question moves a score by 8 points. Use the held-out numbers to check direction, not size. Do not tune against its failures; it is rerun only at milestones with `--confirm-milestone`.
+
 #### 7. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
 Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Menaka a daughter named Sakuntala" and "the lewd Menaka is thy mother"; expected answer "Menaka, the celestial Apsara (her father was the sage Viswamitra)."
 

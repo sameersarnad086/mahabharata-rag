@@ -143,3 +143,20 @@ After seeing the judge's reason, the owner agreed the judge was right on R10 sen
 
 - **Versus the provisional baseline:** correctness and relevance identical; faithfulness 0.93→0.92 and 0.88→0.82; citation support 0.83→0.74 and 0.75→0.71. The citation drop is the passages-only name rule at work (R08, R20 style cases are now flagged), which the owner chose.
 - **Conclusion:** this is the reference for all Phase 3 comparisons. Retrieval is still the main weakness (correctness 0.81 → 0.96 with the gold passages). Held-out not run yet (needs `--confirm-milestone`).
+
+## Held-out generation baseline (frozen judge) — 2026-10-28
+- **Run once** with `--split held-out --confirm-milestone "baseline generation evaluation, frozen judge 2578221ecdd4"` → `eval/results/gen_baseline_heldout.json` (aggregates only, by design), logged in `eval/heldout_runs.log`. 12 answerable + 2 unanswerable end-to-end, 12 in ideal context. Judge $0.61. Per-question failures were deliberately not inspected (held-out rule).
+
+| Metric | Held-out end-to-end | Held-out ideal | Working end-to-end | Working ideal |
+|---|---|---|---|---|
+| Correctness (refusals count 0) | 0.67 | 0.92 | 0.81 | 0.96 |
+| Correctness when it answered | 0.89 | 1.00 | 0.85 | 0.96 |
+| Faithfulness | 0.89 | 0.97 | 0.92 | 0.82 |
+| Citation support | 0.85 | 0.86 | 0.74 | 0.71 |
+| Relevance | 1.00 | 1.00 | 1.00 | 1.00 |
+| Gold text in the passages | 0.75 | 1.00 | 0.67 | 1.00 |
+| Correct / false refusals | 2 of 2 / 3 of 12 | n/a / 1 of 12 | 6 of 6 / 1 of 24 | n/a / 0 of 24 |
+
+- **Reading:** answers that are given are good (correctness when answered 0.89 end-to-end, 1.00 ideal; faithfulness 0.89 to 0.97). The lower headline correctness comes from **false refusals: 3 of 12 end-to-end** (2 caused by retrieval, 1 by generation) and **1 of 12 even with the gold passages** (a generation-caused refusal). On the working set it was 1 of 24 and 0 of 24. Retrieval was no worse than on the working set (gold in passages 0.75 against 0.67), so the gap is over-cautious refusing, not retrieval.
+- **Does the working set generalise?** Directionally yes for retrieval-limited correctness (ideal context is clearly higher than end-to-end in both sets) and for refusal behaviour on unanswerable questions (2 of 2). The faithfulness pattern did not repeat (ideal context was higher here, lower on the working set), so the working-set faithfulness dip is probably question-specific, not a general effect. With 12 questions one question is 8 points, so none of these differences is conclusive.
+- **Next:** do not tune on held-out failures. The false-refusal rate is a candidate for the Phase 3 "generation / I don't know handling" stage, to be examined on the working set.
