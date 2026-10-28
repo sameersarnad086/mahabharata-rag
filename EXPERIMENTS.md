@@ -118,3 +118,12 @@ After seeing the judge's reason, the owner agreed the judge was right on R10 sen
 
 - **Still disagreeing:** R05 correctness (owner partly, judge 0) and R12 faithfulness (judge rejects "the five brothers" claims). Not changed, to avoid tuning the judge to single items.
 - **Caution:** amended grades were revised after seeing the judge, so this is a consistency check, not independent evidence. Round 2 (8 fresh blind answers) is the independent test. If agreement on round 2 is about 80% or more, the judge instructions are frozen.
+
+## Judge calibration, round 2 (8 fresh blind answers, judge fix 1c, not tuned on these) — 2026-10-28
+- **Setup:** owner graded 8 answers not used in round 1 (`eval/calibration_grades_round2.md`, Item 1 citations left as "?" and excluded). Judge = current instructions (fix 1c), scores in `eval/results/gen_calib_round2.json` ($0.23). Compared with `scripts/compare_calibration.py`.
+- **Agreement:** correctness 5/8 = 62%; all-supported 6/7 = 86%; citations 11/13 = 85%. If correctness is reduced to "acceptable (yes or partly) vs wrong (no)": round 2 8/8, round 1 11/12, together 19/20 = 95%.
+- **Disagreements (no judge change made):**
+  - Correctness, the "what is the key fact" boundary, mixed direction: R13 and R14 (owner partly: missed the Yadava girl and the chariot; judge 1.0, "forcible seizure" is the key fact); R34 (owner yes; judge 0.5 for omitting that he composed the Mahabharata).
+  - Citation strictness on minor descriptors: R36 (judge: passage does not say Janamejaya was a "monarch"), R11 (judge: passage does not say Parikshit was "king"). Owner marked both backed.
+  - R31 faithfulness: owner Supported=no; judge faithfulness 1.0 because passage 5 names Astika and his birth to the snakes' sister. The citation check (only passage [3], which does not name Astika) marked both sentences not backed, agreeing with the owner. The judge is arguably right on both: the claim holds across the five passages, but the cited passage [3] alone does not back it.
+- **Conclusion:** the judge generalises on supported and citations (above 80%, small samples: 7 and 13 items). Correctness on the 3-level scale is below 80% mainly because expected answers hold several facts and "key fact" is a judgement call; the coarse correct vs wrong view agrees 95%. Round 2 was the untouched test, so tuning the judge on these items now would remove its independence. Decision recorded below.

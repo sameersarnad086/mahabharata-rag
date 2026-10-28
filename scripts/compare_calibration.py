@@ -33,11 +33,12 @@ for m in re.finditer(r"^Item (\d+) \((\w+)\): Correct=(\S+) \| Supported: (.*?) 
         ok = owner_all == (r["faithfulness"] == 1.0); sup[0] += ok; sup[1] += 1
         line.append(f"supp owner_all={owner_all} judge_faith={r['faithfulness']:.2f} {'AGREE' if ok else 'DIFF'}")
     jc = (r.get("judge") or {}).get("citations") or []
-    oc = [x.split()[1] == "yes" for x in ci.split(", ")] if ci != "n/a" else []
+    oc = [{"yes": True, "no": False}.get(x.split()[1]) for x in ci.split(", ")] if ci != "n/a" else []
     if jc and len(jc) == len(oc):
-        for o, j in zip(oc, jc):
+        pairs = [(o, j) for o, j in zip(oc, jc) if o is not None]          # a "?" from the owner is left out
+        for o, j in pairs:
             cit[0] += (o == j["backed"]); cit[1] += 1
-        line.append("cite " + ",".join("ok" if o == j["backed"] else "DIFF" for o, j in zip(oc, jc)))
+        line.append("cite " + (",".join("ok" if o == j["backed"] else "DIFF" for o, j in pairs) or "skipped"))
     print(" | ".join(line))
 pct = lambda a: f"{a[0]}/{a[1]} = {a[0] / a[1]:.0%}" if a[1] else "-"
 print(f"\ncorrectness {pct(corr)}   all-supported {pct(sup)}   citations {pct(cit)}")
