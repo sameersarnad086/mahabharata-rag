@@ -958,10 +958,43 @@ Status: **built and run once (provisional baseline in `EXPERIMENTS.md`); judge c
 | C. answerable, gold retrieved | Right answer plus one outside-knowledge claim and one misplaced `[3]` | 3/4 | 1/2 | 1 | correct but unfaithful. Same in ideal context, so fault is **generation** |
 | D. unanswerable | Model refuses | n/a | n/a | n/a | correct refusal |
 
-#### 4. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
+#### 4. How each mode worked in our first run, and the results
+Both modes ran together (`python scripts/run_generation_eval.py --mode both --save baseline_working`) on the **working set**: 24 answerable and 6 unanswerable questions. Same generator (`gemini-3.1-flash-lite`), same judge (`gemini-3.5-flash`), same prompt. Only the passages handed to the generator differ.
+
+**Mode 1, end-to-end (30 questions)**
+- **Input:** the question; the real retriever's top 5 chunks (1,670 chunks, `bge-small-en-v1.5`, cosine similarity); the generator prompt asking for `[n]` citations.
+- **Per question:** retrieve, generate, then code checks (is it the refusal sentence? do the evidence phrases appear in the five passages, giving a "gold text was in the passages" flag? do the `[n]` marks point at real passages?), then the judge scores correctness, relevance, faithfulness and citation support. A refusal on an answerable question scores correctness 0 and is labelled a retrieval fault if the gold text was missing, a generation fault otherwise.
+- **Includes the 6 unanswerable questions**, to test refusal.
+
+**Mode 2, ideal context (24 questions)**
+- **Input:** the same prompt, but the five retrieved passages are replaced by the **gold chunks**: every chunk that contains at least one evidence phrase from the CSV, those matching most phrases first, at most 5, no padding. Retrieval is skipped, so "gold text found" is always yes.
+- **Answerable questions only**, because an unanswerable question has no gold passage.
+
+**Where the results are:** `eval/results/gen_baseline_working.json` has `config` (the setup), `summaries` (averages per mode) and `records` (per-question detail, with the judge's claim and citation verdicts). Raw replies are cached in `data/cache/gen_eval/` (not committed). The logged summary is in `EXPERIMENTS.md`.
+
+**Results (provisional: scored with the judge's original instructions, before calibration)**
+| Metric | End-to-end | Ideal context |
+|---|---|---|
+| Correctness (refusals count 0) | 0.81 | 0.96 |
+| Faithfulness | 0.93 | 0.88 |
+| Citation support | 0.83 | 0.75 |
+| Relevance | 1.00 | 1.00 |
+| Gold text in the passages | 0.67 | 1.00 |
+| Correct refusals / false refusals | 6 of 6 / 1 of 24 | not applicable |
+
+#### 5. What the results showed, and what led to calibration
+**Observations**
+1. **Retrieval is the main weakness.** Handing over the right passages lifted correctness from 0.81 to 0.96. In end-to-end mode the gold text reached the model in only 67% of questions. The one false refusal (R25, Karna's father) was a retrieval fault: the passage that names Surya never made the top 5.
+2. **Refusal behaviour is healthy:** 6 of 6 unanswerable questions were refused, and 1 of 24 answerable ones was wrongly refused.
+3. **Faithfulness and citation support did not improve with perfect passages; they got slightly worse** (0.93 to 0.88, 0.83 to 0.75). If these were simply a retrieval problem they should have risen. Something else was going on, and we could not tell whether the generator was over-claiming or the judge was being unreasonable.
+4. **Some verdicts looked odd on a close read.** For example, a sentence naming "Parikshit" was marked not backed because the passage said "the king"; a correct answer using Dwaipayana was marked not backed because the passage said "Vyasa". Those are the many-names-for-one-person problem, now hitting the judge, not only the retriever.
+
+**Why that led to calibration.** The judge is an AI grading another AI, and its scores steer every later experiment (chunking, embeddings, reranking). If it is miscalibrated we could keep a worse change or drop a better one without knowing. So before trusting the numbers we compare the judge with a human: the project owner grades a sample of answers blind (judge scores hidden), and we measure how often they agree. About 80% is our bar. The first sample was 12 answers; where they disagree we read both reasons and fix the judge's instructions, one change at a time. The calibration story and its fixes are written up next.
+
+#### 6. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
 Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Menaka a daughter named Sakuntala" and "the lewd Menaka is thy mother"; expected answer "Menaka, the celestial Apsara (her father was the sage Viswamitra)."
 
-**4.1 The input part**
+**6.1 The input part**
 - `eval/retrieval_questions.csv` (the 36; **never edited** for this): `question`, `expected_answer` (the truth for correctness), `gold_sections` and `evidence_phrases` (which chunks to hand over in ideal-context mode, and the "gold found" flag in end-to-end mode), `type` and `split` (grouping, working or held-out protection).
 - **`eval/generation_questions.csv` (planned, does not exist yet):** the ~8 unanswerable questions: `answerable` = no, no gold section, expected result is a refusal, plus a note that a corpus scan confirmed the answer is absent.
 - **Why unanswerable questions are needed:** all 36 have answers, so we could only test how well the model answers, never whether it knows **when not to**. A model that always answers (and invents facts when the passages say nothing) would look fine on the 36. A model that refuses too easily would show only on answerable ones. Unanswerable questions are the only way to measure refusal accuracy and catch hallucination. For the lineage project, a made-up parentage is worse than "I don't know".
@@ -974,14 +1007,14 @@ Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Mena
 - **Output:** one saved result file per run in `eval/results/`, with the answer, judge replies and scores per question.
 - **Size of a run:** about 44 questions x 2 modes x 4 judge jobs gives roughly 350 to 500 judge calls (the faithfulness and citation jobs scale with answer length). Check the price first.
 
-**4.2 The steps that do NOT use the judge (plain code)**
+**6.2 The steps that do NOT use the judge (plain code)**
 1. **Load the question.** Keep the question and expected answer. Gold sections and phrases are used only to see whether retrieval found the right text. The generator never sees any label.
 2. **Retrieve** the top 5 chunks (end-to-end). Also check by string match whether they contain the evidence phrases, giving a "gold found: yes or no" flag. No model involved. Needed later to explain failures.
 3. **Generate** with the real prompt and `gemini-3.1-flash-lite`. This is the **generator**, the model being tested, not the judge. Illustrative answer: *"Sakuntala's mother was Menaka, an Apsara sent by Indra to disturb Viswamitra's penance [2]. She was born to them and left in the forest [2]."*
 4. **Cheap checks.** Did the answer contain the exact refusal sentence ("The provided passages do not answer this question.")? Does every `[n]` point at an existing passage (the existing `check_citations`)? Code does everything it can before we pay for a model call.
 5. Later: **save** one record per question, then **average** by group (answerable or not, type, working or held-out) and compare the two modes.
 
-**4.3 The steps that use the judge**
+**6.3 The steps that use the judge**
 The judge is called only after the generator has answered, and only for work code cannot do ("is this claim supported?"). Four separate calls, each a fresh conversation with only the slice it needs.
 
 *Assumption for this example: passage [2] says Menaka was sent by Indra, that Viswamitra and Menaka had a daughter, and that she was left in the forest. It never uses the word "Apsara".*
@@ -993,7 +1026,7 @@ The judge is called only after the generator has answered, and only for work cod
 
 **Saved record for R01:** correctness 1; faithfulness 0.8 (claim 2 flagged); citation support 0.5 (sentence 1 flagged); relevance 1; not refused and answerable, so fine. Reading: right and relevant, but one outside fact sneaked in and the first citation overreaches. A plain "is it correct?" check would miss exactly this.
 
-**4.4 How does the judge know what is right? (a question the user asked)**
+**6.4 How does the judge know what is right? (a question the user asked)**
 The judge does **not** decide from its own knowledge and does **not** write an answer of its own. It compares the generator's answer with something we hand it:
 | Check | The "truth" given to the judge | Source |
 |---|---|---|
@@ -1007,7 +1040,7 @@ The judge does **not** decide from its own knowledge and does **not** write an a
 - **Reducing it:** (1) instructions say use only the material given; (2) the narrowest slice per call; (3) calibration on about 12 answers the user grades, to expose disagreement.
 - **Why not let the judge write its own reference answer:** a second error source we cannot check. Our written expected answers are fixed, so any disagreement can be traced.
 
-**4.5 Keeping the judge honest**
+**6.5 Keeping the judge honest**
 - Calibration: agreement with the user under about 80% means fix the judge instructions before trusting any score.
 - Same-vendor bias: a Gemini judge may be generous to Gemini answers. Ragas gives a second opinion later.
 - Fixed reply format (JSON) so scores are read by code, not guessed from prose.
@@ -1025,8 +1058,8 @@ The judge does **not** decide from its own knowledge and does **not** write an a
 #### Gotchas and open design choices
 - Whether faithfulness Stage A and B are two calls (more reliable, slower) or one.
 - Whether the citation judge gives yes/no or yes/partly/no.
-- Judge pre-trained knowledge leaking in (4.4).
-- Unanswerable questions can be answerable through the summary passages, so scan first (4.1).
+- Judge pre-trained knowledge leaking in (6.4).
+- Unanswerable questions can be answerable through the summary passages, so scan first (6.1).
 - Unanswerable questions are drafted by Claude and must be reviewed by the user.
 - **Free-tier quota (found while building):** the Gemini key is on the free tier, which allowed only 20 requests per day for the judge model (error 429, "limit: 20", retry in about 13 hours). A full run needs roughly 400 or more judge calls, so the free tier cannot carry this evaluation. The error named `gemini-3.6-flash` although we asked for `gemini-3.5-flash`; unexplained.
 - **Capacity errors (503 "high demand"):** common on both the generator and the judge model; a single call once stayed unavailable for about four minutes. The runner now waits longer between retries (`EVAL_RETRY_WAITS` in `config.py`), and cached replies make a crashed run resumable.
