@@ -896,12 +896,15 @@ Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1
 
 ### Generation evaluation: what it is and how it runs (lesson written before the build)
 
-Status: **designed and explained, not built yet.** The worked example below uses R01 with an *illustrative* answer; the numbers are not from a real run.
+Status: **built and run once (provisional baseline in `EXPERIMENTS.md`); judge calibration still in progress, so the baseline numbers are not final.** Sections 1 to 3 below are updated to match what was built. Section 4 onward is the original pre-build lesson and is still to be refined. The worked examples are *illustrative*, not from a real run.
 
 #### 1. What generation evaluation is, and how we do it
 - **Concept:** retrieval evaluation asks "did we fetch the right passages?". Generation evaluation asks "given those passages, did the model write a good answer?". The two are scored separately so we know which half to fix.
 - **How, in one line:** for each question we produce an answer with the real system, then grade it from several angles. Some grades are plain code. The rest come from a second model, the **judge**, which gets a narrow job, only the information that job needs, and must reply in a fixed format (JSON) so code can read the score.
-- **Questions:** the same 36 as retrieval, plus about 8 **unanswerable** ones (see section 4.1).
+- **Why a judge model at all:** answers are free text, so there is no exact-match check. A second model reads the answer and decides, the way a person would grade it. It uses language understanding, not a line-by-line text comparison, so borderline cases can flip. That is why it must be checked against a human (calibration).
+- **Who is who:** the **generator** (`gemini-3.1-flash-lite`) writes the answers and is the thing being tested. The **judge** (`gemini-3.5-flash`) only grades them. Both are set in `config.py`; the judge's instructions are in `src/rag/judge.py`.
+- **Questions:** the same 36 as retrieval (24 working, 12 held-out), plus 8 **unanswerable** ones (6 working, 2 held-out), in `eval/generation_questions.csv`. Every unanswerable question was scanned against the corpus to confirm the answer is absent.
+- **Where the code is:** `src/rag/eval_generation.py` (scoring), `src/rag/judge.py` (the judge's jobs), `scripts/run_generation_eval.py` (the runner). Replies are cached on disk, so a rerun is free and a crashed run resumes.
 
 #### 2. The two ways to run it
 | Mode | Passages given to the generator | What a result tells us |
@@ -911,6 +914,8 @@ Status: **designed and explained, not built yet.** The worked example below uses
 
 - **Reading the pair:** good in ideal context but bad end-to-end means fix retrieval. Bad in both means fix the prompt or model. The gap between them is the cost of imperfect retrieval.
 - Only the passage-fetching step differs. Everything after it is identical.
+- **Ideal context applies to answerable questions only.** An unanswerable question has no gold passage to hand over, so it appears in end-to-end mode only.
+- **First reading from our baseline (working set, provisional):** correctness 0.81 end-to-end against 0.96 with ideal context. So most wrong answers come from retrieval, not the generator. Faithfulness and citation support did not improve with perfect passages, which pointed us at the generator and the judge itself, and led to calibration.
 - The ideal-context idea exists in research as "oracle retrieval". Libraries do not ship it as a feature, so it is our own design choice.
 
 #### 3. The metrics: what they mean, how they are calculated
@@ -921,6 +926,21 @@ Status: **designed and explained, not built yet.** The worked example below uses
 | **Citation support** | Each `[n]` really backs the sentence it sits on | code, then judge | the one sentence and **only** passage n | backed citations / all citations |
 | **Relevance** | The answer addresses the question asked | judge | question and answer only | 1 / 0, refusals left out |
 | **Refusal accuracy** | Refuses exactly when it should | code | the answer text | 2x2 table: answerable or not, refused or not |
+
+**Rules the judge follows (as of now):**
+- **Correctness:** full (1) = the key fact(s) of the expected answer are stated, including the cause when the expected answer has one (for "How did Parikshit die?" the curse is needed; "bitten by Takshaka" alone is partly right); partly (0.5) = right idea or right entity but a key part missing or hedged; no (0) = wrong, or a refusal on an answerable question.
+- **Faithfulness and citations:** the passages are the only truth. A fact that is true in the story but not in the passages counts as unsupported. Two different names for one person match only when the passages show it (spelling variants of one name are to be allowed; fix 1c, pending).
+- **Refusals** are detected by code (the exact refusal sentence), not judged by the model.
+
+**What the run prints, in plain terms:**
+| Printed as | Meaning |
+|---|---|
+| correctness (refusals count 0) | average over all answerable questions, a refusal scores 0 |
+| correctness (when it answered) | average over answers only, so it ignores refusals |
+| faithfulness, citation support | averaged over the answers that have claims or cited sentences |
+| relevance | refusals are left out |
+| gold text was in the passages | share of answerable questions where retrieval put an evidence phrase in the top 5 |
+| outcomes | answered, correct refusal, false refusal caused by retrieval, false refusal caused by generation |
 
 **Reading them together:**
 - Faithfulness high, correctness low: honest but wrong or incomplete. The passages usually lacked the answer, so look at retrieval.
