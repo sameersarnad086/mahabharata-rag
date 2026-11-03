@@ -934,6 +934,22 @@ Status: **built, calibrated and run: the judge is frozen (sections 6a to 6c) and
 | **Citation support** | Each `[n]` really backs the sentence it sits on | one **sentence** of the answer and **only the passage(s) it cites**. Code finds the sentences and markers. | backed sentences / cited sentences |
 | **Relevance** | The answer addresses the question asked | the **question** (CSV) and the generator's answer | 1 / 0, refusals left out |
 
+**How each judge metric becomes the final number (two steps: score each answer, then average)**
+| Metric | Step 1: score one answer | Step 2: average over | Final number from the baseline (end-to-end, working set) |
+|---|---|---|---|
+| **Correctness** | the judge's verdict, 1, 0.5 or 0. A refusal on an answerable question is set to 0 by code (the judge is not asked). | the **24 answerable** questions | **0.81** = (17 x 1 + 5 x 0.5 + 2 x 0) / 24 = 19.5 / 24 = 0.8125 |
+| **Correctness, when it answered** | same | the **23** answerable questions that were not refused (R25 left out) | 19.5 / 23 = 0.848, shown as **0.85** |
+| **Faithfulness** | supported claims / all claims in that answer | the **23** answers that were given (a refusal has no claims) | 21.22 / 23 = 0.922, shown as **0.92** |
+| **Citation support** | backed cited sentences / all cited sentences in that answer | the same **23** answers | 17.0 / 23 = 0.739, shown as **0.74** |
+| **Relevance** | 1 if the answer tries to answer the question, else 0 | the 23 answered, answerable questions | 23 / 23 = **1.00** |
+
+- **Where the 0.81 comes from, concretely:** of the 24 answerable questions, 17 scored 1 (fully correct), 5 scored 0.5 (partly), and 2 scored 0. The two zeros are R25 (a refusal, because retrieval missed the Surya passage) and R05 (the answer said the passages did not say who set the fire). The 0.81 is a plain average, so a partly correct answer counts half.
+- **Why two correctness numbers:** 0.81 punishes refusals (R25 counts as 0), 0.85 shows how good the answers are when the system does answer. The gap between them is the cost of refusing.
+- **The same arithmetic in ideal context:** 22 x 1 + 2 x 0.5 = 23 over 24 answerable = 0.958, shown as **0.96**. No refusals, so only one correctness number applies.
+- **Per-answer examples for faithfulness and citations:** R21 had 6 claims and the judge found 4 supported, so its faithfulness is 4 / 6 = 0.67. R10 had 3 cited sentences and the judge found 2 backed, so its citation support is 2 / 3 = 0.67. Each of those answers then counts as one value in the average, however many claims it had.
+- **Why this matters:** an average hides the spread. For faithfulness, 19 of the 23 answers scored a perfect 1.0, and the 0.92 is pulled down by a few answers. For citations only 14 of 23 scored 1.0. When a number moves between experiments, check which answers changed.
+- **Rounding:** the log prints two decimals, so 0.8125 appears as 0.81.
+
 **Metrics computed by plain code (no AI)**
 | Metric | Meaning | Input | How |
 |---|---|---|---|
