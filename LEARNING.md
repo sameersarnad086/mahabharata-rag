@@ -954,6 +954,11 @@ Status: **built, calibrated and run: the judge is frozen (sections 6a to 6c) and
 - **Industry view:** faithfulness, answer relevance, correctness against a reference answer and citation checks are standard generation metrics; Ragas and DeepEval offer versions of them, which is why a side-by-side comparison is planned. Checking an LLM judge against human grades is also standard practice, but the way we count agreement here is our own design, not a library function.
 - **They connect in one direction:** calibration does not change the system's scores. It tells us how far to believe them.
 
+**Rules the judge follows (frozen, fingerprint `2578221ecdd4`):**
+- **Correctness:** full (1) = the key fact(s) of the expected answer are stated, including the cause when the expected answer has one (for "How did Parikshit die?" the curse is needed; "bitten by Takshaka" alone is partly right); partly (0.5) = right idea or right entity but a key part missing or hedged; no (0) = wrong, or a refusal on an answerable question.
+- **Faithfulness and citations:** the passages are the only truth. A fact that is true in the story but not in the passages counts as unsupported. Two different names for one person match only when the passages show it; spelling variants of one name always match.
+- **Refusals** are detected by code (the exact refusal sentence), not judged by the model.
+
 **What the run prints, in plain terms:**
 | Printed as | Meaning |
 |---|---|
