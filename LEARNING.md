@@ -919,18 +919,40 @@ Status: **built, calibrated and run: the judge is frozen (sections 6a to 6c) and
 - The ideal-context idea exists in research as "oracle retrieval". Libraries do not ship it as a feature, so it is our own design choice.
 
 #### 3. The metrics: what they mean, how they are calculated
-| Metric | Meaning | Graded by | Judge sees | Score |
-|---|---|---|---|---|
-| **Correctness** | Matches the expected answer | judge | question, expected answer, the answer (**no passages**, so fluent but wrong text cannot fool it) | 1 / 0.5 / 0 |
-| **Faithfulness** | Every claim is backed by the retrieved text. Not "true in the world", but "the text says it" | judge, 2 stages | A: the answer only (list the claims). B: passages plus claims (supported or not) | supported claims / all claims |
-| **Citation support** | Each `[n]` really backs the sentence it sits on | code, then judge | the one sentence and **only** passage n | backed citations / all citations |
-| **Relevance** | The answer addresses the question asked | judge | question and answer only | 1 / 0, refusals left out |
-| **Refusal accuracy** | Refuses exactly when it should | code | the answer text | 2x2 table: answerable or not, refused or not |
+**The three sources of input.** Every metric is built from some mix of these:
+| Source | What it holds | Who sees it |
+|---|---|---|
+| **The label files** `eval/retrieval_questions.csv` and `eval/generation_questions.csv` | `question`, `expected_answer`, `evidence_phrases`, `gold_sections`, `type`, `split` | the evaluation code. The judge sees only `expected_answer` (for correctness). The generator sees only the `question`. |
+| **The retriever** | the 5 passages found for the question (end-to-end) or the gold chunks (ideal context) | the generator, and the judge for faithfulness and citations |
+| **The generator** | the answer text it wrote | the judge and the code checks. The answer is *not* from the CSV. |
 
-**Rules the judge follows (as of now):**
-- **Correctness:** full (1) = the key fact(s) of the expected answer are stated, including the cause when the expected answer has one (for "How did Parikshit die?" the curse is needed; "bitten by Takshaka" alone is partly right); partly (0.5) = right idea or right entity but a key part missing or hedged; no (0) = wrong, or a refusal on an answerable question.
-- **Faithfulness and citations:** the passages are the only truth. A fact that is true in the story but not in the passages counts as unsupported. Two different names for one person match only when the passages show it (spelling variants of one name are to be allowed; fix 1c, pending).
-- **Refusals** are detected by code (the exact refusal sentence), not judged by the model.
+**Metrics graded by the judge (an AI reads and decides)**
+| Metric | Meaning | Judge sees (and from where) | Score |
+|---|---|---|---|
+| **Correctness** | Matches the expected answer | the **question** and **expected answer** (CSV) and the **generator's answer**. No passages, so fluent but wrong text cannot fool it. | 1 / 0.5 / 0 |
+| **Faithfulness** | Every claim is backed by the retrieved text. Not "true in the world", but "the text says it" | two calls. A: the generator's answer only (list its single claims). B: the **5 passages** plus those **claims** (supported or not, with a quote). | supported claims / all claims |
+| **Citation support** | Each `[n]` really backs the sentence it sits on | one **sentence** of the answer and **only the passage(s) it cites**. Code finds the sentences and markers. | backed sentences / cited sentences |
+| **Relevance** | The answer addresses the question asked | the **question** (CSV) and the generator's answer | 1 / 0, refusals left out |
+
+**Metrics computed by plain code (no AI)**
+| Metric | Meaning | Input | How |
+|---|---|---|---|
+| **Gold text in the passages** | Did retrieval put the answer text in front of the model? | the **5 retrieved passages** and the **`evidence_phrases`** (CSV) | true if any phrase appears word for word (after normalising spaces and case) in any passage. Averaged over answerable questions. |
+| **Invalid citations** | Did the answer cite a passage that does not exist? | the **generator's answer** and the **number of passages given** (5) | any `[n]` outside 1 to 5 is invalid. It is stored in each record. It is not a headline number, but such a sentence is scored "not backed" in citation support. |
+| **Refusal accuracy** | Refuses exactly when it should | the generator's answer and whether the question is answerable (CSV) | the answer contains the exact refusal sentence ("The provided passages do not answer this question."). Gives a 2x2 table and the outcome labels (answered, correct refusal, false refusal from retrieval, false refusal from generation). |
+
+**Generation metrics versus calibration metrics: two different questions**
+| | Generation metrics (above) | Calibration metrics (section 6) |
+|---|---|---|
+| **Question answered** | How good is the RAG system's answer? | Can we trust the judge that produces those scores? |
+| **What is compared** | the answer against the expected answer, or against the retrieved passages | the judge's verdicts against the owner's hand grades on the same answers |
+| **Who produces the numbers** | the judge (and code) | the owner (human) and the judge, compared by `scripts/compare_calibration.py` |
+| **Unit** | a score from 0 to 1 per answer, averaged | agreement: do the two verdicts match? Counted per answer or per sentence. |
+| **Used for** | comparing experiments in Phase 3 | deciding whether the judge is allowed to score at all (bar about 80%) |
+| **Rerun when** | every experiment | only if the judge's instructions change |
+
+- **Industry view:** faithfulness, answer relevance, correctness against a reference answer and citation checks are standard generation metrics; Ragas and DeepEval offer versions of them, which is why a side-by-side comparison is planned. Checking an LLM judge against human grades is also standard practice, but the way we count agreement here is our own design, not a library function.
+- **They connect in one direction:** calibration does not change the system's scores. It tells us how far to believe them.
 
 **What the run prints, in plain terms:**
 | Printed as | Meaning |
