@@ -20,7 +20,7 @@ Alternatives → Gotchas → Results.**
     - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
 11. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
 12. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
-    - [Phase 2 retrospective (partial)](#phase-2-retrospective-partial)
+    - [Phase 2 retrospective (final)](#phase-2-retrospective-final)
     - [How the retrieval evaluation runs, step by step](#how-the-retrieval-evaluation-runs-step-by-step)
 13. [Public post drafts](#public-post-drafts)
 
@@ -1270,29 +1270,94 @@ Made: Claude drafts the questions and the user reviews them; the working / held-
 
 ---
 
-## Phase 2 retrospective (partial)
+## Phase 2 retrospective (final)
 
-**Status:** the **retrieval half of Phase 2 is complete**; the **generation half is designed but not built** (deferred to the next chat to save context). Finalise this retrospective after the generation evaluation.
+**Rule (also in `CLAUDE.md`):** at the end of every phase I write what worked, what did not, how it compares with standard RAG practice, and what it means for the next phase.
 
-**Done:** evaluation concepts and metrics; 36 labelled questions with a frozen working / held-out split; label checker; five retrieval metrics (tested, hand-verified); retrieval baseline scored (working set, and held-out once, logged). Nothing was fixed: Phase 2 measures, Phase 3 changes things.
+### Verdict
+**Phase 2 is complete as a measurement phase, with one planned step moved.** We can now score the baseline in two separate halves (retrieval and generation), with a judge that was checked against my own grading and then frozen. The baseline numbers are recorded in `EXPERIMENTS.md` and are the reference for every Phase 3 change. **Moved to Phase 3 (the owner's decision):** the Ragas side-by-side comparison. The original plan said to implement the metrics myself first and then compare with Ragas or DeepEval; the first half is done, the comparison now runs alongside the Phase 3 improvements.
 
-**Baseline (strict phrase check, hit@5):** working 0.67 (0.50 without the summary passages), held-out 0.75; MRR@5 0.35 working. Full table in `EXPERIMENTS.md`.
+### What we built
+| Part | What | Where |
+|---|---|---|
+| Question set | 36 labelled answerable questions (24 working, 12 held-out, frozen split) plus 8 unanswerable (6 working, 2 held-out, corpus-scanned) | `eval/retrieval_questions.csv`, `eval/generation_questions.csv`, `eval/README.md` |
+| Retrieval metrics | hit@k, precision, recall, MRR, nDCG; strict phrase check and generous section check; with and without summary passages | `src/rag/metrics.py`, `scripts/run_retrieval_eval.py` |
+| Generation metrics | correctness, faithfulness, citation support, relevance, refusal accuracy; two modes (end-to-end, ideal context) | `src/rag/eval_generation.py`, `src/rag/judge.py`, `scripts/run_generation_eval.py` |
+| Judge | `gemini-3.5-flash`, narrow jobs, JSON replies, calibrated and frozen (fingerprint `2578221ecdd4`) | `src/rag/judge.py`, `config.py` |
+| Calibration tooling | blind sheets and forms, a picker with fixed rules, a comparison script | `scripts/make_calibration_*.py`, `scripts/pick_round2.py`, `scripts/compare_calibration.py`, `eval/calibration_*` |
+| Safeguards | held-out locked behind `--confirm-milestone` and logged; disk cache of model replies; judge fingerprint recorded in every run; 28 generation-evaluation tests | `eval/heldout_runs.log`, `data/cache/gen_eval/` |
 
-**What worked:** script checks on every label; the held-out set locked inside the tool and every run logged; recomputing metrics by hand; reporting both a generous and a strict check; spotting the summary-passage effect early.
-**What did not / surprises:** my first question draft clustered in the middle of the book (5 of 36 early); reading the text exposed wrong wording in three questions (R07, R26, R36); all labels have one author (me), script-checked only; sets are small (a held-out question is 8 points).
+### The baseline in numbers (Phase 1 pipeline, nothing tuned)
+| | Working set | Held-out |
+|---|---|---|
+| Retrieval: hit@5, strict phrase | 0.67 (16 of 24) | 0.75 (9 of 12) |
+| Retrieval: MRR@5, strict phrase | 0.35 | 0.58 |
+| Correctness, end-to-end | 0.81 | 0.67 |
+| Correctness, ideal context | 0.96 | 0.92 |
+| Faithfulness, end-to-end / ideal | 0.92 / 0.82 | 0.89 / 0.97 |
+| Citation support, end-to-end / ideal | 0.74 / 0.71 | 0.85 / 0.86 |
+| False refusals, end-to-end | 1 of 24 | 3 of 12 |
+| Correct refusals (unanswerable) | 6 of 6 | 2 of 2 |
 
-**Generation evaluation plan (agreed in concept; waiting for the user's "go"):**
-- **Two modes:** end-to-end (real top-5 chunks) and ideal context (gold chunk guaranteed among the five). Wrong end-to-end but right with ideal context means retrieval caused it; wrong in both means generation caused it. Retrieval metrics belong to neither mode; generation metrics are computed in both.
-- **Metrics:** faithfulness (supported claims / all claims), citation support (supported citations / all citations), answer correctness (correct 1, partial 0.5, wrong 0, against the expected answer), answer relevance (yes/no), refusal accuracy (false-refusal rate on answerable, correct-refusal rate on unanswerable; plain string match, no judge). False refusals are split into retrieval-caused and generation-caused using the phrase check.
-- **Question set:** the 36 questions (same split) plus about 8 unanswerable: 3 out of the world, 3 in the epic's world but absent from the Adi Parva, 2 false-premise. Absence must be verified by scanning the corpus (note: Sections 1 and 2 summarise later events such as Karna's death, so those are NOT absent).
-- **Judge:** recommended `gemini-3.5-flash` (stronger than the Flash-Lite generator, not a preview, about $1.50 / $9 per million tokens, unverified); `gemini-3.1-pro-preview` as the second opinion. Same vendor family as the generator (only a Gemini key), so calibrate: check about a dozen judged items against my reading and the second model, report agreement. Temperature 0, rubric, evidence quote with every verdict. A full run costs roughly $2; working set only about half.
-- **Files to build:** `eval/generation_questions.csv`, `src/rag/judge.py`, `src/rag/eval_generation.py`, `scripts/run_generation_eval.py`, `tests/test_eval_generation.py`; reuse the held-out protection and logging.
+### What worked
+- **Separating retrieval from generation, and the two modes.** Comparing end-to-end with ideal context located the problem: correctness jumps from 0.81 to 0.96 (working) and 0.67 to 0.92 (held-out) when the right passages are supplied. Without this split, a retrieval miss would have looked like a "correct refusal".
+- **Checking the judge before trusting it.** Two calibration rounds with blind grading caught real judge problems (name handling, a self-contradiction on R12) and showed the judge was mostly right on faithfulness. Keeping the blind originals and logging every amendment kept the evidence honest.
+- **Keeping one test untouched.** Round 2 was graded on answers the judge was never tuned on, and we did not tune on it afterwards.
+- **Freezing the judge with a fingerprint,** so Phase 3 comparisons cannot silently change the ruler.
+- **The held-out protection.** Held-out run once, aggregates only, logged; no failure inspected.
+- **Caching every model reply,** so re-scoring the same 12 answers after each judge fix cost cents and reruns resumed after crashes.
+- **Script checks on every label** and recomputing metrics by hand before believing them.
+- **Reading the data.** The summary passages (Sections 1, 2, 95) act as magnets for retrieval; spotting this early led to reporting every number with and without them.
 
-**Implications for Phase 3 (hypotheses from the working-set numbers; to be ordered by the generation results too):**
-1. Lineage questions are weakest (phrase hit 1 of 4): try chunking that keeps the sentence stating parentage together, sentence-level or parent-child retrieval, and hybrid keyword search.
-2. Summary passages (Sections 1, 2, 95) act as magnets: consider de-duplication or diversity ranking, and always report with and without them.
-3. Name pairs: alias expansion of the question (Arjuna, Partha, Dhananjaya...).
-4. A bigger k is not a cure: working phrase hit rate goes from 0.67 at k=5 to only 0.75 at k=10.
+### What did not work, or surprised us
+- **The judge needed more care than the pipeline.** Most of the effort went into making the judge's standard explicit, not into building it.
+- **A 3-level correctness score is fuzzy.** Expected answers hold several facts and nothing marks which is "the key fact" (R13/R14 against R34 pulled in opposite directions). Reduced to acceptable-vs-wrong, agreement was 19 of 20 across both rounds; on the 3-level scale it was 62% in round 2 before amendments.
+- **My own grades drifted toward the judge.** Several of the owner's grades were amended after seeing the judge's reasons. Each was logged, but the agreement figures from round 1 are a consistency check, not independent proof.
+- **Judge variance is real.** The same answer's faithfulness flipped 1.0, 0.75, 1.0 (R10) from rewording alone. Single-item flips are noise.
+- **Small sets.** One held-out question is 8 points. Use held-out for direction, not size.
+- **Labels have one author** (Claude, script-checked, delegated by the owner), so they reflect that author's view.
+- **Unexplained:** on the working set, faithfulness and citation support were *lower* with perfect passages (0.92 to 0.82, 0.74 to 0.71). The held-out set did not repeat the faithfulness dip (0.89 to 0.97). Not investigated.
+
+### Findings that shape Phase 3
+1. **Retrieval is the bottleneck.** Gold text reached the model in only 67% (working) and 75% (held-out) of questions. Lineage questions suffer most (correctness 0.62 end-to-end against 1.00 with gold passages).
+2. **Concrete retrieval failures found by hand** (from the owner's calibration notes): right section but wrong paragraph (R05, R08, R12); irrelevant top-1 chunk (R25); chunk boundaries cutting the key line (R20, R01, R26 "And from Drupada wa", the sentence naming Satyavati for R34).
+3. **Name traps the system must handle:** Parikshit vs Parikshita (R08), Vyasa vs Dwaipayana (R20), Hidimba vs Hidimva (R21), "the king" without a name.
+4. **Over-cautious refusing:** 3 of 12 false refusals end-to-end on held-out, and 1 of 12 even with the gold passages.
+5. **Healthy where it matters:** every unanswerable question (8 of 8 across both sets) was correctly refused, and answers that were given were mostly good (correctness when answered 0.85 working, 0.89 held-out).
+
+### Mistakes along the way (and the lesson from each)
+- I described the calibration set as if it existed when no file or script had produced it yet. **Lesson:** say "planned, not built" plainly.
+- The round 2 form links did not open for the owner and the HTML preview would not render. **Lesson:** have a plain-text fallback ready when sharing a form.
+- `scripts/rebuild_all.sh` aborted because of a `| head` pipe under `set -e`. **Lesson:** a pipe that closes early is a failure in strict shells.
+- My first rewrite of a `LEARNING.md` section silently dropped a neighbouring block. **Lesson:** diff before pushing an edit to a shared document.
+- The first explanation of how the final metric numbers are computed confused the reader (answers vs claims in the denominator). **Lesson:** show the arithmetic on a real number (0.81) before describing the rule.
+- Tuning the judge and validating it on the same items would have overfit. **Lesson:** keep a second, untouched test.
+
+### How this compares with standard RAG practice
+(Statements about other projects are from general knowledge, not checked against sources.)
+| Common practice | Where I am |
+|---|---|
+| Separate retrieval and generation evaluation | Done |
+| Reference-based correctness plus reference-free faithfulness and relevance | Done (own implementation) |
+| Claim-level faithfulness (split into claims, verify each) | Done |
+| Judge model checked against human grades; about 80% agreement is a common rule of thumb | Done, two rounds, small samples |
+| A held-out set kept for milestones | Done |
+| Unanswerable questions to test refusal and hallucination | Done (8 questions) |
+| Oracle or ideal-context run to separate retrieval from generation faults | Done (own design, not a library feature) |
+| Compare with an off-the-shelf evaluation library (Ragas, DeepEval) | **Moved to Phase 3** |
+| Larger, multi-author question set; confidence intervals | Not yet; sets are small and single-author |
+| Cost and latency tracking | Judge cost logged per run; no latency measurement yet (Phase 6) |
+
+### Implications for Phase 3
+Order of work, with the evidence for each. One change at a time, scored on the working set each time with the frozen judge; held-out only at milestones.
+1. **Retrieval first** (the biggest gap). Candidates, matched to the failures above: chunking that keeps parentage statements and their context together (structure-aware, sentence-level or parent-child); hybrid keyword plus meaning search for names; query expansion for aliases; reranking; diversity ranking against near-duplicates and summary-passage magnets.
+2. **Generation behaviour second:** the false-refusal rate (prompt and "I don't know" handling), judged on the working set only.
+3. **Ragas alongside,** run on the same answers as our own metrics, to compare definitions and results; this is the step moved out of Phase 2.
+4. **Open questions to investigate, not assume:** the ideal-context faithfulness dip on the working set; whether citation strictness on minor descriptors (R36, R11) distorts the citation number.
+5. **Rules that stay:** do not change the judge without a new calibration (the runner warns if the fingerprint differs); never tune against held-out failures; report retrieval numbers with and without the summary passages.
+
+### Carried over
+Ragas comparison; the owner's list of retrieval observations (above); R05 correctness and R12 faithfulness remain judge disagreements; Item 1 citations in round 2 were left as "?" and excluded; the page web address in citations is still pending; prices quoted from third-party sources are unverified; the session-start hook for Graphify and claude-mem has not yet been seen running on a fresh cloud session.
 
 ---
 
