@@ -85,3 +85,7 @@ All tunables are in `config.py`.
 ## Update 2026-10-28 (held-out generation baseline done)
 - Held-out generation baseline run once (frozen judge), logged in `eval/heldout_runs.log` and EXPERIMENTS.md. Do NOT rerun except at a milestone with --confirm-milestone. Headline: correctness 0.67 end-to-end / 0.92 ideal; false refusals 3 of 12 / 1 of 12 (over-cautious generator).
 - Remaining in Phase 2: Ragas side-by-side (fixed step; the user wants to explain it in interviews), Phase 2 retrospective in LEARNING.md, then Phase 3.
+
+## Update 2026-11-03 (Phase 2 closed)
+- **Phase 2 retrospective (final) written** in LEARNING.md. Phase 2 is complete; the Ragas side-by-side moved to Phase 3 (owner's decision), to run alongside the Phase 3 improvements.
+- **Next:** start Phase 3, retrieval first (evidence and candidates listed in the retrospective). Teach the concept before building; one change at a time; score the working set each time with the frozen judge; held-out only at milestones with --confirm-milestone. Ask the owner which retrieval change to try first.
