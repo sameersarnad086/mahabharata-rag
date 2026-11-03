@@ -1,0 +1,63 @@
+{
+  "config": {
+    "generator": "gemini-3.1-flash-lite",
+    "judge": "gemini-3.5-flash",
+    "k": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "split": "held-out",
+    "commit": "c3eacc7",
+    "date": "2026-10-28",
+    "judge_fingerprint": "2578221ecdd4",
+    "judge_frozen": true
+  },
+  "summaries": {
+    "end-to-end": {
+      "n": 14,
+      "n_errors": 0,
+      "n_answerable": 12,
+      "n_unanswerable": 2,
+      "correctness": 0.6666666666666666,
+      "correctness_when_answered": 0.8888888888888888,
+      "faithfulness": 0.8851851851851852,
+      "citation_support": 0.8518518518518519,
+      "relevance": 1.0,
+      "gold_found_rate": 0.75,
+      "outcomes": {
+        "answered": 9,
+        "false_refusal_retrieval": 2,
+        "false_refusal_generation": 1,
+        "correct_refusal": 2
+      },
+      "refusal": {
+        "correct_refusals": 2,
+        "unanswerable": 2,
+        "false_refusals": 3,
+        "answerable": 12
+      }
+    },
+    "ideal-context": {
+      "n": 12,
+      "n_errors": 0,
+      "n_answerable": 12,
+      "n_unanswerable": 0,
+      "correctness": 0.9166666666666666,
+      "correctness_when_answered": 1.0,
+      "faithfulness": 0.9696969696969696,
+      "citation_support": 0.8636363636363636,
+      "relevance": 1.0,
+      "gold_found_rate": 1.0,
+      "outcomes": {
+        "answered": 11,
+        "false_refusal_generation": 1
+      },
+      "refusal": {
+        "correct_refusals": 0,
+        "unanswerable": 0,
+        "false_refusals": 1,
+        "answerable": 12
+      }
+    }
+  }
+}

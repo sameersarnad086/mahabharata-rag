@@ -1,0 +1,2863 @@
+{
+  "config": {
+    "generator": "gemini-3.1-flash-lite",
+    "judge": "gemini-3.5-flash",
+    "k": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "split": "working",
+    "commit": "bd363a2",
+    "date": "2026-10-28",
+    "judge_fingerprint": "2578221ecdd4",
+    "judge_frozen": true
+  },
+  "summaries": {
+    "end-to-end": {
+      "n": 30,
+      "n_errors": 0,
+      "n_answerable": 24,
+      "n_unanswerable": 6,
+      "correctness": 0.8125,
+      "correctness_when_answered": 0.8478260869565217,
+      "faithfulness": 0.922463768115942,
+      "citation_support": 0.7391304347826086,
+      "relevance": 1.0,
+      "gold_found_rate": 0.6666666666666666,
+      "outcomes": {
+        "answered": 23,
+        "false_refusal_retrieval": 1,
+        "correct_refusal": 6
+      },
+      "refusal": {
+        "correct_refusals": 6,
+        "unanswerable": 6,
+        "false_refusals": 1,
+        "answerable": 24
+      }
+    },
+    "ideal-context": {
+      "n": 24,
+      "n_errors": 0,
+      "n_answerable": 24,
+      "n_unanswerable": 0,
+      "correctness": 0.9583333333333334,
+      "correctness_when_answered": 0.9583333333333334,
+      "faithfulness": 0.8229166666666666,
+      "citation_support": 0.7083333333333334,
+      "relevance": 1.0,
+      "gold_found_rate": 1.0,
+      "outcomes": {
+        "answered": 24
+      },
+      "refusal": {
+        "correct_refusals": 0,
+        "unanswerable": 0,
+        "false_refusals": 0,
+        "answerable": 24
+      }
+    }
+  },
+  "records": {
+    "end-to-end": [
+      {
+        "id": "R01",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Sakuntala's mother?",
+        "answer": "Sakuntala's mother was Menaka [3].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Menaka as Sakuntala's mother, which is the key fact required."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Sakuntala's mother as requested by the question."
+          },
+          "claims": [
+            {
+              "claim": "Sakuntala's mother was Menaka.",
+              "supported": true,
+              "evidence": "Those vultures protected the daughter of Menaka."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Sakuntala's mother was Menaka [3].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Sakuntala is the daughter of Menaka."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R03",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "What did Drona ask Ekalavya to give him?",
+        "answer": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states that Drona asked Ekalavya for the thumb of his right hand as his tuition fee."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly states what Drona asked Ekalavya to give him."
+          },
+          "claims": [
+            {
+              "claim": "Drona asked Ekalavya for the thumb of Ekalavya's right hand as Drona's tuition fee.",
+              "supported": true,
+              "evidence": "Drona answered, 'O Ekalavya, if thou art really intent on making me a gift, I should like then to have the thumb of thy right hand.'"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][5].",
+              "backed": true,
+              "reason": "The sentence is fully supported by the cited passages, which state that Drona asked Ekalavya for the thumb of his right hand as his tuition fee."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R05",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who set fire to the Khandava forest, and why?",
+        "answer": "The provided passages do not state who set the fire to the Khandava forest, though they identify Agni (also called Havyavahana) as the deity who was burning the creatures within it [1][3]. The passages focus on the efforts of the forest's denizens to extinguish the fire and the subsequent actions of Krishna and Arjuna during the conflagration [1][2][4].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 0.0,
+            "reason": "The answer incorrectly claims that it is not stated who set fire to the forest and fails to provide the reason why."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by explaining what the provided text states regarding who set fire to the Khandava forest and why."
+          },
+          "claims": [
+            {
+              "claim": "Agni is also known as Havyavahana.",
+              "supported": true,
+              "evidence": "Then Havyavahana (Agni) in anger and disappointment"
+            },
+            {
+              "claim": "Agni was the deity burning the creatures within the Khandava forest.",
+              "supported": true,
+              "evidence": "Why, O lord of immortals, doth Agni burn these creatures below?"
+            },
+            {
+              "claim": "The denizens of the Khandava forest made efforts to extinguish the fire.",
+              "supported": true,
+              "evidence": "the blazing fire was extinguished there as often by the denizens of that forest."
+            },
+            {
+              "claim": "Krishna and Arjuna took actions during the conflagration in the Khandava forest.",
+              "supported": true,
+              "evidence": "Those heroes then fearlessly assisted at the conflagration of the forest."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The provided passages do not state who set the fire to the Khandava forest, though they identify Agni (also called Havyavahana) as the deity who was burning the creatures within it [1][3].",
+              "backed": true,
+              "reason": "The passages do not mention who started the fire, while explicitly equating Havyavahana with Agni and noting that Agni was burning the creatures below."
+            },
+            {
+              "sentence": "The passages focus on the efforts of the forest's denizens to extinguish the fire and the subsequent actions of Krishna and Arjuna during the conflagration [1][2][4].",
+              "backed": true,
+              "reason": "Passage 1 describes the efforts of the denizens of the forest to extinguish the fire, while passages 2 and 4 describe the actions of Krishna and Arjuna during the conflagration."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R06",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did Arjuna win Draupadi at her swayamvara?",
+        "answer": "Arjuna won Draupadi by successfully stringing a stiff bow and shooting a mark attached to machinery erected in the sky [2][5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states the key facts that Arjuna won Draupadi by stringing the stiff bow and shooting the mark attached to the machinery."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains how Arjuna won Draupadi by describing the bow-stringing and target-shooting feat he performed."
+          },
+          "claims": [
+            {
+              "claim": "Arjuna won Draupadi.",
+              "supported": true,
+              "evidence": "Arjuna by the exercise of Kshatriya virtues, won Draupadi for wife."
+            },
+            {
+              "claim": "Arjuna successfully strung a stiff bow.",
+              "supported": true,
+              "evidence": "caused a very stiff bow to be made that was incapable of being bent by any except Arjuna... He that will string this bow and with these well-adorned arrows shoot the mark"
+            },
+            {
+              "claim": "Arjuna shot a mark attached to machinery erected in the sky.",
+              "supported": true,
+              "evidence": "Causing some machinery to be erected in the sky, the king set up a mark attached to that machinery."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Arjuna won Draupadi by successfully stringing a stiff bow and shooting a mark attached to machinery erected in the sky [2][5].",
+              "backed": true,
+              "reason": "The cited passages explicitly detail Drupada setting up the contest conditions (stringing a stiff bow and shooting a mark attached to machinery erected in the sky to win his daughter) and Arjuna subsequently acquiring Draupadi by successfully piercing the mark."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R08",
+        "type": "plain",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did King Parikshit die?",
+        "answer": "King Parikshit died after being bitten by the snake Takshaka, whose poison caused the king to fall down as if struck by lightning and set his mansion ablaze [3][4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer correctly identifies that Takshaka killed King Parikshit with his poison, but it omits the crucial context of Sringin's curse."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by describing how King Parikshit died."
+          },
+          "claims": [
+            {
+              "claim": "King Parikshit died after being bitten by the snake Takshaka.",
+              "supported": true,
+              "evidence": "I must avenge myself on the wretch Takshaka who killed my father."
+            },
+            {
+              "claim": "The poison of the snake Takshaka caused King Parikshit to fall down as if struck by lightning.",
+              "supported": true,
+              "evidence": "And the king himself fell down, as if struck by lightning."
+            },
+            {
+              "claim": "The poison of the snake Takshaka set King Parikshit's mansion ablaze.",
+              "supported": true,
+              "evidence": "And the mansion in which the king was living blazed up with Takshaka's poison."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "King Parikshit died after being bitten by the snake Takshaka, whose poison caused the king to fall down as if struck by lightning and set his mansion ablaze [3][4].",
+              "backed": false,
+              "reason": "The cited passages state that the king died after being bitten by Takshaka, but they do not mention that the king's name was Parikshit."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R10",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "What promise made it possible for a fisherman's daughter's sons to inherit a throne?",
+        "answer": "The fisherman demanded that the son born of his daughter be installed on the throne as the king's successor [2]. To secure this, Devavrata promised that the son born of the maiden would be king [4]. Furthermore, Devavrata took a vow of Brahmacharya (celibacy) to ensure that he would have no children of his own who could claim the throne [3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.75,
+        "citation_support": 0.6666666666666666,
+        "n_claims": 4,
+        "n_cited_sentences": 3,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Devavrata promised the maiden's son would inherit the throne and took a vow of celibacy to ensure it."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly describes the promise and vow made by Devavrata that allowed the fisherman's daughter's sons to inherit the throne."
+          },
+          "claims": [
+            {
+              "claim": "The fisherman demanded that the son born of the fisherman's daughter be installed on the throne as the king's successor.",
+              "supported": true,
+              "evidence": "the son born of this maiden shall be installed by thee on thy throne and none else shall thou make thy successor."
+            },
+            {
+              "claim": "Devavrata promised that the son born of the maiden would be king.",
+              "supported": true,
+              "evidence": "The son that may be born of this maiden shall be our king."
+            },
+            {
+              "claim": "Devavrata took a vow of Brahmacharya (celibacy).",
+              "supported": true,
+              "evidence": "from this day I adopt the vow of Brahmacharya (study and meditation in celibacy)."
+            },
+            {
+              "claim": "The vow of Brahmacharya was taken to ensure that Devavrata would have no children of Devavrata's own who could claim the throne.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The fisherman demanded that the son born of his daughter be installed on the throne as the king's successor [2].",
+              "backed": true,
+              "reason": "The sentence is fully supported by the cited passage, which states the fisherman asked the king to install the son born of his daughter on the throne as successor."
+            },
+            {
+              "sentence": "To secure this, Devavrata promised that the son born of the maiden would be king [4].",
+              "backed": true,
+              "reason": "The sentence is fully supported by the passage, where Devavrata promises to fulfill the demand and states that the son born of the maiden shall be king."
+            },
+            {
+              "sentence": "Furthermore, Devavrata took a vow of Brahmacharya (celibacy) to ensure that he would have no children of his own who could claim the throne [3].",
+              "backed": false,
+              "reason": "The cited passage mentions that Devavrata adopts the vow of Brahmacharya to settle the matter of his children, but it does not state or directly imply that this was to ensure they could not claim the throne."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R11",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Why did a king hold a sacrifice meant to burn all the snakes?",
+        "answer": "King Janamejaya held the snake-sacrifice to avenge himself on the snake Takshaka, who had killed his father, King Parikshit [1]. He desired to burn Takshaka and his relatives in the fire just as his father had been burnt by the snake's poison [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.5,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies that King Janamejaya held the sacrifice to avenge his father Parikshit, who was killed by Takshaka, and aimed to burn Takshaka and his relatives."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains the reason why King Janamejaya performed the snake sacrifice."
+          },
+          "claims": [
+            {
+              "claim": "King Janamejaya held the snake-sacrifice to avenge himself on the snake Takshaka.",
+              "supported": true,
+              "evidence": "expressed his determination to perform a snake-sacrifice. ... 'I must avenge myself on the wretch Takshaka who killed my father."
+            },
+            {
+              "claim": "Takshaka had killed King Janamejaya's father, King Parikshit.",
+              "supported": true,
+              "evidence": "the son of Parikshit, then called his priest and Ritwiks . ... 'I must avenge myself on the wretch Takshaka who killed my father."
+            },
+            {
+              "claim": "King Janamejaya desired to burn Takshaka and Takshaka's relatives in the fire.",
+              "supported": true,
+              "evidence": "Do you know any act by which I may cast into the blazing fire the snake Takshaka with his relatives?"
+            },
+            {
+              "claim": "King Janamejaya's father had been burnt by the snake's poison.",
+              "supported": true,
+              "evidence": "I desire to burn that wretch even as he burnt, of yore, by the fire of his poison, my father."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "King Janamejaya held the snake-sacrifice to avenge himself on the snake Takshaka, who had killed his father, King Parikshit [1].",
+              "backed": false,
+              "reason": "The passage refers to Janamejaya's father as 'Parikshit' and 'my father', but does not state or directly imply that Parikshit was himself a king."
+            },
+            {
+              "sentence": "He desired to burn Takshaka and his relatives in the fire just as his father had been burnt by the snake's poison [1].",
+              "backed": true,
+              "reason": "The sentence is fully supported by the cited passage, where Janamejaya explicitly asks how to cast Takshaka with his relatives into the blazing fire, desiring to burn Takshaka as Takshaka had burnt his father with the fire of his poison."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R12",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did the five brothers survive when their lodging was set on fire in a plot?",
+        "answer": "The provided passages do not explain how the five brothers survived the fire. The passages describe the brothers entering a subterranean passage after setting the house on fire [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 0.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer incorrectly claims the mechanism of survival is not explained, but partially captures the key fact by mentioning that the brothers entered a subterranean passage after setting the house on fire."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by stating what the provided text says about the brothers' escape from the fire."
+          },
+          "claims": [
+            {
+              "claim": "The five brothers set the house on fire.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "The five brothers entered a subterranean passage.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The passages describe the brothers entering a subterranean passage after setting the house on fire [1].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that after Bhima set fire to the house in several parts, the sons of Pandu entered the subterranean passage."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R13",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did Arjuna win Subhadra?",
+        "answer": "Arjuna won Subhadra through \"forcible seizure\" [1]. She is identified as the younger sister of Vasudeva [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly captures the key fact that Arjuna won Subhadra through forcible seizure."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains the method by which Arjuna won Subhadra."
+          },
+          "claims": [
+            {
+              "claim": "Arjuna won Subhadra through forcible seizure.",
+              "supported": true,
+              "evidence": "Subhadra of the race of Madhu had, after forcible seizure been married by Arjuna"
+            },
+            {
+              "claim": "Subhadra is identified as the younger sister of Vasudeva.",
+              "supported": true,
+              "evidence": "younger sister of Vasudeva, Subhadra by name"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Arjuna won Subhadra through \"forcible seizure\" [1].",
+              "backed": true,
+              "reason": "The passage explicitly states that Subhadra was married by Arjuna after forcible seizure."
+            },
+            {
+              "sentence": "She is identified as the younger sister of Vasudeva [2].",
+              "backed": true,
+              "reason": "The passage explicitly identifies Subhadra as the younger sister of Vasudeva."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R14",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How did Partha win Subhadra?",
+        "answer": "Arjuna (also referred to as Partha) took Subhadra away by force [2][4]. This action is described as a forcible seizure [4] and as taking the maiden away by force according to the ordinance [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Arjuna took Subhadra away by force, which captures the key fact of the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses how Partha won Subhadra by describing his forcible seizure of her."
+          },
+          "claims": [
+            {
+              "claim": "Arjuna is also referred to as Partha.",
+              "supported": true,
+              "evidence": "As soon as Arjuna beheld her he was possessed by the god of desire. Then, O Bharata, that tiger among men, Krishna, observing Partha contemplate her"
+            },
+            {
+              "claim": "Arjuna took Subhadra away by force.",
+              "supported": true,
+              "evidence": "I think Arjuna, seeing these faults in all the other methods took the maiden away by force, according to the ordinance."
+            },
+            {
+              "claim": "Arjuna's action of taking Subhadra away is described as a forcible seizure.",
+              "supported": true,
+              "evidence": "When I heard that Subhadra of the race of Madhu had, after forcible seizure been married by Arjuna in the city of Dwaraka"
+            },
+            {
+              "claim": "Arjuna's action of taking Subhadra away is described as taking the maiden away by force according to the ordinance.",
+              "supported": true,
+              "evidence": "I think Arjuna, seeing these faults in all the other methods took the maiden away by force, according to the ordinance."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Arjuna (also referred to as Partha) took Subhadra away by force [2][4].",
+              "backed": true,
+              "reason": "The passages state that Arjuna (also called Partha) took Subhadra away by force."
+            },
+            {
+              "sentence": "This action is described as a forcible seizure [4] and as taking the maiden away by force according to the ordinance [2].",
+              "backed": true,
+              "reason": "Passage [4] explicitly describes the event as a 'forcible seizure' and passage [2] states Arjuna 'took the maiden away by force, according to the ordinance'."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R15",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who is Sauti's father?",
+        "answer": "Sauti's father is Lomaharshana [3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Lomaharshana as Sauti's father, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Sauti's father as requested by the question."
+          },
+          "claims": [
+            {
+              "claim": "Sauti's father is Lomaharshana.",
+              "supported": true,
+              "evidence": "UGRASRAVA SAUTI, the son of Lomaharshana"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Sauti's father is Lomaharshana [3].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Ugrasrava Sauti is the son of Lomaharshana."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R16",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who is Ugrasrava's father?",
+        "answer": "Ugrasrava's father is Lomaharshana [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Lomaharshana as Ugrasrava's father."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the father of Ugrasrava as requested."
+          },
+          "claims": [
+            {
+              "claim": "Ugrasrava's father is Lomaharshana.",
+              "supported": true,
+              "evidence": "Ugrasrava, the son of Lomaharshana"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Ugrasrava's father is Lomaharshana [1][2].",
+              "backed": true,
+              "reason": "Both cited passages explicitly state that Ugrasrava is the son of Lomaharshana."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R19",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Which son did Vyasa beget on Ambalika?",
+        "answer": "Vyasa begot a son named Pandu on Ambalika [1].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Pandu as the son Vyasa begot on Ambalika."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly names the son that Vyasa begot on Ambalika."
+          },
+          "claims": [
+            {
+              "claim": "Vyasa begot a son named Pandu on Ambalika.",
+              "supported": true,
+              "evidence": "Satyavati again begged of the Rishi another child, and the Rishi told her in reply, 'So be it.' Ambalika, then, when her time came, brought forth a son of pale complexion."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Vyasa begot a son named Pandu on Ambalika [1].",
+              "backed": true,
+              "reason": "The cited passage directly states that Ambalika brought forth a son named Pandu who was granted to Satyavati by the Rishi (also identified in the text as Vyasa)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R20",
+        "type": "alias",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Which son did Dwaipayana beget on Ambalika?",
+        "answer": "Dwaipayana begot a son of pale complexion on Ambalika, who was known by the name of Pandu [1].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Pandu as the son Dwaipayana begot on Ambalika, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the son that Dwaipayana begot on Ambalika as Pandu."
+          },
+          "claims": [
+            {
+              "claim": "Dwaipayana begot a son on Ambalika.",
+              "supported": true,
+              "evidence": "Satyavati again begged of the Rishi another child, and the Rishi told her in reply, 'So be it.' Ambalika, then, when her time came, brought forth a son"
+            },
+            {
+              "claim": "The son begotten by Dwaipayana on Ambalika had a pale complexion.",
+              "supported": true,
+              "evidence": "Ambalika, then, when her time came, brought forth a son of pale complexion."
+            },
+            {
+              "claim": "The son begotten by Dwaipayana on Ambalika was known by the name of Pandu.",
+              "supported": true,
+              "evidence": "e of pale complexion and known by the name of Pandu. Satyavati again begged of the Rishi another child, and the Rishi told her in reply, 'So be it.' Ambalika, then, when her time came, brought forth a son of pale complexion."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Dwaipayana begot a son of pale complexion on Ambalika, who was known by the name of Pandu [1].",
+              "backed": false,
+              "reason": "The cited passage does not mention the name Dwaipayana."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R21",
+        "type": "spelling",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Hidimba, and whom did she marry?",
+        "answer": "Hidimba was a female Rakshasa (cannibal) who was the sister of the Rakshasa Hidimva [1][2]. She fell in love with Bhimasena after seeing him while she was sent by her brother to kill the Pandavas [2]. She married Bhimasena, and they had a son named Ghatotkacha [4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.6666666666666666,
+        "citation_support": 0.6666666666666666,
+        "n_claims": 6,
+        "n_cited_sentences": 3,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Hidimba was a female Rakshasa and the sister of Hidimva, and correctly identifies Bhimasena (Bhima) as her husband."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses who Hidimba was and specifies whom she married."
+          },
+          "claims": [
+            {
+              "claim": "Hidimba was a female Rakshasa (cannibal).",
+              "supported": true,
+              "evidence": "Hidimva, the female cannibal"
+            },
+            {
+              "claim": "Hidimba was the sister of the Rakshasa Hidimva.",
+              "supported": true,
+              "evidence": "Hidimva, the female cannibal, at the command of her brother"
+            },
+            {
+              "claim": "Hidimba was sent by her brother to kill the Pandavas.",
+              "supported": true,
+              "evidence": "Do my bidding soon, for we shall then together eat their flesh, tearing off their bodies at pleasure."
+            },
+            {
+              "claim": "Hidimba fell in love with Bhimasena after seeing Bhimasena.",
+              "supported": true,
+              "evidence": "And beholding Bhimasena rivalled on earth for beauty and like unto a vigorous Sala tree, the Rakshasa woman immediately fell in love with him"
+            },
+            {
+              "claim": "Hidimba married Bhimasena.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Hidimba and Bhimasena had a son named Ghatotkacha.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Hidimba was a female Rakshasa (cannibal) who was the sister of the Rakshasa Hidimva [1][2].",
+              "backed": true,
+              "reason": "The passages explicitly establish that Hidimba (spelled Hidimva) was a female cannibal/Rakshasa woman and the sister of the Rakshasa Hidimva."
+            },
+            {
+              "sentence": "She fell in love with Bhimasena after seeing him while she was sent by her brother to kill the Pandavas [2].",
+              "backed": true,
+              "reason": "The passage confirms that her brother commanded her to go to where the Pandavas were to eat their flesh, and upon seeing Bhimasena there, she immediately fell in love with him."
+            },
+            {
+              "sentence": "She married Bhimasena, and they had a son named Ghatotkacha [4].",
+              "backed": false,
+              "reason": "The cited passage does not mention Bhimasena anywhere, so it does not back the claim that she married Bhimasena."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R23",
+        "type": "lineage",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who were Bhishma's parents?",
+        "answer": "Bhishma is identified as the son of Santanu [1][2][5]. He is also referred to as the son of Ganga [5].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies both Santanu and Ganga as Bhishma's parents, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Bhishma's parents as Santanu and Ganga."
+          },
+          "claims": [
+            {
+              "claim": "Bhishma is identified as the son of Santanu.",
+              "supported": true,
+              "evidence": "This Bhishma, the son of Santanu, devoted to truth, doth not, for the sake, of truth, entertain the desire of either begetting children or ruling the kingdom."
+            },
+            {
+              "claim": "Bhishma is referred to as the son of Ganga.",
+              "supported": true,
+              "evidence": "Upon these words of the son of Ganga, the hair on the fisherman's body stood on end from glee, and he replied, 'I bestow my daughter!' Immediately after, the Apsaras and the gods with diverse tribes of Rishis began to rain down flowers from the firmament upon the head of Devavrata and exclaimed, 'This one is Bhishma (the terrible).'"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Bhishma is identified as the son of Santanu [1][2][5].",
+              "backed": true,
+              "reason": "Passages [1] and [2] explicitly refer to him as 'Bhishma, the son of Santanu'."
+            },
+            {
+              "sentence": "He is also referred to as the son of Ganga [5].",
+              "backed": true,
+              "reason": "Passage [5] explicitly refers to the person who receives the name Bhishma as 'the son of Ganga'."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R25",
+        "type": "lineage",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Karna's biological father?",
+        "answer": "The provided passages do not answer this question. The passages mention that Karna was born to Pritha (Kunti) [2] and that he was raised by a husband of the Suta caste and his wife Radha [2], but they do not identify his biological father.",
+        "refused": true,
+        "gold_found": false,
+        "outcome": "false_refusal_retrieval",
+        "invalid_citations": [],
+        "correctness": 0.0,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "R26",
+        "type": "lineage",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Whose children were Dhrishtadyumna and Draupadi, and how were they born?",
+        "answer": "Dhrishtadyumna was born from the sacrificial fire [2]. Draupadi (also called Krishna) was born from the sacrificial altar [2]. The provided passages do not state who their parents were, only the circumstances of their births.",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer correctly explains how Dhrishtadyumna and Draupadi were born from the sacrificial fire/altar, but fails to identify King Drupada as their father."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses both parts of the question by explaining how Dhrishtadyumna and Draupadi were born and noting what the text says regarding their parentage."
+          },
+          "claims": [
+            {
+              "claim": "Dhrishtadyumna was born from the sacrificial fire.",
+              "supported": true,
+              "evidence": "Then was born Dhrishtadyumna, of the splendour of Agni himself, from the sacrificial fire."
+            },
+            {
+              "claim": "Draupadi was born from the sacrificial altar.",
+              "supported": true,
+              "evidence": "And from the sacrificial altar was born Krishna (Draupadi)"
+            },
+            {
+              "claim": "Draupadi is also called Krishna.",
+              "supported": true,
+              "evidence": "born Krishna (Draupadi)"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Dhrishtadyumna was born from the sacrificial fire [2].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Dhrishtadyumna was born from the sacrificial fire."
+            },
+            {
+              "sentence": "Draupadi (also called Krishna) was born from the sacrificial altar [2].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Krishna (Draupadi) was born from the sacrificial altar."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R28",
+        "type": "lineage",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who were Ruru's parents?",
+        "answer": "Ruru's parents were Pramati and Ghritachi [4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies both parents, Pramati and Ghritachi, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the parents of Ruru as requested in the question."
+          },
+          "claims": [
+            {
+              "claim": "Pramati was a parent of Ruru.",
+              "supported": true,
+              "evidence": "And Pramati begot in the womb of Ghritachi a son called Ruru."
+            },
+            {
+              "claim": "Ghritachi was a parent of Ruru.",
+              "supported": true,
+              "evidence": "And Pramati begot in the womb of Ghritachi a son called Ruru."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Ruru's parents were Pramati and Ghritachi [4].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Pramati begot a son called Ruru in the womb of Ghritachi."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R31",
+        "type": "multihop",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "How was Astika related to the snake king Vasuki?",
+        "answer": "Astika was the son of the sister of the snakes [3]. Vasuki, the king of the snakes, was the brother of Astika's mother [3].",
+        "refused": false,
+        "gold_found": false,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.0,
+        "n_claims": 3,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Vasuki was the brother of Astika's mother, correctly identifying the nephew-uncle relationship."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains the family relationship between Astika and Vasuki."
+          },
+          "claims": [
+            {
+              "claim": "Astika was the son of the sister of the snakes.",
+              "supported": true,
+              "evidence": "the sister of the snakes, O Brahmana, gave birth to a son... And the name by which he was known to the world was Astika"
+            },
+            {
+              "claim": "Vasuki was the king of the snakes.",
+              "supported": true,
+              "evidence": "Vasuki, the king of the snakes"
+            },
+            {
+              "claim": "Vasuki was the brother of Astika's mother.",
+              "supported": true,
+              "evidence": "Vasuki, the king of the snakes, accepted those words of his sister"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Astika was the son of the sister of the snakes [3].",
+              "backed": false,
+              "reason": "The cited passage mentions the birth of a son to the sister of the snakes, but it does not state that the son's name is Astika."
+            },
+            {
+              "sentence": "Vasuki, the king of the snakes, was the brother of Astika's mother [3].",
+              "backed": false,
+              "reason": "The cited passage mentions Vasuki as the king of the snakes and his sister, but it does not mention the name Astika anywhere to establish that she is Astika's mother."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R32",
+        "type": "multihop",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Which ancestor links the Yadu and Puru lines?",
+        "answer": "The ancestor who links the Yadu and Puru lines is King Yayati, the son of Nahusha [1][2][3]. Yayati had two wives, Devayani and Sarmishtha; Devayani gave birth to Yadu and Turvasu, while Sarmishtha gave birth to Druhyu, Anu, and Puru [3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 8,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies King Yayati as the ancestor linking both lines and accurately details his sons Yadu (by Devayani) and Puru (by Sarmishtha)."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies King Yayati as the ancestor linking the Yadu and Puru lines and provides context on his lineage."
+          },
+          "claims": [
+            {
+              "claim": "King Yayati is the ancestor who links the Yadu and Puru lines.",
+              "supported": true,
+              "evidence": "(Yayati's) descendants, 'Devayani gave birth to Yadu and Turvasu; and Vrishaparvan's daughter, Sarmishtha gave birth to Druhyu, Anu, and Puru., And the descendants of Yadu are the Yadavas and of Puru are the Pauravas."
+            },
+            {
+              "claim": "King Yayati is the son of Nahusha.",
+              "supported": true,
+              "evidence": "King Yayati, the son of Nahusha"
+            },
+            {
+              "claim": "King Yayati had two wives, Devayani and Sarmishtha.",
+              "supported": true,
+              "evidence": "had two wives, viz., Devayani, the daughter of Usanas, and Sarmishtha the daughter of Vrishaparvan"
+            },
+            {
+              "claim": "Devayani gave birth to Yadu.",
+              "supported": true,
+              "evidence": "Devayani gave birth to Yadu and Turvasu"
+            },
+            {
+              "claim": "Devayani gave birth to Turvasu.",
+              "supported": true,
+              "evidence": "Devayani gave birth to Yadu and Turvasu"
+            },
+            {
+              "claim": "Sarmishtha gave birth to Druhyu.",
+              "supported": true,
+              "evidence": "Sarmishtha gave birth to Druhyu, Anu, and Puru."
+            },
+            {
+              "claim": "Sarmishtha gave birth to Anu.",
+              "supported": true,
+              "evidence": "Sarmishtha gave birth to Druhyu, Anu, and Puru."
+            },
+            {
+              "claim": "Sarmishtha gave birth to Puru.",
+              "supported": true,
+              "evidence": "Sarmishtha gave birth to Druhyu, Anu, and Puru."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The ancestor who links the Yadu and Puru lines is King Yayati, the son of Nahusha [1][2][3].",
+              "backed": true,
+              "reason": "The cited passages explicitly confirm that King Yayati is the son of Nahusha, that he fathered both Yadu and Puru, and that these two sons founded the Yadu (Yadava) and Puru (Paurava) lines respectively."
+            },
+            {
+              "sentence": "Yayati had two wives, Devayani and Sarmishtha; Devayani gave birth to Yadu and Turvasu, while Sarmishtha gave birth to Druhyu, Anu, and Puru [3].",
+              "backed": true,
+              "reason": "The passage explicitly states that Yayati had two wives, Devayani and Sarmishtha, and that Devayani gave birth to Yadu and Turvasu while Sarmishtha gave birth to Druhyu, Anu, and Puru."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R33",
+        "type": "ambiguous",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Why was Draupadi called Krishna?",
+        "answer": "Draupadi was called Krishna because of her dark complexion [4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states that Draupadi was called Krishna because of her dark complexion."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by stating the reason Draupadi was called Krishna."
+          },
+          "claims": [
+            {
+              "claim": "Draupadi was called Krishna because of her dark complexion.",
+              "supported": true,
+              "evidence": "Because this daughter is so dark in complexion, she should be called Krishna (the dark)."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Draupadi was called Krishna because of her dark complexion [4].",
+              "backed": false,
+              "reason": "The cited passage mentions that king Drupada's daughter was called Krishna because of her dark complexion, but it does not mention the name Draupadi."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R34",
+        "type": "ambiguous",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Krishna-Dwaipayana?",
+        "answer": "Krishna-Dwaipayana is also known as the Rishi Vyasa [3][4]. He is the son of the mother of Vichitravirya [3][5]. He is described as the father of Dhritarashtra, Pandu, and Vidura [1][3][5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 0.8,
+        "citation_support": 0.6666666666666666,
+        "n_claims": 5,
+        "n_cited_sentences": 3,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer correctly identifies Krishna-Dwaipayana as Vyasa and the father of Dhritarashtra, Pandu, and Vidura, but misses the key detail that he composed the Mahabharata."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses who Krishna-Dwaipayana was by providing his identity, lineage, and offspring."
+          },
+          "claims": [
+            {
+              "claim": "Krishna-Dwaipayana is also known as the Rishi Vyasa.",
+              "supported": true,
+              "evidence": "when the Vyasa arrived... the son thus begotten upon her by Krishna-Dwaipayana was afterwards known by the name of Vidura."
+            },
+            {
+              "claim": "Krishna-Dwaipayana is the son of the mother of Vichitravirya.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Krishna-Dwaipayana is described as the father of Dhritarashtra.",
+              "supported": true,
+              "evidence": "having thus raised up Dhritarashtra, Pandu and Vidura"
+            },
+            {
+              "claim": "Krishna-Dwaipayana is described as the father of Pandu.",
+              "supported": true,
+              "evidence": "having thus raised up Dhritarashtra, Pandu and Vidura"
+            },
+            {
+              "claim": "Krishna-Dwaipayana is described as the father of Vidura.",
+              "supported": true,
+              "evidence": "the son thus begotten upon her by Krishna-Dwaipayana was afterwards known by the name of Vidura."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Krishna-Dwaipayana is also known as the Rishi Vyasa [3][4].",
+              "backed": true,
+              "reason": "The cited passage explicitly refers to the illustrious Rishi Krishna (Dwaipayana) as Vyasa."
+            },
+            {
+              "sentence": "He is the son of the mother of Vichitravirya [3][5].",
+              "backed": false,
+              "reason": "Neither cited passage states or directly implies that Krishna-Dwaipayana is the son of the mother of Vichitravirya."
+            },
+            {
+              "sentence": "He is described as the father of Dhritarashtra, Pandu, and Vidura [1][3][5].",
+              "backed": true,
+              "reason": "Passage 3 explicitly states that Krishna-Dwaipayana became the father of three boys, raising up Dhritarashtra, Pandu, and Vidura."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R36",
+        "type": "ambiguous",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": true,
+        "question": "Who was Janamejaya, the son of Puru?",
+        "answer": "Janamejaya, the son of Puru, was a monarch who performed three horse-sacrifices and a sacrifice called Viswajit before entering the woods [5]. He married Ananta, the daughter of Madhava, and they had a son named Prachinwat [5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.5,
+        "n_claims": 7,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer mentions the three horse-sacrifices and the Viswajit sacrifice, but omits that he was Puru's son by his wife Kausalya."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by providing details about the identity, achievements, marriage, and offspring of Janamejaya, the son of Puru."
+          },
+          "claims": [
+            {
+              "claim": "Janamejaya was the son of Puru.",
+              "supported": true,
+              "evidence": "Puru had a wife of the name of Kausalya, on whom he begat a son named Janamejaya"
+            },
+            {
+              "claim": "Janamejaya was a monarch.",
+              "supported": true,
+              "evidence": "And that best of monarchs, Janamejaya"
+            },
+            {
+              "claim": "Janamejaya performed three horse-sacrifices before entering the woods.",
+              "supported": true,
+              "evidence": "Janamejaya who performed three horse-sacrifices and a sacrifice called Viswajit . And then he entered into the woods."
+            },
+            {
+              "claim": "Janamejaya performed a sacrifice called Viswajit before entering the woods.",
+              "supported": true,
+              "evidence": "Janamejaya who performed three horse-sacrifices and a sacrifice called Viswajit . And then he entered into the woods."
+            },
+            {
+              "claim": "Janamejaya married Ananta.",
+              "supported": true,
+              "evidence": "And Janamejaya had married Ananta"
+            },
+            {
+              "claim": "Ananta was the daughter of Madhava.",
+              "supported": true,
+              "evidence": "Ananta, the daughter of Madhava"
+            },
+            {
+              "claim": "Janamejaya and Ananta had a son named Prachinwat.",
+              "supported": true,
+              "evidence": "And Janamejaya had married Ananta, the daughter of Madhava, and begat upon her a son called Prachinwat."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Janamejaya, the son of Puru, was a monarch who performed three horse-sacrifices and a sacrifice called Viswajit before entering the woods [5].",
+              "backed": false,
+              "reason": "The passage states that Janamejaya was the son of Puru who performed three horse-sacrifices and a Viswajit sacrifice before entering the woods, but it does not state or directly imply that he was a monarch."
+            },
+            {
+              "sentence": "He married Ananta, the daughter of Madhava, and they had a son named Prachinwat [5].",
+              "backed": true,
+              "reason": "The passage explicitly states that Janamejaya married Ananta, the daughter of Madhava, and had a son named Prachinwat."
+            }
+          ]
+        }
+      },
+      {
+        "id": "G01",
+        "type": "beyond_summary",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "Which of the Pandavas fell first on the final journey to the Himalayas?",
+        "answer": "The provided passages do not answer this question. The passages cover the Pandavas' escape from Varanavata, their time in Ekachakra, and their relocation to Khandavaprastha.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G02",
+        "type": "beyond_summary",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "What did Krishna say to Arjuna in the Bhagavad Gita?",
+        "answer": "The provided passages do not answer this question. The passages cover events such as the battle against Bhishma, the appointment of Dhaumya as priest, Arjuna's archery training under Drona, and the granting of weapons by Indra.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G04",
+        "type": "never_stated",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "What was the name of Arjuna's conch shell?",
+        "answer": "The provided passages do not answer this question. The passages discuss Arjuna's battles, his prowess with weapons, and his relationship with his preceptor Drona.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G05",
+        "type": "never_stated",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "How old was Draupadi at her svayamvara?",
+        "answer": "The provided passages do not answer this question. The passages describe Draupadi's birth from the sacrificial altar and her beauty, but they do not state her age at the time of her svayamvara.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G07",
+        "type": "outside_text",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "Who composed the Ramayana?",
+        "answer": "The provided passages do not answer this question. The passages discuss the composition of the Mahabharata by Vyasa (also known as Krishna-Dwaipayana).",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      },
+      {
+        "id": "G08",
+        "type": "outside_text",
+        "split": "working",
+        "mode": "end-to-end",
+        "answerable": false,
+        "question": "Who was the first Mughal emperor of India?",
+        "answer": "The provided passages do not answer this question. The passages cover topics such as the origins of various figures in the Mahabharata, the birth of Garuda and Aruna, and the duties of kings and priests.",
+        "refused": true,
+        "gold_found": null,
+        "outcome": "correct_refusal",
+        "invalid_citations": [],
+        "correctness": null,
+        "relevance": null,
+        "faithfulness": null,
+        "citation_support": null,
+        "n_claims": 0,
+        "n_cited_sentences": 0,
+        "judge": {}
+      }
+    ],
+    "ideal-context": [
+      {
+        "id": "R01",
+        "type": "plain",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who was Sakuntala's mother?",
+        "answer": "Sakuntala's mother was Menaka [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Menaka as Sakuntala's mother, matching the key fact of the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Sakuntala's mother as requested."
+          },
+          "claims": [
+            {
+              "claim": "Sakuntala's mother was Menaka.",
+              "supported": true,
+              "evidence": "the Rishi begat on Menaka a daughter named Sakuntala."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Sakuntala's mother was Menaka [1][2].",
+              "backed": true,
+              "reason": "Both cited passages explicitly state that Menaka was Sakuntala's mother."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R03",
+        "type": "plain",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "What did Drona ask Ekalavya to give him?",
+        "answer": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states that Drona asked Ekalavya for the thumb of his right hand as his tuition fee, fully answering the question."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses what Drona requested from Ekalavya."
+          },
+          "claims": [
+            {
+              "claim": "Drona asked Ekalavya to give Drona the thumb of Ekalavya's right hand as Ekalavya's tuition fee.",
+              "supported": true,
+              "evidence": "Drona, who had asked of him his thumb as tuition-fee"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Drona asked Ekalavya to give him the thumb of his right hand as his tuition fee [1][2].",
+              "backed": true,
+              "reason": "The cited passages explicitly state that Drona asked Ekalavya for the thumb of his right hand as his tuition fee."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R05",
+        "type": "plain",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who set fire to the Khandava forest, and why?",
+        "answer": "Agni set fire to the Khandava forest because he desired to consume it [2]. He was unable to do so previously because Indra protected the forest to safeguard the Naga Takshaka and other creatures residing there [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 0.6666666666666666,
+        "citation_support": 0.5,
+        "n_claims": 3,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer correctly identifies Agni and mentions Indra's protection, but misses key details about Agni's illness from sacrificial butter and his request to Krishna and Arjuna for help."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies who set fire to the Khandava forest and explains the reason for doing so."
+          },
+          "claims": [
+            {
+              "claim": "Agni set fire to the Khandava forest because Agni desired to consume the forest.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Agni was unable to consume the Khandava forest previously because Indra protected the forest.",
+              "supported": true,
+              "evidence": "This forest of Khandava is always protected by Indra. And as it is protected by the illustrious one, I always fail to consume it."
+            },
+            {
+              "claim": "Indra protected the Khandava forest to safeguard the Naga Takshaka and other creatures residing in the Khandava forest.",
+              "supported": true,
+              "evidence": "In that forest dwelleth, with his followers and family, a Naga , called Takshaka, who is the friend of Indra. It is for him that the wielder of the thunderbolt protecteth this forest. Many other creatures also are thus protected here for the sake of Takshaka."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Agni set fire to the Khandava forest because he desired to consume it [2].",
+              "backed": false,
+              "reason": "The cited passage states that Agni desires to consume the forest and blazes forth in his attempts, but it does not state that he set fire to the Khandava forest."
+            },
+            {
+              "sentence": "He was unable to do so previously because Indra protected the forest to safeguard the Naga Takshaka and other creatures residing there [2].",
+              "backed": true,
+              "reason": "The cited passage directly states that Agni failed to consume the forest because Indra protected it to safeguard Takshaka and the other creatures living there."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R06",
+        "type": "plain",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "How did Arjuna win Draupadi at her swayamvara?",
+        "answer": "Arjuna won Draupadi by stringing a very stiff bow that was incapable of being bent by others and shooting a mark attached to machinery in the sky with five arrows [2][3]. Upon successfully shooting the mark, it fell to the ground through the hole in the machine [3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.5,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states that Arjuna won Draupadi by stringing the stiff bow that others could not bend and shooting down the mark attached to the machine."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains the actions Arjuna took to win Draupadi at her swayamvara."
+          },
+          "claims": [
+            {
+              "claim": "Arjuna won Draupadi by stringing a very stiff bow.",
+              "supported": true,
+              "evidence": "caused a very stiff bow to be made... 'He that will string this bow and with these well-adorned arrows shoot the mark above the machine shall obtain my daughter.'"
+            },
+            {
+              "claim": "The bow was incapable of being bent by others.",
+              "supported": true,
+              "evidence": "caused a very stiff bow to be made that was incapable of being bent by any except Arjuna."
+            },
+            {
+              "claim": "Arjuna shot a mark attached to machinery in the sky with five arrows.",
+              "supported": true,
+              "evidence": "set up a mark attached to that machinery... And taking up the five arrows he shot the mark"
+            },
+            {
+              "claim": "The mark fell to the ground through the hole in the machine upon being successfully shot.",
+              "supported": true,
+              "evidence": "he shot the mark and caused it to fall down on the ground through the hole in the machine above which it had been placed."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Arjuna won Draupadi by stringing a very stiff bow that was incapable of being bent by others and shooting a mark attached to machinery in the sky with five arrows [2][3].",
+              "backed": false,
+              "reason": "The cited passages mention Arjuna winning King Drupada's daughter, but they do not state that her name was Draupadi."
+            },
+            {
+              "sentence": "Upon successfully shooting the mark, it fell to the ground through the hole in the machine [3].",
+              "backed": true,
+              "reason": "The sentence is fully supported by the cited passage, which explicitly states that shooting the mark caused it to fall down on the ground through the hole in the machine."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R08",
+        "type": "plain",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "How did King Parikshit die?",
+        "answer": "King Parikshit died after being bitten by the snake Takshaka, who coiled around the king's neck and bit him [2]. The mansion in which the king resided blazed up with Takshaka's poison, and the king fell down as if struck by lightning [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 0.5,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.5,
+        "n_claims": 5,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 0.5,
+            "reason": "The answer correctly identifies that Takshaka killed King Parikshit with poison, but it omits the key details regarding Sringin's curse and the seven-day timeframe."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses how King Parikshit died by describing his death from the snake Takshaka's bite."
+          },
+          "claims": [
+            {
+              "claim": "King Parikshit died after being bitten by the snake Takshaka.",
+              "supported": true,
+              "evidence": "when the king was laid low by Takshaka's poison, his councillors with the royal priest--a holy Brahmana--performed all his last rites"
+            },
+            {
+              "claim": "Takshaka coiled around King Parikshit's neck.",
+              "supported": true,
+              "evidence": "quickly coiling round the king's neck and uttering a tremendous roar, Takshaka, that lord of snakes, bit that protector of the earth."
+            },
+            {
+              "claim": "Takshaka bit King Parikshit.",
+              "supported": true,
+              "evidence": "Takshaka, that lord of snakes, bit that protector of the earth."
+            },
+            {
+              "claim": "The mansion in which King Parikshit resided blazed up with Takshaka's poison.",
+              "supported": true,
+              "evidence": "And the mansion in which the king was living blazed up with Takshaka's poison."
+            },
+            {
+              "claim": "King Parikshit fell down as if struck by lightning.",
+              "supported": true,
+              "evidence": "And the king himself fell down, as if struck by lightning."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "King Parikshit died after being bitten by the snake Takshaka, who coiled around the king's neck and bit him [2].",
+              "backed": false,
+              "reason": "The cited passage refers to the monarch as 'the king' or 'protector of the earth', but does not mention the name Parikshit."
+            },
+            {
+              "sentence": "The mansion in which the king resided blazed up with Takshaka's poison, and the king fell down as if struck by lightning [2].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that the mansion in which the king was living blazed up with Takshaka's poison and that the king himself fell down as if struck by lightning."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R10",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "What promise made it possible for a fisherman's daughter's sons to inherit a throne?",
+        "answer": "The son of Ganga (Devavrata, also known as Bhishma) relinquished his right to the throne and adopted the vow of Brahmacharya (celibacy) to ensure that the children of the fisherman's daughter would inherit it [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.75,
+        "citation_support": 0.0,
+        "n_claims": 4,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states that Devavrata (Bhishma) relinquished his claim to the throne and took a vow of celibacy so that the fisherman's daughter's children would inherit."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses the question by describing the promise and vow of celibacy made by Bhishma to allow the fisherman's daughter's sons to inherit the throne."
+          },
+          "claims": [
+            {
+              "claim": "The son of Ganga is Devavrata, who is also known as Bhishma.",
+              "supported": true,
+              "evidence": "Upon these words of the son of Ganga, the hair on the fisherman's body stood on end from glee, and he replied, 'I bestow my daughter!' Immediately after, the Apsaras and the gods with diverse tribes of Rishis began to rain down flowers from the firmament upon the head of Devavrata and exclaimed, 'This one is Bhishma (the terrible).'"
+            },
+            {
+              "claim": "Devavrata relinquished his right to the throne.",
+              "supported": true,
+              "evidence": "I have already relinquished my right to the throne"
+            },
+            {
+              "claim": "Devavrata adopted the vow of Brahmacharya (celibacy).",
+              "supported": true,
+              "evidence": "from this day I adopt the vow of Brahmacharya (study and meditation in celibacy)."
+            },
+            {
+              "claim": "Devavrata took these actions to ensure that the children of the fisherman's daughter would inherit the throne.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The son of Ganga (Devavrata, also known as Bhishma) relinquished his right to the throne and adopted the vow of Brahmacharya (celibacy) to ensure that the children of the fisherman's daughter would inherit it [1][2].",
+              "backed": false,
+              "reason": "The cited passages do not state that Bhishma adopted the vow of Brahmacharya specifically to ensure that the children of the fisherman's daughter would inherit the throne."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R11",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Why did a king hold a sacrifice meant to burn all the snakes?",
+        "answer": "King Janamejaya held the snake-sacrifice to avenge the death of his father, Parikshit, who was killed by the snake Takshaka [1][2]. Janamejaya sought to cast Takshaka and his relatives into a blazing fire because Takshaka had caused his father's death and prevented the Brahmana Kasyapa from reviving him [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.75,
+        "citation_support": 1.0,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately provides all the key facts from the expected answer, stating that King Janamejaya held the sacrifice to avenge his father Parikshit who was killed by Takshaka, aiming to burn Takshaka and his relatives."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains why King Janamejaya performed the snake sacrifice."
+          },
+          "claims": [
+            {
+              "claim": "King Janamejaya held a snake-sacrifice to avenge the death of his father, Parikshit.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Parikshit was killed by the snake Takshaka.",
+              "supported": true,
+              "evidence": "the son of Parikshit, then called his priest and Ritwiks . And accomplished in speech, he spake unto them these words relating to the accomplishment of his great task. 'I must avenge myself on the wretch Takshaka who killed my father."
+            },
+            {
+              "claim": "King Janamejaya sought to cast Takshaka and Takshaka's relatives into a blazing fire.",
+              "supported": true,
+              "evidence": "Do you know any act by which I may cast into the blazing fire the snake Takshaka with his relatives?"
+            },
+            {
+              "claim": "Takshaka prevented the Brahmana Kasyapa from reviving Parikshit.",
+              "supported": true,
+              "evidence": "he prevented Kasyapa--that excellent of Brahmanas--whom he could not defeat, from coming to my father with the desire of reviving him."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "King Janamejaya held the snake-sacrifice to avenge the death of his father, Parikshit, who was killed by the snake Takshaka [1][2].",
+              "backed": true,
+              "reason": "The passages explicitly state that King Janamejaya was the son of Parikshit, that Takshaka was a snake who killed his father, and that Janamejaya determined to perform a snake-sacrifice to avenge his father's death."
+            },
+            {
+              "sentence": "Janamejaya sought to cast Takshaka and his relatives into a blazing fire because Takshaka had caused his father's death and prevented the Brahmana Kasyapa from reviving him [1][2].",
+              "backed": true,
+              "reason": "The passages explicitly show Janamejaya asking for a way to cast the snake Takshaka and his relatives into a blazing fire, citing that Takshaka killed his father and prevented the Brahmana Kasyapa from coming to revive him."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R12",
+        "type": "paraphrase",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "How did the five brothers survive when their lodging was set on fire in a plot?",
+        "answer": "The five brothers survived by escaping through a large subterranean passage that had been excavated by a miner [1][2]. They entered this passage after Bhima set fire to the house of lac [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.3333333333333333,
+        "citation_support": 0.5,
+        "n_claims": 3,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies that a miner excavated a subterranean passage and that the brothers escaped through it after Bhima set fire to the house of lac."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains how the five brothers survived the fire by escaping through a subterranean passage."
+          },
+          "claims": [
+            {
+              "claim": "The five brothers survived by escaping through a large subterranean passage.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "The subterranean passage had been excavated by a miner.",
+              "supported": true,
+              "evidence": "the miner said, 'So be it,' and carefully beginning his work of excavation, made a large subterranean passage."
+            },
+            {
+              "claim": "The five brothers entered the subterranean passage after Bhima set fire to the house of lac.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "The five brothers survived by escaping through a large subterranean passage that had been excavated by a miner [1][2].",
+              "backed": false,
+              "reason": "The passages mention the 'sons of Pandu' and their mother entering the subterranean passage, but do not state that there were 'five brothers' or explicitly state that they survived."
+            },
+            {
+              "sentence": "They entered this passage after Bhima set fire to the house of lac [2].",
+              "backed": true,
+              "reason": "The passage explicitly states that after Bhima set fire to the house of lac, the sons of Pandu with their mother entered the subterranean passage."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R13",
+        "type": "alias",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "How did Arjuna win Subhadra?",
+        "answer": "Arjuna won Subhadra by forcibly seizing her [1][2][3][4]. He took her into his car while she was returning from the Raivataka hill [4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer accurately states the key facts from the expected answer, explaining that Arjuna forcibly seized Subhadra and took her into his chariot."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses how Arjuna won Subhadra by describing his actions in forcibly taking her."
+          },
+          "claims": [
+            {
+              "claim": "Arjuna won Subhadra by forcibly seizing Subhadra.",
+              "supported": true,
+              "evidence": "Subhadra of the race of Madhu had, after forcible seizure been married by Arjuna"
+            },
+            {
+              "claim": "Arjuna took Subhadra into his car while Subhadra was returning from the Raivataka hill.",
+              "supported": true,
+              "evidence": "Meanwhile Subhadra, having paid her homage unto that prince of hills, Raivataka and having worshipped the deities and made the Brahmanas utter benedictions upon her, and having also walked round the hill, was coming towards Dwaravati. The son of Kunti, afflicted with the shafts of the god of desire, suddenly rushed towards that Yadava girl of faultless features and forcibly took her into his car."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Arjuna won Subhadra by forcibly seizing her [1][2][3][4].",
+              "backed": true,
+              "reason": "The cited passages explicitly state that Arjuna brought away Subhadra by force and married her after forcible seizure."
+            },
+            {
+              "sentence": "He took her into his car while she was returning from the Raivataka hill [4].",
+              "backed": true,
+              "reason": "The cited passage confirms that Subhadra was coming towards Dwaravati after visiting the Raivataka hill when the son of Kunti (he) forcibly took her into his car."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R14",
+        "type": "alias",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "How did Partha win Subhadra?",
+        "answer": "Partha (Arjuna) won Subhadra by forcibly seizing her and taking her into his car while she was returning from the Raivataka hill [1][2][3][4]. He then brought her away to his city, Indraprastha [1][4].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.0,
+        "citation_support": 0.5,
+        "n_claims": 2,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly states the key fact that Arjuna forcibly seized Subhadra and took her into his chariot."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains how Partha (Arjuna) won Subhadra by describing the actions he took to capture her."
+          },
+          "claims": [
+            {
+              "claim": "Partha (Arjuna) won Subhadra by forcibly seizing Subhadra and taking Subhadra into Partha's (Arjuna's) car while Subhadra was returning from the Raivataka hill.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Partha (Arjuna) brought Subhadra away to Partha's (Arjuna's) city, Indraprastha.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Partha (Arjuna) won Subhadra by forcibly seizing her and taking her into his car while she was returning from the Raivataka hill [1][2][3][4].",
+              "backed": false,
+              "reason": "The name 'Partha' does not appear anywhere in the cited passages to establish it as an epithet/name of Arjuna."
+            },
+            {
+              "sentence": "He then brought her away to his city, Indraprastha [1][4].",
+              "backed": true,
+              "reason": "The sentence is directly supported by passage [4], which states that after taking Subhadra into his car, he proceeded in his car towards his own city (Indraprastha)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R15",
+        "type": "alias",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who is Sauti's father?",
+        "answer": "Sauti's father is Lomaharshana [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Lomaharshana as Sauti's father, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly names Sauti's father as requested by the question."
+          },
+          "claims": [
+            {
+              "claim": "Sauti's father is Lomaharshana.",
+              "supported": true,
+              "evidence": "Ugrasrava, the son of Lomaharshana, surnamed Sauti"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Sauti's father is Lomaharshana [1][2].",
+              "backed": true,
+              "reason": "Both passages explicitly state that Ugrasrava Sauti is the son of Lomaharshana."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R16",
+        "type": "alias",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who is Ugrasrava's father?",
+        "answer": "Ugrasrava's father is Lomaharshana [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Lomaharshana as Ugrasrava's father."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the father of Ugrasrava as requested."
+          },
+          "claims": [
+            {
+              "claim": "Ugrasrava's father is Lomaharshana.",
+              "supported": true,
+              "evidence": "Ugrasrava, the son of Lomaharshana"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Ugrasrava's father is Lomaharshana [1][2].",
+              "backed": true,
+              "reason": "Both cited passages explicitly state that Ugrasrava is the son of Lomaharshana."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R19",
+        "type": "alias",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Which son did Vyasa beget on Ambalika?",
+        "answer": "Vyasa begot a son on Ambalika named Pandu, who was so named because of his pale complexion [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 2,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Pandu as the son begotten on Ambalika by Vyasa and mentions his pale nature."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Pandu as the son Vyasa begot on Ambalika, directly addressing the question."
+          },
+          "claims": [
+            {
+              "claim": "Vyasa begot a son on Ambalika named Pandu.",
+              "supported": true,
+              "evidence": "Vyasa came according to his promise, and approached, as before, the second wife of his brother... the name also thy child shall bear will be Pandu"
+            },
+            {
+              "claim": "Pandu was named Pandu because of Pandu's pale complexion.",
+              "supported": true,
+              "evidence": "thy child shall be pale in complexion. O thou of handsome face, the name also thy child shall bear will be Pandu (the pale)."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Vyasa begot a son on Ambalika named Pandu, who was so named because of his pale complexion [1].",
+              "backed": true,
+              "reason": "The cited passage directly supports that Vyasa approached Ambalika, resulting in a child named Pandu who was so named because of his pale complexion."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R20",
+        "type": "alias",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Which son did Dwaipayana beget on Ambalika?",
+        "answer": "Dwaipayana (Vyasa) begot a son on Ambalika who was named Pandu [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.5,
+        "citation_support": 0.0,
+        "n_claims": 2,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Pandu as the son Dwaipayana begot on Ambalika, matching the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the son begotten by Dwaipayana on Ambalika as Pandu."
+          },
+          "claims": [
+            {
+              "claim": "Dwaipayana (Vyasa) begot a son on Ambalika.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "The son begotten on Ambalika was named Pandu.",
+              "supported": true,
+              "evidence": "the name also thy child shall bear will be Pandu"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Dwaipayana (Vyasa) begot a son on Ambalika who was named Pandu [1].",
+              "backed": false,
+              "reason": "The cited passage refers to Vyasa, but it does not mention the name Dwaipayana or establish that Vyasa and Dwaipayana are the same person."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R21",
+        "type": "spelling",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who was Hidimba, and whom did she marry?",
+        "answer": "Hidimba was a Rakshasa woman who was the sister of the Rakshasa named Hidimva [3]. She married Bhimasena (also referred to as Bhima) [1][4][5].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Hidimba as a Rakshasa woman, the sister of Hidimva, and states that she married Bhima."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly addresses both who Hidimba was and whom she married."
+          },
+          "claims": [
+            {
+              "claim": "Hidimba was a Rakshasa woman.",
+              "supported": true,
+              "evidence": "know me as the sister of that chief of the Rakshasa."
+            },
+            {
+              "claim": "Hidimba was the sister of a Rakshasa named Hidimva.",
+              "supported": true,
+              "evidence": "is the abode of a Rakshasa of the name of Hidimva. O handsome lady, know me as the sister of that chief of the Rakshasa."
+            },
+            {
+              "claim": "Hidimba married Bhimasena.",
+              "supported": true,
+              "evidence": "Then Hidimva, knowing that the period of her stay (with her husband) had come to an end"
+            },
+            {
+              "claim": "Bhimasena is also referred to as Bhima.",
+              "supported": true,
+              "evidence": "by that mighty and intelligent son of thine--my husband. Behold now that couple--man and Rakshasa... they beheld Bhima and the Rakshasa already engaged in fight"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Hidimba was a Rakshasa woman who was the sister of the Rakshasa named Hidimva [3].",
+              "backed": true,
+              "reason": "The cited passage confirms that Hidimva (Hidimba) was female ('sister') and the sister of the chief of the Rakshasa who was named Hidimva."
+            },
+            {
+              "sentence": "She married Bhimasena (also referred to as Bhima) [1][4][5].",
+              "backed": true,
+              "reason": "The cited passages show that Hidimva had a son Ghatotkacha with Bhimasena, referred to Bhima as her husband, and noted the end of her stay with her husband, directly supporting that she was married to Bhimasena (also referred to as Bhima)."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R23",
+        "type": "lineage",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who were Bhishma's parents?",
+        "answer": "Bhishma's parents were Santanu and Ganga [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 1,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Santanu and Ganga as Bhishma's parents, matching the key facts of the expected answer."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Bhishma's parents as Santanu and Ganga, fully addressing the question."
+          },
+          "claims": [
+            {
+              "claim": "Bhishma's parents were Santanu and Ganga.",
+              "supported": true,
+              "evidence": "Santanu married Ganga, who bore him a son Devavrata who was afterwards called Bhishma."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Bhishma's parents were Santanu and Ganga [1].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Santanu married Ganga, who bore him a son named Devavrata who was afterwards called Bhishma."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R25",
+        "type": "lineage",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who was Karna's biological father?",
+        "answer": "Karna's biological father is the god Arka, also referred to as Vivaswat and Surya [1][2][3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Surya (also known as Arka and Vivaswat) as Karna's biological father."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Karna's biological father as requested by the question."
+          },
+          "claims": [
+            {
+              "claim": "Karna's biological father is the god Arka.",
+              "supported": true,
+              "evidence": "The son of Surya was before this known by the name of Vasusena. But since he cut off his natural armour, he came to be called Karna"
+            },
+            {
+              "claim": "Arka is also referred to as Vivaswat.",
+              "supported": true,
+              "evidence": "summoned the god Arka (Sun). And as soon as he pronounced the Mantra , she beheld that effulgent deity--that beholder of everything in the world--approaching her. And beholding that extraordinary sight, the maiden of faultless features was overcome with surprise. But the god Vivaswat (Sun) approaching her, said"
+            },
+            {
+              "claim": "Arka is also referred to as Surya.",
+              "supported": true,
+              "evidence": "summoned the god Arka (Sun)... Surya (Sun) replied"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Karna's biological father is the god Arka, also referred to as Vivaswat and Surya [1][2][3].",
+              "backed": true,
+              "reason": "Passages 1 and 2 identify Arka, Vivaswat, and Surya as the same deity summoned to give Kunti a child, and Passage 3 states that Karna is the son of Surya."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R26",
+        "type": "lineage",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Whose children were Dhrishtadyumna and Draupadi, and how were they born?",
+        "answer": "Dhrishtadyumna and Krishna (also called the daughter of Drupada) were the children of King Drupada [2][3]. They were born from the sacrificial fire of a great sacrifice performed by the Brahmanas Yaja and Upayaja [1][3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.5,
+        "n_claims": 6,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies King Drupada as their father and states that they were born from the sacrificial fire."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies the parent of Dhrishtadyumna and Draupadi and explains the manner of their birth."
+          },
+          "claims": [
+            {
+              "claim": "Dhrishtadyumna was the child of King Drupada.",
+              "supported": true,
+              "evidence": "Let this son of king Drupada, they said, be called Dhrishtadyumna"
+            },
+            {
+              "claim": "Krishna was the child of King Drupada.",
+              "supported": true,
+              "evidence": "Because this daughter is so dark in complexion, she should be called Krishna (the dark).' 'The Brahmana continued, 'Thus were born those twins of the great sacrifice of Drupada."
+            },
+            {
+              "claim": "Krishna is also called the daughter of Drupada.",
+              "supported": true,
+              "evidence": "Let this son of king Drupada, they said, be called Dhrishtadyumna... And they also said, 'Because this daughter is so dark in complexion, she should be called Krishna (the dark).'"
+            },
+            {
+              "claim": "Dhrishtadyumna was born from the sacrificial fire of a great sacrifice.",
+              "supported": true,
+              "evidence": "Yaja poured the sanctified libation on the fire, whereupon arose from those flames a child"
+            },
+            {
+              "claim": "Krishna was born from the sacrificial fire of a great sacrifice.",
+              "supported": true,
+              "evidence": "Thus were born those twins of the great sacrifice of Drupada."
+            },
+            {
+              "claim": "The great sacrifice was performed by the Brahmanas Yaja and Upayaja.",
+              "supported": true,
+              "evidence": "why should not the object of this sacrifice be accomplished when the oblation hath already been prepared by me and sanctified by Upayaja's invocations?"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Dhrishtadyumna and Krishna (also called the daughter of Drupada) were the children of King Drupada [2][3].",
+              "backed": true,
+              "reason": "The cited passages explicitly identify Dhrishtadyumna as the son of King Drupada and Krishna as the twin daughter born from Drupada's sacrifice, making them both children of King Drupada."
+            },
+            {
+              "sentence": "They were born from the sacrificial fire of a great sacrifice performed by the Brahmanas Yaja and Upayaja [1][3].",
+              "backed": false,
+              "reason": "The passages do not state or directly imply that Upayaja was a Brahmana, so describing them as 'the Brahmanas Yaja and Upayaja' is not fully backed."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R28",
+        "type": "lineage",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who were Ruru's parents?",
+        "answer": "According to the provided passages, Ruru's parents are identified in two different ways:\n\n*   Ruru was the son of Pramati and the celestial dancer Ghritachi [1][2].\n*   The passages also state that Ruru was begotten by Pramati in the womb of Ghritachi [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Ruru's parents as Pramati and the celestial dancer Ghritachi."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Pramati and Ghritachi as the parents of Ruru."
+          },
+          "claims": [
+            {
+              "claim": "Ruru was the son of Pramati.",
+              "supported": true,
+              "evidence": "Pramati had a son named Ruru by Ghritachi"
+            },
+            {
+              "claim": "Ghritachi is a celestial dancer.",
+              "supported": true,
+              "evidence": "Ghritachi (the celestial dancer )"
+            },
+            {
+              "claim": "Ruru was the son of Ghritachi.",
+              "supported": true,
+              "evidence": "Pramati had a son named Ruru by Ghritachi"
+            },
+            {
+              "claim": "Ruru was begotten by Pramati in the womb of Ghritachi.",
+              "supported": true,
+              "evidence": "Pramati begot in the womb of Ghritachi a son called Ruru"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "*   Ruru was the son of Pramati and the celestial dancer Ghritachi [1][2].",
+              "backed": true,
+              "reason": "Both passages explicitly state that Pramati had/begot a son named Ruru by Ghritachi, and passage 1 explicitly describes Ghritachi as the celestial dancer."
+            },
+            {
+              "sentence": "*   The passages also state that Ruru was begotten by Pramati in the womb of Ghritachi [2].",
+              "backed": true,
+              "reason": "Passage 2 explicitly states that Pramati begot in the womb of Ghritachi a son called Ruru."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R31",
+        "type": "multihop",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "How was Astika related to the snake king Vasuki?",
+        "answer": "Astika was the son of the Rishi Jaratkaru and his wife, who was the younger sister of the snake king Vasuki [1][2]. Consequently, Vasuki was Astika's maternal uncle [2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 0.5,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies that Astika was the son of Jaratkaru and Vasuki's sister, making Vasuki his maternal uncle."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains the family relationship between Astika and Vasuki."
+          },
+          "claims": [
+            {
+              "claim": "Astika was the son of Rishi Jaratkaru.",
+              "supported": true,
+              "evidence": "he offered his beautiful sister to Jaratkaru who then espoused her with ordained rites. ... married his sister to that high-souled Rishi of excellent vows. The Rishi wedded her according to the rites ordained (in the scriptures), and from them was born a high-souled son called Astika."
+            },
+            {
+              "claim": "Astika's mother was the younger sister of Vasuki.",
+              "supported": true,
+              "evidence": "Vasuki replied, 'O Jaratkaru, this my younger sister is called Jaratkaru. ... married his sister to that high-souled Rishi of excellent vows. ... and from them was born a high-souled son called Astika."
+            },
+            {
+              "claim": "Vasuki was a snake king.",
+              "supported": true,
+              "evidence": "the chief of the snakes married his sister to that high-souled Rishi"
+            },
+            {
+              "claim": "Vasuki was Astika's maternal uncle.",
+              "supported": true,
+              "evidence": "Vasuki replied, 'O Jaratkaru, this my younger sister is called Jaratkaru. ... and from them was born a high-souled son called Astika."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Astika was the son of the Rishi Jaratkaru and his wife, who was the younger sister of the snake king Vasuki [1][2].",
+              "backed": true,
+              "reason": "The cited passages state that the snake Vasuki gave his younger sister to the Rishi Jaratkaru as his wife, and that Astika was born to them."
+            },
+            {
+              "sentence": "Consequently, Vasuki was Astika's maternal uncle [2].",
+              "backed": false,
+              "reason": "The cited passage refers to 'the chief of the snakes' but does not mention the name Vasuki."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R32",
+        "type": "multihop",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Which ancestor links the Yadu and Puru lines?",
+        "answer": "Yayati is the ancestor who links the Yadu and Puru lines, as he fathered Yadu by his wife Devayani and Puru by his wife Sarmishtha [1][2][3].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 3,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Yayati as the common ancestor and accurately details his sons Yadu and Puru along with their respective mothers."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly identifies Yayati as the ancestor linking the Yadu and Puru lines."
+          },
+          "claims": [
+            {
+              "claim": "Yayati is the ancestor who links the Yadu and Puru lines.",
+              "supported": true,
+              "evidence": "Devayani gave birth to Yadu and Turvasu; and Vrishaparvan's daughter, Sarmishtha gave birth to Druhyu, Anu, and Puru., And the descendants of Yadu are the Yadavas and of Puru are the Pauravas."
+            },
+            {
+              "claim": "Yayati fathered Yadu by his wife Devayani.",
+              "supported": true,
+              "evidence": "Yayati also begot on Devayani two sons called Yadu and Turvasu"
+            },
+            {
+              "claim": "Yayati fathered Puru by his wife Sarmishtha.",
+              "supported": true,
+              "evidence": "And Sarmishtha, the daughter of Vrishaparvan, became through the royal sage the mother of three sons in all, named Drahyu, Anu, and Puru."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Yayati is the ancestor who links the Yadu and Puru lines, as he fathered Yadu by his wife Devayani and Puru by his wife Sarmishtha [1][2][3].",
+              "backed": true,
+              "reason": "The passages explicitly state that Yayati had two wives, Devayani and Sarmishtha, and that he fathered Yadu by Devayani and Puru by Sarmishtha, whose descendants became the Yadavas and Pauravas."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R33",
+        "type": "ambiguous",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Why was Draupadi called Krishna?",
+        "answer": "Draupadi was called Krishna because of her dark complexion [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.0,
+        "citation_support": 0.0,
+        "n_claims": 2,
+        "n_cited_sentences": 1,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies that Draupadi was called Krishna because of her dark complexion."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains the reason why Draupadi was called Krishna."
+          },
+          "claims": [
+            {
+              "claim": "Draupadi was called Krishna.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Draupadi was called Krishna because of her dark complexion.",
+              "supported": false,
+              "evidence": ""
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Draupadi was called Krishna because of her dark complexion [1].",
+              "backed": false,
+              "reason": "The cited passage mentions King Drupada's daughter being named Krishna due to her dark complexion, but it does not mention the name Draupadi."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R34",
+        "type": "ambiguous",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who was Krishna-Dwaipayana?",
+        "answer": "Krishna-Dwaipayana was a spirited and virtuous Rishi who, by the injunctions of Bhishma and his mother, became the father of Dhritarashtra, Pandu, and Vidura through the two wives of Vichitra-virya [2]. He is also identified as the author who composed the Mahabharata [1][2].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 0.75,
+        "citation_support": 0.5,
+        "n_claims": 4,
+        "n_cited_sentences": 2,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer correctly identifies Krishna-Dwaipayana as the sage who composed the Mahabharata and fathered Dhritarashtra, Pandu, and Vidura through Vichitravirya's wives."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly explains who Krishna-Dwaipayana was by detailing his identity, lineage, and accomplishments."
+          },
+          "claims": [
+            {
+              "claim": "Krishna-Dwaipayana was a spirited and virtuous Rishi.",
+              "supported": false,
+              "evidence": ""
+            },
+            {
+              "claim": "Krishna-Dwaipayana became the father of Dhritarashtra, Pandu, and Vidura by the injunctions of Bhishma and his mother.",
+              "supported": true,
+              "evidence": "the spirited and virtuous Krishna-Dwaipayana, by the injunctions of Bhishma, the wise son of Ganga and of his own mother, became the father of three boys who were like the three fires by the two wives of Vichitra-virya ; and having thus raised up Dhritarashtra, Pandu and Vidura"
+            },
+            {
+              "claim": "Krishna-Dwaipayana fathered Dhritarashtra, Pandu, and Vidura through the two wives of Vichitra-virya.",
+              "supported": true,
+              "evidence": "became the father of three boys who were like the three fires by the two wives of Vichitra-virya ; and having thus raised up Dhritarashtra, Pandu and Vidura"
+            },
+            {
+              "claim": "Krishna-Dwaipayana is identified as the author who composed the Mahabharata.",
+              "supported": true,
+              "evidence": "stories which were composed in his Mahabharata by Krishna-Dwaipayana"
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Krishna-Dwaipayana was a spirited and virtuous Rishi who, by the injunctions of Bhishma and his mother, became the father of Dhritarashtra, Pandu, and Vidura through the two wives of Vichitra-virya [2].",
+              "backed": false,
+              "reason": "The cited passage describes Krishna-Dwaipayana as 'spirited and virtuous', but does not state that he was a Rishi, nor does it explicitly identify him with 'the great Rishi Vyasa' mentioned later."
+            },
+            {
+              "sentence": "He is also identified as the author who composed the Mahabharata [1][2].",
+              "backed": true,
+              "reason": "Passage 1 explicitly states that the sacred and wonderful stories in his Mahabharata were composed by Krishna-Dwaipayana."
+            }
+          ]
+        }
+      },
+      {
+        "id": "R36",
+        "type": "ambiguous",
+        "split": "working",
+        "mode": "ideal-context",
+        "answerable": true,
+        "question": "Who was Janamejaya, the son of Puru?",
+        "answer": "Janamejaya was the son of Puru and his wife Kausalya [1]. He performed three horse-sacrifices and a sacrifice called Viswajit before entering the woods [1]. He married Ananta, the daughter of Madhava, and they had a son named Prachinwat [1].",
+        "refused": false,
+        "gold_found": true,
+        "outcome": "answered",
+        "invalid_citations": [],
+        "correctness": 1.0,
+        "relevance": 1.0,
+        "faithfulness": 1.0,
+        "citation_support": 1.0,
+        "n_claims": 8,
+        "n_cited_sentences": 3,
+        "judge": {
+          "correctness": {
+            "score": 1.0,
+            "reason": "The answer includes all key facts from the expected answer, correctly identifying Janamejaya's mother and the specific sacrifices he performed."
+          },
+          "relevance": {
+            "relevant": true,
+            "reason": "The answer directly provides details about Janamejaya, the son of Puru, including his sacrifices and family."
+          },
+          "claims": [
+            {
+              "claim": "Janamejaya was the son of Puru.",
+              "supported": true,
+              "evidence": "Puru had a wife of the name of Kausalya, on whom he begat a son named Janamejaya"
+            },
+            {
+              "claim": "Janamejaya was the son of Kausalya.",
+              "supported": true,
+              "evidence": "Puru had a wife of the name of Kausalya, on whom he begat a son named Janamejaya"
+            },
+            {
+              "claim": "Kausalya was the wife of Puru.",
+              "supported": true,
+              "evidence": "Puru had a wife of the name of Kausalya"
+            },
+            {
+              "claim": "Janamejaya performed three horse-sacrifices before entering the woods.",
+              "supported": true,
+              "evidence": "performed three horse-sacrifices and a sacrifice called Viswajit . And then he entered into the woods."
+            },
+            {
+              "claim": "Janamejaya performed a sacrifice called Viswajit before entering the woods.",
+              "supported": true,
+              "evidence": "performed three horse-sacrifices and a sacrifice called Viswajit . And then he entered into the woods."
+            },
+            {
+              "claim": "Janamejaya married Ananta.",
+              "supported": true,
+              "evidence": "Janamejaya had married Ananta"
+            },
+            {
+              "claim": "Ananta was the daughter of Madhava.",
+              "supported": true,
+              "evidence": "Ananta, the daughter of Madhava"
+            },
+            {
+              "claim": "Janamejaya and Ananta had a son named Prachinwat.",
+              "supported": true,
+              "evidence": "Janamejaya had married Ananta, the daughter of Madhava, and begat upon her a son called Prachinwat."
+            }
+          ],
+          "citations": [
+            {
+              "sentence": "Janamejaya was the son of Puru and his wife Kausalya [1].",
+              "backed": true,
+              "reason": "The cited passage explicitly states that Puru had a wife named Kausalya on whom he begat a son named Janamejaya."
+            },
+            {
+              "sentence": "He performed three horse-sacrifices and a sacrifice called Viswajit before entering the woods [1].",
+              "backed": true,
+              "reason": "The cited passage confirms that Janamejaya performed three horse-sacrifices and a sacrifice called Viswajit, and then entered into the woods."
+            },
+            {
+              "sentence": "He married Ananta, the daughter of Madhava, and they had a son named Prachinwat [1].",
+              "backed": true,
+              "reason": "The cited passage states that Janamejaya married Ananta, the daughter of Madhava, and begat upon her a son called Prachinwat."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

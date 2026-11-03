@@ -99,3 +99,18 @@ An explorer for the Suryavamsha and Chandravamsha lineages and sub-lineages:
 - **RAG over the texts** for story context around each person and event.
 - An **interactive family-tree visualization** with citations on every link.
 - Explicit handling of name ambiguity and conflicting sources.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
+
+## Dev tooling (set up by `.claude/hooks/session-start.sh`, cloud sessions only)
+- **Graphify** maps the code and docs of this repo (`data/`, `eval/results/` and the question log are excluded by `.graphifyignore`). Use it to navigate the *code*; the Mahabharata knowledge graph in Phase 5 is something we build ourselves, so do not run Graphify on the corpus.
+- **claude-mem** keeps session memory locally in `~/.claude-mem` (no account, no hosted memory, telemetry off). It lives in the cloud container, so it does not survive after the container is reclaimed. Its memory compression runs through the logged-in Claude account and counts against that usage. Wrap anything sensitive in `<private>` tags; never put API keys in prompts.

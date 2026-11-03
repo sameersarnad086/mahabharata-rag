@@ -7,22 +7,49 @@ Each stage follows the same layout: **Why it exists → What I decided (and why)
 Alternatives → Gotchas → Results.**
 
 **Contents**
-1. [The pipeline at a glance](#the-pipeline-at-a-glance)
-2. [Code map: what is done where](#code-map-what-is-done-where)
-3. [Decisions log](#decisions-log)
-4. [Phase 0 — Setup and download](#phase-0--setup-and-download)
-5. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
-6. [Phase 1 — Chunking](#phase-1--chunking)
-7. [Phase 1 — Embeddings](#phase-1--embeddings)
-8. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
-9. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
-10. [Phase 1 — Generation](#phase-1--generation)
+1. [Named problems (shared vocabulary)](#named-problems-shared-vocabulary)
+2. [The pipeline at a glance](#the-pipeline-at-a-glance)
+3. [Code map: what is done where](#code-map-what-is-done-where)
+4. [Decisions log](#decisions-log)
+5. [Phase 0 — Setup and download](#phase-0--setup-and-download)
+6. [Phase 1 — Ingestion and cleaning](#phase-1--ingestion-and-cleaning)
+7. [Phase 1 — Chunking](#phase-1--chunking)
+8. [Phase 1 — Embeddings](#phase-1--embeddings)
+9. [Phase 1 — Retrieval (concept)](#phase-1--retrieval-concept)
+10. [Known problems: where each one gets solved](#known-problems-where-each-one-gets-solved)
+11. [Phase 1 — Generation](#phase-1--generation)
     - [Question log: observed failures](#question-log-observed-failures-candidates-for-phase-2)
-11. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
-12. [Phase 2 — Evaluation: concepts and metrics](#phase-2--evaluation-concepts-and-metrics)
-    - [Phase 2 retrospective (partial)](#phase-2-retrospective-partial)
-    - [How the retrieval evaluation runs, step by step](#how-the-retrieval-evaluation-runs-step-by-step)
-13. [Public post drafts](#public-post-drafts)
+12. [Phase 1 retrospective (final)](#phase-1-retrospective-final)
+13. [Phase 2 — Evaluation (concepts, retrieval, generation)](#phase-2--evaluation-concepts-and-metrics)
+    - **Concepts and rules**
+        - [Why it exists](#why-it-exists-5)
+        - [Score retrieval and generation separately](#score-retrieval-and-generation-separately)
+        - [Rules that keep the evaluation honest](#rules-that-keep-the-evaluation-honest)
+        - [The working / held-out split](#the-working--held-out-split)
+    - **Retrieval evaluation**
+        - [Retrieval metrics](#retrieval-metrics)
+        - [The retrieval question set (36)](#the-retrieval-question-set-36-in-evalretrieval_questionscsv)
+        - [Labelling the 36 questions (done)](#labelling-the-36-questions-done)
+        - [How the retrieval evaluation runs, step by step](#how-the-retrieval-evaluation-runs-step-by-step)
+        - [Retrieval evaluation: what was built](#retrieval-evaluation-what-was-built)
+        - [Retrieval baseline results](#retrieval-baseline-results-phase-1-pipeline-full-table-in-experimentsmd)
+    - **Generation evaluation**
+        - [Concept: a language model as judge](#generation-metrics-a-language-model-as-judge)
+        - [Overview](#generation-evaluation-what-it-is-and-how-it-runs-lesson-written-before-the-build)
+        - [1. What it is and how we do it](#1-what-generation-evaluation-is-and-how-we-do-it)
+        - [2. The two modes: end-to-end and ideal context](#2-the-two-ways-to-run-it)
+        - [3. The metrics and how each number is calculated](#3-the-metrics-what-they-mean-how-they-are-calculated)
+        - [4. How each mode ran, and the results](#4-how-each-mode-worked-in-our-first-run-and-the-results)
+        - [5. What the results showed](#5-what-the-results-showed-and-what-led-to-calibration)
+        - [6. Judge calibration, round 1 (and the calibration measures)](#6-judge-calibration-round-1)
+        - [6a. Calibration 1 and the judge fixes](#6a-calibration-1-what-we-saw-and-the-judge-fixes-that-followed)
+        - [6b. Calibration 2](#6b-calibration-2-the-independent-test)
+        - [6c. Freezing the judge](#6c-decision-freeze-the-judge)
+        - [6d. Official baseline, working set](#6d-the-official-baseline-frozen-judge-working-set)
+        - [6e. Held-out baseline](#6e-held-out-generation-baseline-run-once)
+        - [7. How a run works (worked example R01)](#7-how-a-run-works-shown-on-one-real-question-r01-who-was-sakuntalas-mother)
+14. [Phase 2 retrospective (final)](#phase-2-retrospective-final)
+15. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -773,6 +800,7 @@ Cautions: synthetic questions flatter retrieval because they share the chunk's w
 - **Answer relevance and correctness:** it answers the question and matches the expected answer.
 - **Refusal accuracy:** it refuses exactly when it should.
 - The judge should ideally be a different (preferably stronger) model than the generator; chosen when we build it. Later: compare my own implementation with the Ragas and DeepEval libraries, after checking they are current.
+- **Fixed step (not optional): run Ragas against my own metrics.** After my generation metrics are baselined, run the same questions, answers and passages through Ragas with the same Gemini judge. Record a side-by-side table in `EXPERIMENTS.md` and read each disagreement to decide who was right. Add a "Ragas vs my own metrics" section here. Purpose: be able to explain, in interviews, how faithfulness is computed (split the answer into claims, check each against the passages), why a single judge is biased, and give a real example from our data where the two disagreed. DeepEval comes after Ragas if time allows. Check both libraries are current and work with Gemini first.
 
 ### Rules that keep the evaluation honest
 - Write the set **before** looking at Phase 3 results, and **never edit it** to flatter them. New questions go in a clearly marked separate section.
@@ -893,34 +921,470 @@ Result for this question: hit@5 = 1; first hit at rank 1, so reciprocal rank = 1
 - **Held-out is in the same range** as the working set (0.75 vs 0.67 phrase hit@5), which suggests the working-set result is not a fluke. With 12 questions the gap is within noise.
 **Lessons:** (1) the strict check and the summary-free variant are the honest numbers; the generous ones are ceilings; (2) always report counts (16 of 24) next to rates; (3) a metric must be tested against hand calculation before its numbers are believed.
 
+### Generation evaluation: what it is and how it runs (lesson written before the build)
+
+Status: **built, calibrated and run: the judge is frozen (sections 6a to 6c) and the official working-set baseline is in section 6d. Held-out run not done yet.** Sections 1 to 3 below are updated to match what was built. Section 4 onward is the original pre-build lesson and is still to be refined. The worked examples are *illustrative*, not from a real run.
+
+#### 1. What generation evaluation is, and how we do it
+- **Concept:** retrieval evaluation asks "did we fetch the right passages?". Generation evaluation asks "given those passages, did the model write a good answer?". The two are scored separately so we know which half to fix.
+- **How, in one line:** for each question we produce an answer with the real system, then grade it from several angles. Some grades are plain code. The rest come from a second model, the **judge**, which gets a narrow job, only the information that job needs, and must reply in a fixed format (JSON) so code can read the score.
+- **Why a judge model at all:** answers are free text, so there is no exact-match check. A second model reads the answer and decides, the way a person would grade it. It uses language understanding, not a line-by-line text comparison, so borderline cases can flip. That is why it must be checked against a human (calibration).
+- **Who is who:** the **generator** (`gemini-3.1-flash-lite`) writes the answers and is the thing being tested. The **judge** (`gemini-3.5-flash`) only grades them. Both are set in `config.py`; the judge's instructions are in `src/rag/judge.py`.
+- **Questions:** the same 36 as retrieval (24 working, 12 held-out), plus 8 **unanswerable** ones (6 working, 2 held-out), in `eval/generation_questions.csv`. Every unanswerable question was scanned against the corpus to confirm the answer is absent.
+- **Where the code is:** `src/rag/eval_generation.py` (scoring), `src/rag/judge.py` (the judge's jobs), `scripts/run_generation_eval.py` (the runner). Replies are cached on disk, so a rerun is free and a crashed run resumes.
+
+#### 2. The two ways to run it
+| Mode | Passages given to the generator | What a result tells us |
+|---|---|---|
+| **End-to-end** | What the real retriever returns (top 5) | The user-facing truth: retrieval and generation together |
+| **Ideal context** (also called oracle retrieval) | The gold passage(s) handed over directly | The generator alone. A bad answer here is the generator's fault |
+
+- **Reading the pair:** good in ideal context but bad end-to-end means fix retrieval. Bad in both means fix the prompt or model. The gap between them is the cost of imperfect retrieval.
+- Only the passage-fetching step differs. Everything after it is identical.
+- **Ideal context applies to answerable questions only.** An unanswerable question has no gold passage to hand over, so it appears in end-to-end mode only.
+- **First reading from our baseline (working set, provisional):** correctness 0.81 end-to-end against 0.96 with ideal context. So most wrong answers come from retrieval, not the generator. Faithfulness and citation support did not improve with perfect passages, which pointed us at the generator and the judge itself, and led to calibration.
+- The ideal-context idea exists in research as "oracle retrieval". Libraries do not ship it as a feature, so it is our own design choice.
+
+#### 3. The metrics: what they mean, how they are calculated
+**The three sources of input.** Every metric is built from some mix of these:
+| Source | What it holds | Who sees it |
+|---|---|---|
+| **The label files** `eval/retrieval_questions.csv` and `eval/generation_questions.csv` | `question`, `expected_answer`, `evidence_phrases`, `gold_sections`, `type`, `split` | the evaluation code. The judge sees only `expected_answer` (for correctness). The generator sees only the `question`. |
+| **The retriever** | the 5 passages found for the question (end-to-end) or the gold chunks (ideal context) | the generator, and the judge for faithfulness and citations |
+| **The generator** | the answer text it wrote | the judge and the code checks. The answer is *not* from the CSV. |
+
+**Metrics graded by the judge (an AI reads and decides)**
+| Metric | Meaning | Judge sees (and from where) | Score |
+|---|---|---|---|
+| **Correctness** | Matches the expected answer | the **question** and **expected answer** (CSV) and the **generator's answer**. No passages, so fluent but wrong text cannot fool it. | 1 / 0.5 / 0 |
+| **Faithfulness** | Every claim is backed by the retrieved text. Not "true in the world", but "the text says it" | two calls. A: the generator's answer only (list its single claims). B: the **5 passages** plus those **claims** (supported or not, with a quote). | supported claims / all claims |
+| **Citation support** | Each `[n]` really backs the sentence it sits on | one **sentence** of the answer and **only the passage(s) it cites**. Code finds the sentences and markers. | backed sentences / cited sentences |
+| **Relevance** | The answer addresses the question asked | the **question** (CSV) and the generator's answer | 1 / 0, refusals left out |
+
+**How each judge metric becomes the final number**
+Every judge metric is built in two steps.
+1. **Score each answer on its own.** Each answer gets one number from 0 to 1.
+2. **Add up those numbers and divide by the number of answers.** Each answer counts once, so a long answer carries the same weight as a short one.
+
+| Metric | Step 1: the score of one answer | Step 2: add up, divide by | Final number (baseline, end-to-end, working set) |
+|---|---|---|---|
+| **Correctness** | the judge's verdict: 1, 0.5 or 0. A refusal on an answerable question is set to 0 by code. | the **24** answerable questions | **0.81**: 17 answers x 1 + 5 x 0.5 + 2 x 0 = 19.5, and 19.5 / 24 = 0.8125 |
+| **Correctness, when it answered** | same verdicts | the **23** questions that were not refused | 19.5 / 23 = 0.848, shown as **0.85** |
+| **Faithfulness** | supported claims / all claims **in that answer** (R21: 4 of 6 = 0.67) | the **23** answers that were given | **0.92**: 19 answers scored 1.0 and 4 scored lower (together 2.22), so the 23 scores add up to 21.22, and 21.22 / 23 = 0.922 |
+| **Citation support** | backed cited sentences / all cited sentences **in that answer** (R10: 2 of 3 = 0.67) | the same **23** answers | **0.74**: 14 answers scored 1.0 and 9 scored lower (together 3.0), so the scores add up to 17.0, and 17.0 / 23 = 0.739 |
+| **Relevance** | 1 if the answer tries to answer the question, else 0 | the 23 answered, answerable questions | 23 / 23 = **1.00** |
+
+- **The 23 and the 24 count answers, not claims.** One answer with many claims is still one score in step 2. A small made-up example: if 22 answers scored 0.67 and one scored 0.90, the faithfulness is (22 x 0.67 + 0.90) / 23 = 15.64 / 23 = 0.68.
+- **Where the 0.81 comes from:** of the 24 answerable questions, 17 were fully correct, 5 partly correct (worth half) and 2 scored zero. The two zeros are R25 (a refusal, because retrieval missed the Surya passage) and R05 (the answer said the passages did not say who set the fire).
+- **Two correctness numbers:** 0.81 punishes refusals (R25 counts as 0); 0.85 shows how good the answers are when the system does answer. The gap between them is the cost of refusing.
+- **Ideal context, same arithmetic:** 22 x 1 + 2 x 0.5 = 23, and 23 / 24 = 0.958, shown as **0.96**.
+- **The alternative, pooling:** add up every claim from every answer and divide once (baseline faithfulness would be 65 of 71 = 0.915; citations 28 of 38 = 0.737). We use the per-answer average (the code is `summarise` in `src/rag/eval_generation.py`) so one long answer cannot dominate. Keep this choice fixed across experiments.
+- **An average hides the spread.** When a number moves between experiments, check which answers changed.
+- **Rounding:** the log prints two decimals, so 0.8125 appears as 0.81.
+
+**Metrics computed by plain code (no AI)**
+| Metric | Meaning | Input | How |
+|---|---|---|---|
+| **Gold text in the passages** | Did retrieval put the answer text in front of the model? | the **5 retrieved passages** and the **`evidence_phrases`** (CSV) | true if any phrase appears word for word (after normalising spaces and case) in any passage. Averaged over answerable questions. |
+| **Invalid citations** | Did the answer cite a passage that does not exist? | the **generator's answer** and the **number of passages given** (5) | any `[n]` outside 1 to 5 is invalid. It is stored in each record. It is not a headline number, but such a sentence is scored "not backed" in citation support. |
+| **Refusal accuracy** | Refuses exactly when it should | the generator's answer and whether the question is answerable (CSV) | the answer contains the exact refusal sentence ("The provided passages do not answer this question."). Gives a 2x2 table and the outcome labels (answered, correct refusal, false refusal from retrieval, false refusal from generation). |
+
+**Generation metrics versus calibration metrics: two different questions**
+| | Generation metrics (above) | Calibration metrics (section 6) |
+|---|---|---|
+| **Question answered** | How good is the RAG system's answer? | Can we trust the judge that produces those scores? |
+| **What is compared** | the answer against the expected answer, or against the retrieved passages | the judge's verdicts against the owner's hand grades on the same answers |
+| **Who produces the numbers** | the judge (and code) | the owner (human) and the judge, compared by `scripts/compare_calibration.py` |
+| **Unit** | a score from 0 to 1 per answer, averaged | agreement: do the two verdicts match? Counted per answer or per sentence. |
+| **Used for** | comparing experiments in Phase 3 | deciding whether the judge is allowed to score at all (bar about 80%) |
+| **Rerun when** | every experiment | only if the judge's instructions change |
+
+- **Industry view:** faithfulness, answer relevance, correctness against a reference answer and citation checks are standard generation metrics; Ragas and DeepEval offer versions of them, which is why a side-by-side comparison is planned. Checking an LLM judge against human grades is also standard practice, but the way we count agreement here is our own design, not a library function.
+- **They connect in one direction:** calibration does not change the system's scores. It tells us how far to believe them.
+
+**Rules the judge follows (frozen, fingerprint `2578221ecdd4`):**
+- **Correctness:** full (1) = the key fact(s) of the expected answer are stated, including the cause when the expected answer has one (for "How did Parikshit die?" the curse is needed; "bitten by Takshaka" alone is partly right); partly (0.5) = right idea or right entity but a key part missing or hedged; no (0) = wrong, or a refusal on an answerable question.
+- **Faithfulness and citations:** the passages are the only truth. A fact that is true in the story but not in the passages counts as unsupported. Two different names for one person match only when the passages show it; spelling variants of one name always match.
+- **Refusals** are detected by code (the exact refusal sentence), not judged by the model.
+
+**What the run prints, in plain terms:**
+| Printed as | Meaning |
+|---|---|
+| correctness (refusals count 0) | average over all answerable questions, a refusal scores 0 |
+| correctness (when it answered) | average over answers only, so it ignores refusals |
+| faithfulness, citation support | averaged over the answers that have claims or cited sentences |
+| relevance | refusals are left out |
+| gold text was in the passages | share of answerable questions where retrieval put an evidence phrase in the top 5 |
+| outcomes | answered, correct refusal, false refusal caused by retrieval, false refusal caused by generation |
+
+**Reading them together:**
+- Faithfulness high, correctness low: honest but wrong or incomplete. The passages usually lacked the answer, so look at retrieval.
+- Correctness high, faithfulness low: right from the model's memory. Dangerous for this project, because the citations then mean nothing.
+- Citation support low, faithfulness fine: the claims are true, but the `[n]` marks are misplaced.
+- False refusals: split into retrieval-caused (ideal context answers) and generation-caused (even ideal context refuses).
+- Correct refusals on unanswerable questions but false refusals on answerable ones: the model is too cautious, so tune the prompt, not the retriever.
+- Faithfulness and citation support overlap (one unsupported claim can lower both) but are not the same. Faithfulness counts claims. Citation support asks whether the marker is honest.
+
+**Worked example across four situations (illustrative):**
+| Question | What happened | Faithful | Cites | Correct | Verdict |
+|---|---|---|---|---|---|
+| A. "Who was Bharata's father?" | Gold retrieved, "Dushyanta [2]" | 1/1 | 1/1 | 1 | all good |
+| B. answerable, retrieval missed the gold | Model refuses | n/a | n/a | 0 | false refusal. Ideal context answers, so fault is **retrieval** |
+| C. answerable, gold retrieved | Right answer plus one outside-knowledge claim and one misplaced `[3]` | 3/4 | 1/2 | 1 | correct but unfaithful. Same in ideal context, so fault is **generation** |
+| D. unanswerable | Model refuses | n/a | n/a | n/a | correct refusal |
+
+#### 4. How each mode worked in our first run, and the results
+Both modes ran together (`python scripts/run_generation_eval.py --mode both --save baseline_working`) on the **working set**: 24 answerable and 6 unanswerable questions. Same generator (`gemini-3.1-flash-lite`), same judge (`gemini-3.5-flash`), same prompt. Only the passages handed to the generator differ.
+
+**Mode 1, end-to-end (30 questions)**
+- **Input:** the question; the real retriever's top 5 chunks (1,670 chunks, `bge-small-en-v1.5`, cosine similarity); the generator prompt asking for `[n]` citations.
+- **Per question:** retrieve, generate, then code checks (is it the refusal sentence? do the evidence phrases appear in the five passages, giving a "gold text was in the passages" flag? do the `[n]` marks point at real passages?), then the judge scores correctness, relevance, faithfulness and citation support. A refusal on an answerable question scores correctness 0 and is labelled a retrieval fault if the gold text was missing, a generation fault otherwise.
+- **Includes the 6 unanswerable questions**, to test refusal.
+
+**Mode 2, ideal context (24 questions)**
+- **Input:** the same prompt, but the five retrieved passages are replaced by the **gold chunks**: every chunk that contains at least one evidence phrase from the CSV, those matching most phrases first, at most 5, no padding. Retrieval is skipped, so "gold text found" is always yes.
+- **Answerable questions only**, because an unanswerable question has no gold passage.
+
+**Where the results are:** `eval/results/gen_baseline_working.json` has `config` (the setup), `summaries` (averages per mode) and `records` (per-question detail, with the judge's claim and citation verdicts). Raw replies are cached in `data/cache/gen_eval/` (not committed). The logged summary is in `EXPERIMENTS.md`.
+
+**Results (provisional: scored with the judge's original instructions, before calibration)**
+| Metric | End-to-end | Ideal context |
+|---|---|---|
+| Correctness (refusals count 0) | 0.81 | 0.96 |
+| Faithfulness | 0.93 | 0.88 |
+| Citation support | 0.83 | 0.75 |
+| Relevance | 1.00 | 1.00 |
+| Gold text in the passages | 0.67 | 1.00 |
+| Correct refusals / false refusals | 6 of 6 / 1 of 24 | not applicable |
+
+#### 5. What the results showed, and what led to calibration
+**Observations**
+1. **Retrieval is the main weakness.** Handing over the right passages lifted correctness from 0.81 to 0.96. In end-to-end mode the gold text reached the model in only 67% of questions. The one false refusal (R25, Karna's father) was a retrieval fault: the passage that names Surya never made the top 5.
+2. **Refusal behaviour is healthy:** 6 of 6 unanswerable questions were refused, and 1 of 24 answerable ones was wrongly refused.
+3. **Faithfulness and citation support did not improve with perfect passages; they got slightly worse** (0.93 to 0.88, 0.83 to 0.75). If these were simply a retrieval problem they should have risen. Something else was going on, and we could not tell whether the generator was over-claiming or the judge was being unreasonable.
+4. **Some verdicts looked odd on a close read.** For example, a sentence naming "Parikshit" was marked not backed because the passage said "the king"; a correct answer using Dwaipayana was marked not backed because the passage said "Vyasa". Those are the many-names-for-one-person problem, now hitting the judge, not only the retriever.
+
+**Why that led to calibration.** The judge is an AI grading another AI, and its scores steer every later experiment (chunking, embeddings, reranking). If it is miscalibrated we could keep a worse change or drop a better one without knowing. So before trusting the numbers we compare the judge with a human: the project owner grades a sample of answers blind (judge scores hidden), and we measure how often they agree. About 80% is our bar. The first sample was 12 answers; where they disagree we read both reasons and fix the judge's instructions, one change at a time. The calibration story and its fixes are written up next.
+
+#### 6. Judge calibration, round 1
+**Why we calibrate.** The judge is an AI grading another AI, and its scores steer every later experiment (chunking, embeddings, reranking). If it is miscalibrated we could keep a worse change or drop a better one without noticing. In the baseline, faithfulness and citation support got slightly worse with perfect passages, which made us unsure the judge was doing a good job. So before trusting any score, the project owner grades a sample blind and we measure how often owner and judge agree. Our bar is about 80%.
+
+**What we did in the first iteration**
+1. **Sample:** 12 answers from the end-to-end baseline, picked by fixed rules (a wrongful refusal, correct refusals, answers the judge scored low or partial, right answers with weak faithfulness, weak citations, and a few clean ones), so the sample is not all easy cases. Items: R25, G01, G02, R05, R08, R12, R21, R20, R01, R03, R06, R10.
+2. **Blind grading:** the owner filled in a form (`eval/calibration_form.html`, same content as `eval/calibration_sheet.md`) showing the question, expected answer, the system's answer split into sentences, and the five passages. The judge's scores were not shown; they were saved separately in `eval/results/calibration_key.json`.
+3. **Grading standards:** *Correct?* is judged against the expected answer, using the owner's knowledge of the text. *Supported?* and *Citation ok?* use **only the passages shown**; a fact that is true but not in the passages counts as not supported.
+4. **Comparison:** `scripts/compare_calibration.py` reduces both sides to something that can be matched and counts agreement. The owner's blind grades are kept unchanged in `eval/calibration_grades.md`.
+
+#### Calibration measures: what each means and how it is calculated
+Calibration compares the owner's blind grades with the judge's scores on the same 12 answers. There are three comparisons. Each reduces both sides to something that can be matched.
+
+**1. Correct? (does the answer match the expected answer)**
+- The owner answers yes, partly or no. This becomes 1, 0.5 or 0.
+- The judge gives its own 1, 0.5 or 0 for the same answer.
+- Agreement = the two numbers are exactly equal. Agreement rate = matches / items.
+- A correct refusal on an unanswerable question counts as agreement when the owner said yes.
+- **Calibration 1: 8 of 12 (67%).**
+- Example: R05. The owner said partly (0.5) and the judge gave 0, so they disagree. R01. Both said 1, so they agree.
+- The four disagreements: R25 (owner partly, judge 0), R05 (owner partly, judge 0), R08 (owner yes, judge 0.5), R12 (owner no, judge 0.5).
+
+**2. Supported? (is every claim in the answer backed by the retrieved passages)**
+- The owner graded each *sentence* of the answer, yes or no, using only the passages.
+- The judge works on *claims*, not sentences. It splits the answer into single claims on its own, which the owner never saw. One sentence can hold several claims, so the counts differ (R21: 3 sentences, 6 claims).
+- The judge's faithfulness score = supported claims / all claims.
+- Each side is reduced to one verdict per answer:
+  - "all supported": every owner sentence is yes, or the judge's faithfulness is exactly 1.0.
+  - "not all supported": at least one owner sentence is no, or the judge's faithfulness is below 1.0.
+- Agreement = the two verdicts match. The fractions are not compared (a judge score of 0.67 and of 0.0 are both "not all supported").
+- Refusals are left out because the judge does not score faithfulness for them. That is why the denominator is 9, not 12.
+- **Calibration 1: 8 of 9 (89%).**
+- Example: R21. The owner marked sentence 3 no, and the judge's faithfulness was 0.67. Both say "not all supported", so they agree. R12 was the mismatch: the owner marked every sentence yes, but the judge scored faithfulness 0.0.
+
+**3. Citations ok? (does the cited passage back the sentence)**
+- Only sentences that carry a [n] marker are graded. The owner marked each yes or no.
+- Each owner sentence is lined up, in order, with the judge's verdict on the same sentence, backed or not backed.
+- Agreement = both say backed, or both say not backed. This is counted one sentence at a time.
+- **Calibration 1: 11 of 14 sentences (79%).**
+- Example: R08. The owner said backed and the judge said not backed (the passage says "the king", the answer says "Parikshit"). R20 differed the same way (Vyasa vs Dwaipayana). R10 sentence 3 was the third mismatch.
+
+**Faithfulness vs "all sentences supported"**
+- Faithfulness is the judge's own score, supported claims / all claims.
+- "All sentences supported" is the yes/no comparison used here to check the judge's faithfulness against the owner's sentence grades.
+
+**Notes** the owner writes on each item are not scored. They are read to understand why the two sides disagreed.
+
+#### 6a. Calibration 1: what we saw, and the judge fixes that followed
+**Result (original judge, owner's blind grades):** correctness 8 of 12 (67%), all-supported 8 of 9 (89%), citations 11 of 14 (79%). The worry that the judge was unreliable on faithfulness turned out to be mostly unfounded: it was right to flag R21's marriage sentence (the owner agreed). The problems were elsewhere.
+
+**What we saw**
+1. **Names (R08, R20):** the judge marked citations "not backed" because the passage said "the king" or "the Rishi / Vyasa" and the answer said "Parikshit" or "Dwaipayana". The owner had marked them backed using knowledge of the story. This is the *many names for one person* problem, now hitting the judge. For R08 it is worse than it looks: the cited passage mentions "Parikshita" only as the *son* ruling later, a different person, so the passages never name the dying king (the *same name, different people* trap).
+2. **R12, the judge contradicted itself:** the claim check said the claims were unsupported (no evidence quoted) while the citation check, on the same passage, said the passage "explicitly states" them. Two jobs seeing different slices of the same text can disagree.
+3. **Correctness (R25, R05, R08, R12):** the disagreements were about partial answers. Our rubric (full, partly, no) had never been written down precisely. The owner settled it: *full* = the key facts of the expected answer, including the cause when the expected answer has one (for "How did Parikshit die?" the curse is needed); *partly* = right idea or entity but a key part missing or hedged; *no* = wrong, or a refusal on an answerable question. That matches what the judge already did, so the judge's correctness instructions were not changed.
+4. **R10, a lesson in standards:** the judge rejected "the vow was taken so he would have no children who could claim the throne". The passage states the vow, not its purpose. True in the story, not in the passage. The owner agreed the judge was right. A model need not repeat a passage word for word, but a purpose or reason added on top of the stated fact goes past "directly implied".
+5. **The owner's retrieval notes (kept for Phase 3):** the right section was often retrieved with the wrong paragraph (R05, R08, R12); R25's top-1 chunk was irrelevant; chunk boundaries cut off the key line (R20, R01).
+
+**The fixes (only the "Names" rule in `src/rag/judge.py` changed; one variable at a time; the same 12 cached answers re-scored each time)**
+| Fix | Change | Why |
+|---|---|---|
+| **1** | Names rule: different names of one person match when the passage makes it clear or the alias is well known | R08, R20 |
+| **1b** (owner's decision) | Names match **only when the passages show it**; no outside knowledge | keeps "supported" meaning "the retrieved text shows it"; alias gaps become visible retrieval gaps for Phase 3 |
+| **1c** | Spelling variants of one name always match (Hidimba / Hidimva) | 1b wrongly flagged R21; spelling is transliteration, not outside knowledge |
+
+| Judge version | Correctness | All supported | Citations |
+|---|---|---|---|
+| Original | 67% | 89% | 79% |
+| Fix 1 | 67% | 78% | 93% |
+| Fix 1b | 92% | 78% | 79% |
+| **Fix 1c** | **92%** | **89%** | **100%** |
+
+*Caution:* the owner's grades were amended along the way (R25, R08, R12 correctness; R10 sentence 3; R08 and R20 citations), each time after seeing the judge's reason and with the blind originals kept (`eval/calibration_grades.md` vs `eval/calibration_grades_amended.md`). So this table is a consistency check, not independent evidence, and the columns are not strictly comparable. Also, the same answer's faithfulness flipped between 1.0, 0.75 and 1.0 (R10) just from rewording the instructions, so a single-item flip is noise.
+
+#### 6b. Calibration 2: the independent test
+**Setup:** 8 fresh answers not used in round 1 (R26, R31, R34, R36, R11, R13, G04, R14), picked by fixed rules in `scripts/pick_round2.py` (judge-flagged answers first, then clean ones, plus one refusal). The judge was fix 1c and was **not tuned on these**. The owner graded blind from `eval/calibration_sheet_round2.md`; grades in `eval/calibration_grades_round2.md`.
+
+**Result before any amendment:** correctness 5 of 8 (62%), all-supported 6 of 7 (86%), citations 11 of 13 (85%). Item 1 citations were left as "?" and excluded. If correctness is reduced to *acceptable (yes or partly) vs wrong (no)*, agreement is 8 of 8 in round 2 and 19 of 20 across both rounds.
+
+**What we saw**
+- **Correctness, the "key fact" boundary, mixed direction:** R13 and R14 (owner partly because the Yadava girl and the chariot were missing; judge 1.0 because "forcible seizure" is the key fact) and R34 (owner yes; judge 0.5 for omitting that Vyasa composed the Mahabharata). The expected answers hold several facts and nothing marks which is *the* key fact, so a 3-level score is inherently fuzzy.
+- **Citation strictness on small descriptors:** R36 ("not stated that he was a monarch") and R11 ("not stated that Parikshit was a king"). The judge's rule that *everything* in the sentence must be backed is stricter than a human reader.
+- **R31, the judge was right and the owner reconsidered:** the claim check passed because passage 5 names Astika and his birth to the snakes' sister; the citation check, seeing only the cited passage [3], marked it not backed. Both are correct: the claim holds across the five passages, but the cited passage alone does not back it.
+- **R34 sentence 2** ("son of the mother of Vichitravirya"): true in the story, but no shown passage names Vichitravirya's mother. The sentence that does was not retrieved.
+
+**Owner amendments after seeing the reasons:** R13 and R14 partly to yes (the owner had compared with the longer expected answer); R31 Supported to yes, citations stay no. R36, R11 and R34 left as disagreements. **After amendment:** correctness 7 of 8 (88%), all-supported 7 of 7 (100%), citations 11 of 13 (85%).
+
+#### 6c. Decision: freeze the judge
+- Agreement is above the 80% bar on all three measures across both rounds, with the known limits listed above (citation check fussy about minor descriptors; "key fact" is a judgement call; R05 correctness and R12 faithfulness unresolved).
+- We did **not** tune the judge on round 2, to keep it an independent test. Fixing round 2's items would require a round 3 to verify.
+- Why a stable imperfect judge is acceptable: in Phase 3 we compare experiments scored by the *same* judge, so a constant bias cancels out. What breaks a comparison is changing the judge mid-way.
+- **Mechanism:** the judge's instructions have a fingerprint (`2578221ecdd4`, `JUDGE_FROZEN_FINGERPRINT` in `config.py`). Every run records its own fingerprint and warns if it differs. Do not change the judge without a new calibration.
+
+**Lessons from calibration**
+- Define the standard before grading: *Correct?* is against the expected answer, while *Supported?* and *Citations* use only the passages. Mixing them was the root of most disagreements.
+- A judge needs explicit handling of names: aliases (only if the passages show it), spelling variants (always), and different people with one name (never merge).
+- Multi-job judges can contradict themselves because each job sees a different slice. Compare their reasons before blaming either.
+- Never let the human grade drift toward the judge unrecorded: keep blind originals and log every amendment with its reason.
+- Do not tune on the test you use to validate. Keep one set untouched.
+
+#### 6d. The official baseline (frozen judge, working set)
+`python scripts/run_generation_eval.py --mode both --save baseline_working_frozen` → `eval/results/gen_baseline_working_frozen.json`. Generator answers came from the cache (same prompts), so only the judge scores changed. Cost about $1.57.
+
+| Metric | End-to-end (30 questions) | Ideal context (24) |
+|---|---|---|
+| Correctness (refusals count 0) | 0.81 | 0.96 |
+| Faithfulness | 0.92 | 0.82 |
+| Citation support | 0.74 | 0.71 |
+| Relevance | 1.00 | 1.00 |
+| Gold text in the passages | 0.67 | 1.00 |
+| Correct refusals / false refusals | 6 of 6 / 1 of 24 | not applicable |
+
+**Versus the provisional run:** correctness and relevance identical; faithfulness 0.93 to 0.92 and 0.88 to 0.82; citation support 0.83 to 0.74 and 0.75 to 0.71. The citation drop is the passages-only name rule doing its job.
+
+**By question type (correctness / faithfulness)**
+| Type | n | End-to-end | Ideal context |
+|---|---|---|---|
+| plain | 5 | 0.70 / 1.00 | 0.80 / 0.93 |
+| paraphrase | 3 | 0.83 / 0.58 | 1.00 / 0.61 |
+| alias | 6 | 1.00 / 1.00 | 1.00 / 0.75 |
+| spelling | 1 | 1.00 / 0.67 | 1.00 / 1.00 |
+| lineage | 4 | 0.62 / 1.00 (1 refusal) | 1.00 / 1.00 |
+| multihop | 2 | 1.00 / 1.00 | 1.00 / 1.00 |
+| ambiguous | 3 | 0.67 / 0.93 | 1.00 / 0.58 |
+
+**Observations**
+1. **Retrieval is the main weakness.** With the gold passages correctness rises from 0.81 to 0.96; end-to-end the gold text reached the model in only 67% of questions. Lineage questions suffer most (0.62 against 1.00); the one false refusal (R25, Karna's father) was a retrieval fault.
+2. **Refusal behaviour is healthy:** 6 of 6 unanswerable questions refused, 1 of 24 answerable wrongly refused.
+3. **Faithfulness is lower with perfect passages (0.92 to 0.82),** concentrated in paraphrase and ambiguous questions. This is not explained yet. Untested hypotheses: with only the gold chunks the model adds claims beyond them; the judge's claim splitting is stricter on longer, richer answers; the name rule bites harder when the answer uses different names from the gold chunk. To be investigated in Phase 3, not assumed.
+4. **Citation support is the weakest metric (0.74 and 0.71).** Part of it is genuine (citations pointing at a passage that holds only part of the sentence), part is the judge's strictness about small descriptors. Read it as a relative measure across experiments, not as an absolute quality score.
+5. **From the end-user view, answers are reasonably good** (owner's reading across both calibration rounds); most failures are missing facts caused by retrieval, not invented ones.
+
+**Phase 3 notes carried from calibration:** right section but wrong paragraph; irrelevant top-1 chunks; key lines cut by chunk boundaries (R20, R01, R26 "And from Drupada wa", and the Satyavati sentence missing for R34); name traps that retrieval must handle (Parikshit vs Parikshita; Vyasa vs Dwaipayana; Hidimba vs Hidimva).
+
+
+#### 6e. Held-out generation baseline (run once)
+Run once with the frozen judge, aggregates only (the held-out set is never inspected question by question). Results, next to the working set:
+
+| Metric | Held-out end-to-end | Held-out ideal | Working end-to-end | Working ideal |
+|---|---|---|---|---|
+| Correctness (refusals count 0) | 0.67 | 0.92 | 0.81 | 0.96 |
+| Correctness when it answered | 0.89 | 1.00 | 0.85 | 0.96 |
+| Faithfulness | 0.89 | 0.97 | 0.92 | 0.82 |
+| Citation support | 0.85 | 0.86 | 0.74 | 0.71 |
+| Gold text in the passages | 0.75 | 1.00 | 0.67 | 1.00 |
+| False refusals | 3 of 12 | 1 of 12 | 1 of 24 | 0 of 24 |
+
+**Observations**
+- **The answers given are good** (correctness when it answered 0.89 end-to-end and 1.00 with gold passages). The lower headline number (0.67) comes from **false refusals**: 3 of 12 end-to-end, and 1 of 12 even when the gold passages were supplied. Retrieval was no worse than on the working set, so this is the generator being over-cautious ("The provided passages do not answer this question") on a few questions it could answer. It is a candidate for the Phase 3 stage on "I don't know" handling.
+- **Retrieval-limited correctness generalises:** ideal context beats end-to-end in both sets. The 2 unanswerable questions were both refused correctly.
+- **The faithfulness dip with gold passages did not repeat** (0.97 here against 0.82 on the working set), so the dip is probably question-specific. Keep it as an open question, not a finding.
+- **Caveat:** 12 questions means one question moves a score by 8 points. Use the held-out numbers to check direction, not size. Do not tune against its failures; it is rerun only at milestones with `--confirm-milestone`.
+
+#### 7. How a run works, shown on one real question: R01 "Who was Sakuntala's mother?"
+Stored label: gold sections 72 and 74; evidence phrases "the Rishi begat on Menaka a daughter named Sakuntala" and "the lewd Menaka is thy mother"; expected answer "Menaka, the celestial Apsara (her father was the sage Viswamitra)."
+
+**7.1 The input part**
+- `eval/retrieval_questions.csv` (the 36; **never edited** for this): `question`, `expected_answer` (the truth for correctness), `gold_sections` and `evidence_phrases` (which chunks to hand over in ideal-context mode, and the "gold found" flag in end-to-end mode), `type` and `split` (grouping, working or held-out protection).
+- **`eval/generation_questions.csv` (planned, does not exist yet):** the ~8 unanswerable questions: `answerable` = no, no gold section, expected result is a refusal, plus a note that a corpus scan confirmed the answer is absent.
+- **Why unanswerable questions are needed:** all 36 have answers, so we could only test how well the model answers, never whether it knows **when not to**. A model that always answers (and invents facts when the passages say nothing) would look fine on the 36. A model that refuses too easily would show only on answerable ones. Unanswerable questions are the only way to measure refusal accuracy and catch hallucination. For the lineage project, a made-up parentage is worse than "I don't know".
+- **Candidate types (none verified):** later events from other parvas; false premises; details the book never states; things outside the text.
+- **The catch:** the book's summary passages (Sections 1, 2, 95) mention events from the whole epic, so a "later events" question may be answerable after all. Each one needs a corpus scan before it counts.
+- **System under test:** chunks, embedding cache and retriever (end-to-end passages); generator settings from `config.py` (gemini-3.1-flash-lite, temperature 0, top 5) and the system prompt in `src/rag/generation.py`.
+- **The judge (new):** model name in `config.py` (`gemini-3.5-flash`), plus one fixed instruction per job in `src/rag/judge.py`: correctness, faithfulness, citation support, relevance. Each says what to look at, what to ignore, and the exact reply format.
+- **Calibration set (new):** about 12 answers the user grades by hand, used only to check the judge.
+- **Access:** `GEMINI_API_KEY` in the environment (never printed or committed).
+- **Output:** one saved result file per run in `eval/results/`, with the answer, judge replies and scores per question.
+- **Size of a run:** about 44 questions x 2 modes x 4 judge jobs gives roughly 350 to 500 judge calls (the faithfulness and citation jobs scale with answer length). Check the price first.
+
+**7.2 The steps that do NOT use the judge (plain code)**
+1. **Load the question.** Keep the question and expected answer. Gold sections and phrases are used only to see whether retrieval found the right text. The generator never sees any label.
+2. **Retrieve** the top 5 chunks (end-to-end). Also check by string match whether they contain the evidence phrases, giving a "gold found: yes or no" flag. No model involved. Needed later to explain failures.
+3. **Generate** with the real prompt and `gemini-3.1-flash-lite`. This is the **generator**, the model being tested, not the judge. Illustrative answer: *"Sakuntala's mother was Menaka, an Apsara sent by Indra to disturb Viswamitra's penance [2]. She was born to them and left in the forest [2]."*
+4. **Cheap checks.** Did the answer contain the exact refusal sentence ("The provided passages do not answer this question.")? Does every `[n]` point at an existing passage (the existing `check_citations`)? Code does everything it can before we pay for a model call.
+5. Later: **save** one record per question, then **average** by group (answerable or not, type, working or held-out) and compare the two modes.
+
+**7.3 The steps that use the judge**
+The judge is called only after the generator has answered, and only for work code cannot do ("is this claim supported?"). Four separate calls, each a fresh conversation with only the slice it needs.
+
+*Assumption for this example: passage [2] says Menaka was sent by Indra, that Viswamitra and Menaka had a daughter, and that she was left in the forest. It never uses the word "Apsara".*
+
+1. **Correctness.** Sees question, expected answer, generated answer. Replies: score 1, reason "names Menaka as mother, mentions Viswamitra". Score used as is; the metric is the average of these.
+2. **Faithfulness.** Stage A: from the answer alone, list the claims: (1) mother was Menaka, (2) Menaka was an Apsara, (3) Indra sent her to disturb the penance, (4) born to Menaka and Viswamitra, (5) left in the forest. Stage B: sees passages plus claims, marks each supported or not, with the sentence relied on. Claims 1, 3, 4, 5 supported; claim 2 **not supported** (the word is nowhere in the passages). Score 4/5 = **0.8**. This is how "right from memory" is caught: claim 2 may be true, but the text does not say it.
+3. **Citation support.** Code splits the answer into sentences and finds each `[n]`. Each sentence goes to the judge with only its cited passage. Sentence 1 (cites [2], contains "Apsara"): **no**. Sentence 2: yes. The rule given to the judge: a sentence counts as backed only if everything in it is backed. Score 1/2 = **0.5**.
+4. **Relevance.** Sees question and answer only. Yes, score 1. Refusals are skipped ("I don't know" is not irrelevant, just not an answer).
+
+**Saved record for R01:** correctness 1; faithfulness 0.8 (claim 2 flagged); citation support 0.5 (sentence 1 flagged); relevance 1; not refused and answerable, so fine. Reading: right and relevant, but one outside fact sneaked in and the first citation overreaches. A plain "is it correct?" check would miss exactly this.
+
+**7.4 How does the judge know what is right? (a question the user asked)**
+The judge does **not** decide from its own knowledge and does **not** write an answer of its own. It compares the generator's answer with something we hand it:
+| Check | The "truth" given to the judge | Source |
+|---|---|---|
+| Correctness | the expected answer | our label (Claude-written, script-checked); the only place real-world truth enters |
+| Faithfulness | the five passages | retrieved text: "does the text say this", not "is it true" |
+| Citation support | the one cited passage | same idea, narrower slice |
+| Relevance | nothing but the question | needs language understanding, not facts |
+| Refusal | no judge | string match in code |
+
+- **Risk: the judge's pre-trained knowledge.** It knows the Mahabharata, so it can be too generous (knows Menaka is an Apsara, marks the claim supported although the passages do not say it) or too harsh (remembers a different version of the story and disagrees with our expected answer).
+- **Reducing it:** (1) instructions say use only the material given; (2) the narrowest slice per call; (3) calibration on about 12 answers the user grades, to expose disagreement.
+- **Why not let the judge write its own reference answer:** a second error source we cannot check. Our written expected answers are fixed, so any disagreement can be traced.
+
+**7.5 Keeping the judge honest**
+- Calibration: agreement with the user under about 80% means fix the judge instructions before trusting any score.
+- Same-vendor bias: a Gemini judge may be generous to Gemini answers. Ragas gives a second opinion later.
+- Fixed reply format (JSON) so scores are read by code, not guessed from prose.
+- Judge instructions are frozen once calibrated. Changing them mid-experiment breaks comparisons.
+
+#### Alternatives: how other RAG projects do it
+- **Same everywhere:** the judge recipe (narrow job, right slice, structured reply); faithfulness by splitting into claims (Ragas, DeepEval, TruLens do essentially this, from memory, to be confirmed at the Ragas step); cheap checks in code; averaging by group.
+- **Reference-based vs reference-free:** we check correctness against expected answers we wrote (more careful, costs labelling). Many teams cannot afford that and use reference-free metrics (faithfulness, relevance) plus correctness on a small set.
+- **Answer relevance:** in Ragas, as remembered, it generates questions from the answer and compares them with the original by embedding similarity, not a direct rating. Ours is simpler and more transparent. Confirm when we run Ragas.
+- **Citation support:** less common in general libraries. Research benchmarks for cited answers (for example ALCE) measure it. We need it because lineage claims must be traceable.
+- **Pairwise judging:** "which of these two answers is better?" is often more reliable for comparing versions. Ours scores single answers, which fits one-change-at-a-time.
+- **Cheaper faithfulness checkers:** small trained natural-language-inference models instead of a big LLM judge.
+- **Production monitoring:** sampling live traffic and user feedback. Phase 6.
+
+#### Gotchas and open design choices
+- Whether faithfulness Stage A and B are two calls (more reliable, slower) or one.
+- Whether the citation judge gives yes/no or yes/partly/no.
+- Judge pre-trained knowledge leaking in (7.4).
+- Unanswerable questions can be answerable through the summary passages, so scan first (7.1).
+- Unanswerable questions are drafted by Claude and must be reviewed by the user.
+- **Free-tier quota (found while building):** the Gemini key is on the free tier, which allowed only 20 requests per day for the judge model (error 429, "limit: 20", retry in about 13 hours). A full run needs roughly 400 or more judge calls, so the free tier cannot carry this evaluation. The error named `gemini-3.6-flash` although we asked for `gemini-3.5-flash`; unexplained.
+- **Capacity errors (503 "high demand"):** common on both the generator and the judge model; a single call once stayed unavailable for about four minutes. The runner now waits longer between retries (`EVAL_RETRY_WAITS` in `config.py`), and cached replies make a crashed run resumable.
+- **Thinking tokens:** the judge model spends several times more thinking tokens than visible output (3 trial calls: 78 output, 410 thinking), and thinking is billed as output. Costs are higher than the visible reply suggests.
+- **Alias trap in the absence scan:** "Krishna" is also one of Draupadi's own names ("born Krishna (Draupadi)", Section 63), so searching for Krishna-related text finds Draupadi paragraphs. Use Vasudeva, Kesava, Madhava for the god.
+
 ### Decisions
 Made: Claude drafts the questions and the user reviews them; the working / held-out split (24 / 12); approaches and goals above. Assumed unless the user objects: label by section **and** evidence phrase (both columns exist in the file). Done since: gold labels and evidence phrases for all 36 (above). Still open: whether the user adds questions of their own (a quarter of the set in their own words would be ideal; they would go in the separate "added" file).
 
 ---
 
-## Phase 2 retrospective (partial)
+## Phase 2 retrospective (final)
 
-**Status:** the **retrieval half of Phase 2 is complete**; the **generation half is designed but not built** (deferred to the next chat to save context). Finalise this retrospective after the generation evaluation.
+**Rule (also in `CLAUDE.md`):** at the end of every phase I write what worked, what did not, how it compares with standard RAG practice, and what it means for the next phase.
 
-**Done:** evaluation concepts and metrics; 36 labelled questions with a frozen working / held-out split; label checker; five retrieval metrics (tested, hand-verified); retrieval baseline scored (working set, and held-out once, logged). Nothing was fixed: Phase 2 measures, Phase 3 changes things.
+### Verdict
+**Phase 2 is complete as a measurement phase, with one planned step moved.** We can now score the baseline in two separate halves (retrieval and generation), with a judge that was checked against my own grading and then frozen. The baseline numbers are recorded in `EXPERIMENTS.md` and are the reference for every Phase 3 change. **Moved to Phase 3 (the owner's decision):** the Ragas side-by-side comparison. The original plan said to implement the metrics myself first and then compare with Ragas or DeepEval; the first half is done, the comparison now runs alongside the Phase 3 improvements.
 
-**Baseline (strict phrase check, hit@5):** working 0.67 (0.50 without the summary passages), held-out 0.75; MRR@5 0.35 working. Full table in `EXPERIMENTS.md`.
+### What we built
+| Part | What | Where |
+|---|---|---|
+| Question set | 36 labelled answerable questions (24 working, 12 held-out, frozen split) plus 8 unanswerable (6 working, 2 held-out, corpus-scanned) | `eval/retrieval_questions.csv`, `eval/generation_questions.csv`, `eval/README.md` |
+| Retrieval metrics | hit@k, precision, recall, MRR, nDCG; strict phrase check and generous section check; with and without summary passages | `src/rag/metrics.py`, `scripts/run_retrieval_eval.py` |
+| Generation metrics | correctness, faithfulness, citation support, relevance, refusal accuracy; two modes (end-to-end, ideal context) | `src/rag/eval_generation.py`, `src/rag/judge.py`, `scripts/run_generation_eval.py` |
+| Judge | `gemini-3.5-flash`, narrow jobs, JSON replies, calibrated and frozen (fingerprint `2578221ecdd4`) | `src/rag/judge.py`, `config.py` |
+| Calibration tooling | blind sheets and forms, a picker with fixed rules, a comparison script | `scripts/make_calibration_*.py`, `scripts/pick_round2.py`, `scripts/compare_calibration.py`, `eval/calibration_*` |
+| Safeguards | held-out locked behind `--confirm-milestone` and logged; disk cache of model replies; judge fingerprint recorded in every run; 28 generation-evaluation tests | `eval/heldout_runs.log`, `data/cache/gen_eval/` |
 
-**What worked:** script checks on every label; the held-out set locked inside the tool and every run logged; recomputing metrics by hand; reporting both a generous and a strict check; spotting the summary-passage effect early.
-**What did not / surprises:** my first question draft clustered in the middle of the book (5 of 36 early); reading the text exposed wrong wording in three questions (R07, R26, R36); all labels have one author (me), script-checked only; sets are small (a held-out question is 8 points).
+### The baseline in numbers (Phase 1 pipeline, nothing tuned)
+| | Working set | Held-out |
+|---|---|---|
+| Retrieval: hit@5, strict phrase | 0.67 (16 of 24) | 0.75 (9 of 12) |
+| Retrieval: MRR@5, strict phrase | 0.35 | 0.58 |
+| Correctness, end-to-end | 0.81 | 0.67 |
+| Correctness, ideal context | 0.96 | 0.92 |
+| Faithfulness, end-to-end / ideal | 0.92 / 0.82 | 0.89 / 0.97 |
+| Citation support, end-to-end / ideal | 0.74 / 0.71 | 0.85 / 0.86 |
+| False refusals, end-to-end | 1 of 24 | 3 of 12 |
+| Correct refusals (unanswerable) | 6 of 6 | 2 of 2 |
 
-**Generation evaluation plan (agreed in concept; waiting for the user's "go"):**
-- **Two modes:** end-to-end (real top-5 chunks) and ideal context (gold chunk guaranteed among the five). Wrong end-to-end but right with ideal context means retrieval caused it; wrong in both means generation caused it. Retrieval metrics belong to neither mode; generation metrics are computed in both.
-- **Metrics:** faithfulness (supported claims / all claims), citation support (supported citations / all citations), answer correctness (correct 1, partial 0.5, wrong 0, against the expected answer), answer relevance (yes/no), refusal accuracy (false-refusal rate on answerable, correct-refusal rate on unanswerable; plain string match, no judge). False refusals are split into retrieval-caused and generation-caused using the phrase check.
-- **Question set:** the 36 questions (same split) plus about 8 unanswerable: 3 out of the world, 3 in the epic's world but absent from the Adi Parva, 2 false-premise. Absence must be verified by scanning the corpus (note: Sections 1 and 2 summarise later events such as Karna's death, so those are NOT absent).
-- **Judge:** recommended `gemini-3.5-flash` (stronger than the Flash-Lite generator, not a preview, about $1.50 / $9 per million tokens, unverified); `gemini-3.1-pro-preview` as the second opinion. Same vendor family as the generator (only a Gemini key), so calibrate: check about a dozen judged items against my reading and the second model, report agreement. Temperature 0, rubric, evidence quote with every verdict. A full run costs roughly $2; working set only about half.
-- **Files to build:** `eval/generation_questions.csv`, `src/rag/judge.py`, `src/rag/eval_generation.py`, `scripts/run_generation_eval.py`, `tests/test_eval_generation.py`; reuse the held-out protection and logging.
+### What worked
+- **Separating retrieval from generation, and the two modes.** Comparing end-to-end with ideal context located the problem: correctness jumps from 0.81 to 0.96 (working) and 0.67 to 0.92 (held-out) when the right passages are supplied. Without this split, a retrieval miss would have looked like a "correct refusal".
+- **Checking the judge before trusting it.** Two calibration rounds with blind grading caught real judge problems (name handling, a self-contradiction on R12) and showed the judge was mostly right on faithfulness. Keeping the blind originals and logging every amendment kept the evidence honest.
+- **Keeping one test untouched.** Round 2 was graded on answers the judge was never tuned on, and we did not tune on it afterwards.
+- **Freezing the judge with a fingerprint,** so Phase 3 comparisons cannot silently change the ruler.
+- **The held-out protection.** Held-out run once, aggregates only, logged; no failure inspected.
+- **Caching every model reply,** so re-scoring the same 12 answers after each judge fix cost cents and reruns resumed after crashes.
+- **Script checks on every label** and recomputing metrics by hand before believing them.
+- **Reading the data.** The summary passages (Sections 1, 2, 95) act as magnets for retrieval; spotting this early led to reporting every number with and without them.
 
-**Implications for Phase 3 (hypotheses from the working-set numbers; to be ordered by the generation results too):**
-1. Lineage questions are weakest (phrase hit 1 of 4): try chunking that keeps the sentence stating parentage together, sentence-level or parent-child retrieval, and hybrid keyword search.
-2. Summary passages (Sections 1, 2, 95) act as magnets: consider de-duplication or diversity ranking, and always report with and without them.
-3. Name pairs: alias expansion of the question (Arjuna, Partha, Dhananjaya...).
-4. A bigger k is not a cure: working phrase hit rate goes from 0.67 at k=5 to only 0.75 at k=10.
+### What did not work, or surprised us
+- **The judge needed more care than the pipeline.** Most of the effort went into making the judge's standard explicit, not into building it.
+- **A 3-level correctness score is fuzzy.** Expected answers hold several facts and nothing marks which is "the key fact" (R13/R14 against R34 pulled in opposite directions). Reduced to acceptable-vs-wrong, agreement was 19 of 20 across both rounds; on the 3-level scale it was 62% in round 2 before amendments.
+- **My own grades drifted toward the judge.** Several of the owner's grades were amended after seeing the judge's reasons. Each was logged, but the agreement figures from round 1 are a consistency check, not independent proof.
+- **Judge variance is real.** The same answer's faithfulness flipped 1.0, 0.75, 1.0 (R10) from rewording alone. Single-item flips are noise.
+- **Small sets.** One held-out question is 8 points. Use held-out for direction, not size.
+- **Labels have one author** (Claude, script-checked, delegated by the owner), so they reflect that author's view.
+- **Unexplained:** on the working set, faithfulness and citation support were *lower* with perfect passages (0.92 to 0.82, 0.74 to 0.71). The held-out set did not repeat the faithfulness dip (0.89 to 0.97). Not investigated.
+
+### Findings that shape Phase 3
+1. **Retrieval is the bottleneck.** Gold text reached the model in only 67% (working) and 75% (held-out) of questions. Lineage questions suffer most (correctness 0.62 end-to-end against 1.00 with gold passages).
+2. **Concrete retrieval failures found by hand** (from the owner's calibration notes): right section but wrong paragraph (R05, R08, R12); irrelevant top-1 chunk (R25); chunk boundaries cutting the key line (R20, R01, R26 "And from Drupada wa", the sentence naming Satyavati for R34).
+3. **Name traps the system must handle:** Parikshit vs Parikshita (R08), Vyasa vs Dwaipayana (R20), Hidimba vs Hidimva (R21), "the king" without a name.
+4. **Over-cautious refusing:** 3 of 12 false refusals end-to-end on held-out, and 1 of 12 even with the gold passages.
+5. **Healthy where it matters:** every unanswerable question (8 of 8 across both sets) was correctly refused, and answers that were given were mostly good (correctness when answered 0.85 working, 0.89 held-out).
+
+### Mistakes along the way (and the lesson from each)
+- I described the calibration set as if it existed when no file or script had produced it yet. **Lesson:** say "planned, not built" plainly.
+- The round 2 form links did not open for the owner and the HTML preview would not render. **Lesson:** have a plain-text fallback ready when sharing a form.
+- `scripts/rebuild_all.sh` aborted because of a `| head` pipe under `set -e`. **Lesson:** a pipe that closes early is a failure in strict shells.
+- My first rewrite of a `LEARNING.md` section silently dropped a neighbouring block. **Lesson:** diff before pushing an edit to a shared document.
+- The first explanation of how the final metric numbers are computed confused the reader (answers vs claims in the denominator). **Lesson:** show the arithmetic on a real number (0.81) before describing the rule.
+- Tuning the judge and validating it on the same items would have overfit. **Lesson:** keep a second, untouched test.
+
+### How this compares with standard RAG practice
+(Statements about other projects are from general knowledge, not checked against sources.)
+| Common practice | Where I am |
+|---|---|
+| Separate retrieval and generation evaluation | Done |
+| Reference-based correctness plus reference-free faithfulness and relevance | Done (own implementation) |
+| Claim-level faithfulness (split into claims, verify each) | Done |
+| Judge model checked against human grades; about 80% agreement is a common rule of thumb | Done, two rounds, small samples |
+| A held-out set kept for milestones | Done |
+| Unanswerable questions to test refusal and hallucination | Done (8 questions) |
+| Oracle or ideal-context run to separate retrieval from generation faults | Done (own design, not a library feature) |
+| Compare with an off-the-shelf evaluation library (Ragas, DeepEval) | **Moved to Phase 3** |
+| Larger, multi-author question set; confidence intervals | Not yet; sets are small and single-author |
+| Cost and latency tracking | Judge cost logged per run; no latency measurement yet (Phase 6) |
+
+### Implications for Phase 3
+Order of work, with the evidence for each. One change at a time, scored on the working set each time with the frozen judge; held-out only at milestones.
+1. **Retrieval first** (the biggest gap). Candidates, matched to the failures above: chunking that keeps parentage statements and their context together (structure-aware, sentence-level or parent-child); hybrid keyword plus meaning search for names; query expansion for aliases; reranking; diversity ranking against near-duplicates and summary-passage magnets.
+2. **Generation behaviour second:** the false-refusal rate (prompt and "I don't know" handling), judged on the working set only.
+3. **Ragas alongside,** run on the same answers as our own metrics, to compare definitions and results; this is the step moved out of Phase 2.
+4. **Open questions to investigate, not assume:** the ideal-context faithfulness dip on the working set; whether citation strictness on minor descriptors (R36, R11) distorts the citation number.
+5. **Rules that stay:** do not change the judge without a new calibration (the runner warns if the fingerprint differs); never tune against held-out failures; report retrieval numbers with and without the summary passages.
+
+### Carried over
+Ragas comparison; the owner's list of retrieval observations (above); R05 correctness and R12 faithfulness remain judge disagreements; Item 1 citations in round 2 were left as "?" and excluded; the page web address in citations is still pending; prices quoted from third-party sources are unverified; the session-start hook for Graphify and claude-mem has not yet been seen running on a fresh cloud session.
 
 ---
 
