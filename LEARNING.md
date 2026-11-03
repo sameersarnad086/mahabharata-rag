@@ -934,21 +934,25 @@ Status: **built, calibrated and run: the judge is frozen (sections 6a to 6c) and
 | **Citation support** | Each `[n]` really backs the sentence it sits on | one **sentence** of the answer and **only the passage(s) it cites**. Code finds the sentences and markers. | backed sentences / cited sentences |
 | **Relevance** | The answer addresses the question asked | the **question** (CSV) and the generator's answer | 1 / 0, refusals left out |
 
-**How each judge metric becomes the final number (two steps: score each answer, then average)**
-| Metric | Step 1: score one answer | Step 2: average over | Final number from the baseline (end-to-end, working set) |
+**How each judge metric becomes the final number**
+Every judge metric is built in two steps.
+1. **Score each answer on its own.** Each answer gets one number from 0 to 1.
+2. **Add up those numbers and divide by the number of answers.** Each answer counts once, so a long answer carries the same weight as a short one.
+
+| Metric | Step 1: the score of one answer | Step 2: add up, divide by | Final number (baseline, end-to-end, working set) |
 |---|---|---|---|
-| **Correctness** | the judge's verdict, 1, 0.5 or 0. A refusal on an answerable question is set to 0 by code (the judge is not asked). | the **24 answerable** questions | **0.81** = (17 x 1 + 5 x 0.5 + 2 x 0) / 24 = 19.5 / 24 = 0.8125 |
-| **Correctness, when it answered** | same | the **23** answerable questions that were not refused (R25 left out) | 19.5 / 23 = 0.848, shown as **0.85** |
-| **Faithfulness** | supported claims / all claims in that answer | the **23** answers that were given (a refusal has no claims) | 21.22 / 23 = 0.922, shown as **0.92** |
-| **Citation support** | backed cited sentences / all cited sentences in that answer | the same **23** answers | 17.0 / 23 = 0.739, shown as **0.74** |
+| **Correctness** | the judge's verdict: 1, 0.5 or 0. A refusal on an answerable question is set to 0 by code. | the **24** answerable questions | **0.81**: 17 answers x 1 + 5 x 0.5 + 2 x 0 = 19.5, and 19.5 / 24 = 0.8125 |
+| **Correctness, when it answered** | same verdicts | the **23** questions that were not refused | 19.5 / 23 = 0.848, shown as **0.85** |
+| **Faithfulness** | supported claims / all claims **in that answer** (R21: 4 of 6 = 0.67) | the **23** answers that were given | **0.92**: 19 answers scored 1.0 and 4 scored lower (together 2.22), so the 23 scores add up to 21.22, and 21.22 / 23 = 0.922 |
+| **Citation support** | backed cited sentences / all cited sentences **in that answer** (R10: 2 of 3 = 0.67) | the same **23** answers | **0.74**: 14 answers scored 1.0 and 9 scored lower (together 3.0), so the scores add up to 17.0, and 17.0 / 23 = 0.739 |
 | **Relevance** | 1 if the answer tries to answer the question, else 0 | the 23 answered, answerable questions | 23 / 23 = **1.00** |
 
-- **Where the 0.81 comes from, concretely:** of the 24 answerable questions, 17 scored 1 (fully correct), 5 scored 0.5 (partly), and 2 scored 0. The two zeros are R25 (a refusal, because retrieval missed the Surya passage) and R05 (the answer said the passages did not say who set the fire). The 0.81 is a plain average, so a partly correct answer counts half.
-- **Why two correctness numbers:** 0.81 punishes refusals (R25 counts as 0), 0.85 shows how good the answers are when the system does answer. The gap between them is the cost of refusing.
-- **The same arithmetic in ideal context:** 22 x 1 + 2 x 0.5 = 23 over 24 answerable = 0.958, shown as **0.96**. No refusals, so only one correctness number applies.
-- **Per-answer examples for faithfulness and citations:** R21 had 6 claims and the judge found 4 supported, so its faithfulness is 4 / 6 = 0.67. R10 had 3 cited sentences and the judge found 2 backed, so its citation support is 2 / 3 = 0.67. Each of those answers then counts as one value in the average, however many claims it had.
-- **Why the denominator is 23 (answers), not the number of claims:** there are two layers. Inside one answer the fraction counts *claims* (R21: 4 of 6). Across the run the final number averages those fractions over *answers* (23 of them). One answer is one vote, however many claims it holds. The alternative is to **pool** every claim from every answer into one fraction. For the baseline, pooled faithfulness is 65 supported of 71 claims = 0.915 (against 0.92 averaged over answers), and pooled citation support is 28 backed of 38 cited sentences = 0.737 (against 0.74). In ideal context pooled faithfulness is 63 of 74 = 0.85 (against 0.82), because the answers with many unsupported claims were short. We use the per-answer average so that a long answer cannot dominate; it is also how the code is written (`summarise` in `src/rag/eval_generation.py`). Keep the choice fixed across experiments so comparisons stay fair.
-- **Why this matters:** an average hides the spread. For faithfulness, 19 of the 23 answers scored a perfect 1.0, and the 0.92 is pulled down by a few answers. For citations only 14 of 23 scored 1.0. When a number moves between experiments, check which answers changed.
+- **The 23 and the 24 count answers, not claims.** One answer with many claims is still one score in step 2. A small made-up example: if 22 answers scored 0.67 and one scored 0.90, the faithfulness is (22 x 0.67 + 0.90) / 23 = 15.64 / 23 = 0.68.
+- **Where the 0.81 comes from:** of the 24 answerable questions, 17 were fully correct, 5 partly correct (worth half) and 2 scored zero. The two zeros are R25 (a refusal, because retrieval missed the Surya passage) and R05 (the answer said the passages did not say who set the fire).
+- **Two correctness numbers:** 0.81 punishes refusals (R25 counts as 0); 0.85 shows how good the answers are when the system does answer. The gap between them is the cost of refusing.
+- **Ideal context, same arithmetic:** 22 x 1 + 2 x 0.5 = 23, and 23 / 24 = 0.958, shown as **0.96**.
+- **The alternative, pooling:** add up every claim from every answer and divide once (baseline faithfulness would be 65 of 71 = 0.915; citations 28 of 38 = 0.737). We use the per-answer average (the code is `summarise` in `src/rag/eval_generation.py`) so one long answer cannot dominate. Keep this choice fixed across experiments.
+- **An average hides the spread.** When a number moves between experiments, check which answers changed.
 - **Rounding:** the log prints two decimals, so 0.8125 appears as 0.81.
 
 **Metrics computed by plain code (no AI)**
