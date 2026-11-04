@@ -1,57 +1,57 @@
 <!doctype html><html><head><meta charset="utf-8">
 <style>
-@page { size: 1080px 1350px; margin: 0 }
+@page { size: 1080px 1080px; margin: 0 }
 :root{--bg:#F1F3EE;--ink:#13262B;--muted:#5B6B6E;--teal:#1F6F78;--accent:#B5382A;--panel:#E8ECE7;--line:#C9D1CC}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg)}
 body{font-family:'Inter',sans-serif;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.slide{width:1080px;height:1350px;padding:80px 80px 72px;display:flex;flex-direction:column;page-break-after:always;position:relative;overflow:hidden;
+.slide{width:1080px;height:1080px;padding:56px 72px 48px;display:flex;flex-direction:column;page-break-after:always;position:relative;overflow:hidden;
  background-color:var(--bg);
  background-image:linear-gradient(rgba(31,111,120,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(31,111,120,.06) 1px,transparent 1px);
  background-size:60px 60px}
 .hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:30px}
-.lab{display:flex;align-items:center;gap:22px;font-size:32px;letter-spacing:.3em;text-transform:uppercase;color:var(--teal);font-weight:500;line-height:1.5;padding-top:6px}
+.lab{display:flex;align-items:center;gap:22px;font-size:29px;letter-spacing:.3em;text-transform:uppercase;color:var(--teal);font-weight:500;line-height:1.5;padding-top:6px}
 .lab::before{content:"";width:46px;height:3px;background:var(--teal);flex:none}
-.who{text-align:right;font-size:34px;line-height:1.35;white-space:nowrap}
+.who{text-align:right;font-size:31px;line-height:1.35;white-space:nowrap}
 .who b{display:block;font-weight:500;color:var(--ink)}
-.who span{color:var(--teal);font-size:30px}
-.body{flex:1;display:flex;flex-direction:column;gap:30px;padding-top:56px}
+.who span{color:var(--teal);font-size:28px}
+.body{flex:1;display:flex;flex-direction:column;gap:20px;padding-top:30px}
 h1,h2{font-weight:700;line-height:1.12;letter-spacing:-.01em}
-h1{font-size:112px;line-height:1.05}
-h2{font-size:68px}
+h1{font-size:103px;line-height:1.05}
+h2{font-size:63px}
 .t{color:var(--teal)}
 .a{color:var(--accent)}
 .rule{width:130px;height:4px;background:linear-gradient(90deg,var(--teal),transparent);flex:none}
-.eyebrow{font-size:32px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
-.lede{font-size:46px;line-height:1.4;color:var(--muted)}
+.eyebrow{font-size:29px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:43px;line-height:1.4;color:var(--muted)}
 .lede b{color:var(--ink);font-weight:600}
-.cta{font-size:39px;letter-spacing:.06em;color:var(--teal)}
-ul{list-style:none;display:flex;flex-direction:column;gap:20px}
-li{font-size:44px;line-height:1.3;padding-left:34px;position:relative;color:var(--ink)}
+.cta{font-size:36px;letter-spacing:.06em;color:var(--teal)}
+ul{list-style:none;display:flex;flex-direction:column;gap:16px}
+li{font-size:40px;line-height:1.3;padding-left:34px;position:relative;color:var(--ink)}
 li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;border-radius:50%;background:var(--teal)}
-.card{border:1.5px solid var(--line);background:rgba(255,255,255,.55);border-radius:20px;padding:30px 32px}
-.card .k{font-size:29px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:600;margin-bottom:8px}
-.card .v{font-size:38px;line-height:1.3}
+.card{border:1.5px solid var(--line);background:rgba(255,255,255,.55);border-radius:18px;padding:20px 26px}
+.card .k{font-size:27px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:600;margin-bottom:8px}
+.card .v{font-size:35px;line-height:1.3}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.big{font-weight:800;font-size:268px;line-height:.9;color:var(--teal);letter-spacing:-.03em}
+.big{font-weight:800;font-size:210px;line-height:.9;color:var(--teal);letter-spacing:-.03em}
 .bars{display:flex;flex-direction:column;gap:26px}
-.bl{font-size:37px;color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
-.bl b{color:var(--ink);font-size:54px}
-.track{height:48px;background:var(--panel);border-radius:8px}
-.fill{height:48px;border-radius:8px}
-.q{border-left:5px solid var(--accent);padding:4px 0 4px 26px;font-size:41px;line-height:1.35}
+.bl{font-size:34px;color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.bl b{color:var(--ink);font-size:49px}
+.track{height:40px;background:var(--panel);border-radius:8px}
+.fill{height:40px;border-radius:8px}
+.q{border-left:5px solid var(--accent);padding:4px 0 4px 26px;font-size:38px;line-height:1.35}
 .mono{font-family:'DejaVu Sans Mono',monospace}
 .steps{display:flex;flex-direction:column;gap:22px}
 .s{display:flex;gap:26px;align-items:flex-start}
-.s .n{font-weight:700;font-size:49px;color:var(--teal);width:54px;line-height:1.1}
-.s .x{font-size:41px;line-height:1.35}
+.s .n{font-weight:700;font-size:45px;color:var(--teal);width:44px;line-height:1.1}
+.s .x{font-size:38px;line-height:1.35}
 .chain{display:flex;flex-direction:column}
-.st{display:flex;align-items:center;gap:24px;padding:20px 0;border-bottom:1.5px solid var(--line);font-size:44px}
-.st .n{font-family:'DejaVu Sans Mono',monospace;color:var(--teal);font-size:32px;width:52px}
+.st{display:flex;align-items:center;gap:24px;padding:9px 0;border-bottom:1.5px solid var(--line);font-size:40px}
+.st .n{font-family:'DejaVu Sans Mono',monospace;color:var(--teal);font-size:29px;width:52px}
 .st.last{border-bottom:none}
-.ask{border:1.5px solid var(--teal);border-radius:18px;padding:24px 30px;background:rgba(31,111,120,.07);font-size:39px;line-height:1.4}
+.ask{border:1.5px solid var(--teal);border-radius:18px;padding:24px 30px;background:rgba(31,111,120,.07);font-size:36px;line-height:1.4}
 .ask b{color:var(--teal)}
-.tags{font-size:32px;color:var(--muted);line-height:1.5}
+.tags{font-size:29px;color:var(--muted);line-height:1.5}
 </style></head><body>
 
 <!-- 1 -->
@@ -59,7 +59,7 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
  <div class="hdr"><div class="lab">Mahabharata RAG</div><div class="who"><b>Sameer Sarnad</b><span>Building AI Products</span></div></div>
  <div class="body">
   <div class="eyebrow">Building Mahabharata RAG</div>
-  <h1 style="font-size:100px">Simplest possible RAG configuration on the <span class="t">Mahabharata.</span></h1>
+  <h1 style="font-size:92px">Simplest possible RAG configuration on the <span class="t">Mahabharata.</span></h1>
   <div class="rule"></div>
   <p class="lede">I ran it on the Adi Parva. Here's what it exposed.</p>
   <p class="cta">Here's what happened &rarr;</p>
@@ -87,7 +87,7 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
  <div class="hdr"><div class="lab">The result</div><div class="who"><b>Sameer Sarnad</b><span>Building AI Products</span></div></div>
  <div class="body">
   <div class="big">0.81</div>
-  <h2 style="font-size:61px">Correctness on 24 hand-labelled questions.</h2>
+  <h2 style="font-size:56px">Correctness on 24 hand-labelled questions.</h2>
   <div class="rule"></div>
   <p class="lede">It also refused every question the text cannot answer.</p>
   <p class="lede"><b>A reasonable start, right?</b> <span class="t" style="font-weight:600">But it exposed many things.</span></p>
@@ -97,7 +97,7 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
 <!-- 4 -->
 <section class="slide">
  <div class="hdr"><div class="lab">What it exposed &middot; 1</div><div class="who"><b>Sameer Sarnad</b><span>Building AI Products</span></div></div>
- <div class="body" style="gap:26px;padding-top:36px">
+ <div class="body" style="gap:16px;padding-top:24px">
   <h2>The Adi Parva is a complex form of <span class="t">storytelling.</span></h2>
   <div class="rule"></div>
   <div class="grid2">
@@ -106,7 +106,7 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
    <div class="card"><div class="k">Stories inside stories</div><div class="v">A narrator retelling a lineage ten generations back</div></div>
    <div class="card"><div class="k">One life, scattered</div><div class="v">Birth, family and deeds in different sections</div></div>
   </div>
-  <p class="lede" style="font-size:39px">Know your corpus before you index it. Chunks cannot see any of this, so the information has to be organised first: entity resolution, a knowledge graph, GraphRAG.</p>
+  <p class="lede" style="font-size:36px">Know your corpus before you index it. Chunks cannot see any of this, so the information has to be organised first: entity resolution, a knowledge graph, GraphRAG.</p>
  </div>
 </section>
 
@@ -128,14 +128,14 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
 <!-- 6 -->
 <section class="slide">
  <div class="hdr"><div class="lab">What it exposed &middot; 3</div><div class="who"><b>Sameer Sarnad</b><span>Building AI Products</span></div></div>
- <div class="body" style="gap:22px;padding-top:36px">
-  <h2 style="font-size:61px">A good score can hide a weak stage.</h2>
+ <div class="body" style="gap:14px;padding-top:24px">
+  <h2 style="font-size:56px">A good score can hide a weak stage.</h2>
   <div class="rule"></div>
-  <p class="lede" style="font-size:39px">I read the passages behind 12 graded answers:</p>
+  <p class="lede" style="font-size:36px">I read the passages behind 12 graded answers:</p>
   <div class="q">Right section, wrong paragraph.</div>
   <div class="q">An irrelevant passage ranked #1.</div>
-  <div class="q">The key sentence cut off at a chunk boundary: <span class="mono a" style="font-size:37px">&ldquo;And from Drupada wa&hellip;&rdquo;</span></div>
-  <div class="ask" style="font-size:37px"><b>Why it matters:</b> when retrieval misses, the model refuses questions it could answer. Karna's father: the passage naming him never reached it.</div>
+  <div class="q">The key sentence cut off at a chunk boundary: <span class="mono a" style="font-size:34px">&ldquo;And from Drupada wa&hellip;&rdquo;</span></div>
+  <div class="ask" style="font-size:34px"><b>Why it matters:</b> when retrieval misses, the model refuses questions it could answer. Karna's father: the passage naming him never reached it.</div>
  </div>
 </section>
 
@@ -151,14 +151,14 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
    <div class="s"><div class="n">3</div><div class="x">Causes: name aliases and spelling variants. Fixed one change at a time.</div></div>
    <div class="s"><div class="n">4</div><div class="x">Re-tested on fresh answers, then froze the judge.</div></div>
   </div>
-  <p class="lede" style="font-size:39px">A judge you have not checked is just another guess.</p>
+  <p class="lede" style="font-size:36px">A judge you have not checked is just another guess.</p>
  </div>
 </section>
 
 <!-- 8 -->
 <section class="slide">
  <div class="hdr"><div class="lab">Where this goes</div><div class="who"><b>Sameer Sarnad</b><span>Building AI Products</span></div></div>
- <div class="body" style="gap:22px;padding-top:36px">
+ <div class="body" style="gap:14px;padding-top:24px">
   <h2>Now I have a baseline <span class="t">to beat.</span></h2>
   <div class="rule"></div>
   <div class="chain">
@@ -168,7 +168,7 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
    <div class="st"><span class="n">04</span>Query rewriting</div>
    <div class="st last"><span class="n">05</span>GraphRAG for lineages</div>
   </div>
-  <p class="lede" style="font-size:37px">One change at a time, each measured against the same frozen judge.</p>
+  <p class="lede" style="font-size:34px">One change at a time, each measured against the same frozen judge.</p>
   <div class="ask"><b>Starting at a baseline was a good approach.</b> Did you apply strategies directly to your solution, or have you tried it this way?</div>
  </div>
 </section>
@@ -181,9 +181,9 @@ li::before{content:"";position:absolute;left:0;top:.62em;width:12px;height:12px;
   <div class="rule"></div>
   <p class="lede">What would you try first?</p>
   <div class="card" style="padding:34px 38px;display:flex;flex-direction:column;gap:18px;background:rgba(31,111,120,.06);border-color:var(--teal)">
-   <p style="font-size:37px;line-height:1.4"><b class="t" style="font-weight:600">Mahabharata RAG</b> &mdash; a baseline-first RAG build over the Adi Parva, measured at every step.</p>
-   <p style="font-size:37px;line-height:1.4;color:var(--muted)">Every post in this series is a real decision or lesson from building it.</p>
-   <p style="font-size:41px;color:var(--teal);font-weight:600;letter-spacing:.03em">Follow to get them all &rarr;</p>
+   <p style="font-size:34px;line-height:1.4"><b class="t" style="font-weight:600">Mahabharata RAG</b> &mdash; a baseline-first RAG build over the Adi Parva, measured at every step.</p>
+   <p style="font-size:34px;line-height:1.4;color:var(--muted)">Every post in this series is a real decision or lesson from building it.</p>
+   <p style="font-size:38px;color:var(--teal);font-weight:600;letter-spacing:.03em">Follow to get them all &rarr;</p>
    <p class="tags">#RAG #LLM #GenAI #AIEngineering</p>
   </div>
  </div>
