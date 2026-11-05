@@ -37,7 +37,7 @@ Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules),
 ## Environment checklist (lives outside the repo)
 - **Secret:** `GEMINI_API_KEY` set as an environment variable in the cloud environment settings (never in files).
 - **Network allowlist:** `sacred-texts.com` (source text) and `huggingface.co` (embedding model download) must be allowed. Google's API and PyPI already work.
-- **A fresh session has an empty disk** (raw pages, vectors, installed packages are gone). Rebuild with `bash scripts/rebuild_all.sh` (about 6 to 8 minutes).
+- **A fresh session has an empty disk** (raw pages, vectors, installed packages are gone). Rebuild with `bash scripts/rebuild_all.sh` (about 6 to 8 minutes; about 2 minutes on the fallback path below). **If sacred-texts.com is blocked (Cloudflare 403), the script falls back to `data_seed/paragraphs.jsonl`** (see the 2026-11-05 note at the end).
 - Git identity: `sameersarnad086`, `190245750+sameersarnad086@users.noreply.github.com`.
 
 ## Map of the code
@@ -96,3 +96,10 @@ All tunables are in `config.py`.
 - **Paused:** automatic Drive uploads by Claude (they cost about 80,000 tokens for LEARNING.md and the Drive tools cannot edit file contents). Drive folder "Mahabharata RAG notes (backups)" holds full copies of HANDOFF, EXPERIMENTS and QUESTION_LOG from 2026-11-05; LEARNING.md was saved manually by the owner.
 - **Routine now:** keep committing and pushing to the Git branch as usual. **After every push, remind the owner to download the latest notes files that changed in that push** (name them: LEARNING.md, HANDOFF.md, EXPERIMENTS.md, QUESTION_LOG.md) and save them manually. Send the changed files with SendUserFile if it helps.
 - The repo is still public (open question: make it private). Only upload to Drive again if the owner asks.
+
+## Update 2026-11-05 (sacred-texts.com blocked; offline fallback added)
+- **Problem:** sacred-texts.com returned HTTP 403 (Cloudflare bot check, header `cf-mitigated: challenge`) in a cloud session, so the download failed. The host was on the allowlist; the block is on the site's side. We do not try to get around it.
+- **Fix:** the cleaned text is committed at `data_seed/paragraphs.jsonl` (1,306 paragraphs, about 1.5 MB; `data_seed/README.md` explains the origin). `scripts/rebuild_all.sh` now tries the download; if it fails, or fewer than 237 pages are present, it copies the seed into `data/processed/` and continues with chunking and embedding. It prints a line starting `>>> PATH:` saying which path it took. `RAG_SKIP_DOWNLOAD=1` forces the fallback with no request to the website. Raw pages (96 MB) and other generated data are not committed.
+- **Checked:** re-ingesting the raw pages gives a file byte-identical to the seed. Fallback from empty `data/` gives 1,306 paragraphs, 1,670 chunks, embeddings (1670, 384). Baseline reproduced: strict phrase hit@5 = 0.67 (16/24), MRR@5 = 0.35; 66 tests pass (9 + 28 + 4 + 18 + 7).
+- **Gotcha:** the downloader asks for page 238 expecting a 404 as the end marker; behind the block that request returns 403, which prints a traceback. The script handles it (it checks the 237 pages are present), so the traceback in the log is harmless when pages exist.
+- **Next:** Phase 3, retrieval first. Ask the owner which retrieval change to try first; teach the concept before building.
