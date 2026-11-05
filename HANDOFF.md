@@ -89,3 +89,9 @@ All tunables are in `config.py`.
 ## Update 2026-11-03 (Phase 2 closed)
 - **Phase 2 retrospective (final) written** in LEARNING.md. Phase 2 is complete; the Ragas side-by-side moved to Phase 3 (owner's decision), to run alongside the Phase 3 improvements.
 - **Next:** start Phase 3, retrieval first (evidence and candidates listed in the retrospective). Teach the concept before building; one change at a time; score the working set each time with the frozen judge; held-out only at milestones with --confirm-milestone. Ask the owner which retrieval change to try first.
+
+## Drive backup of the private notes (set up 2026-11-05)
+- Drive folder: "Mahabharata RAG notes (backups)" (https://drive.google.com/drive/folders/1QBnxy1uFxM2xkkJ9LqkXxtC24ecv4aIa). The Google Drive tools can create files but cannot edit contents, so backups are dated files.
+- Uploaded as full copies on 2026-11-05: HANDOFF, EXPERIMENTS, QUESTION_LOG. LEARNING.md: the owner saves the full copy manually (base); LEARNING is backed up to Drive from commit `20d0759` on.
+- **Routine (when the owner asks, or at each phase end):** upload new dated files with only what changed since the last marker (for LEARNING.md, the added lines from `git diff <marker> -- LEARNING.md`; the small files can go as full copies). Then update the marker here.
+- **Last Drive backup marker:** commit `20d0759` (2026-11-05).
