@@ -1,5 +1,7 @@
 # HANDOFF.md — read this first in a new chat
 
+> **File locations (2026-11-05):** `LEARNING.md` and the project rules now live in `private/` (`private/LEARNING.md`, `private/CLAUDE.md`). The root `CLAUDE.md` is a one-line stub that imports `private/CLAUDE.md`. If a new session does not seem to follow the project rules (teach first, one variable at a time, update LEARNING.md and EXPERIMENTS.md), read `private/CLAUDE.md` yourself first.
+
 Short status file so a fresh session (or a fresh chat) can continue without the old conversation.
 Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules), `LEARNING.md` (study notes and decisions),
 `EXPERIMENTS.md` (experiment log), `QUESTION_LOG.md` (every question asked, with chunks and verdicts).
@@ -89,3 +91,8 @@ All tunables are in `config.py`.
 ## Update 2026-11-03 (Phase 2 closed)
 - **Phase 2 retrospective (final) written** in LEARNING.md. Phase 2 is complete; the Ragas side-by-side moved to Phase 3 (owner's decision), to run alongside the Phase 3 improvements.
 - **Next:** start Phase 3, retrieval first (evidence and candidates listed in the retrospective). Teach the concept before building; one change at a time; score the working set each time with the frozen judge; held-out only at milestones with --confirm-milestone. Ask the owner which retrieval change to try first.
+
+## Backup of the private notes (owner's decision, 2026-11-05)
+- **Paused:** automatic Drive uploads by Claude (they cost about 80,000 tokens for LEARNING.md and the Drive tools cannot edit file contents). Drive folder "Mahabharata RAG notes (backups)" holds full copies of HANDOFF, EXPERIMENTS and QUESTION_LOG from 2026-11-05; LEARNING.md was saved manually by the owner.
+- **Routine now:** keep committing and pushing to the Git branch as usual. **After every push, remind the owner to download the latest notes files that changed in that push** (name them: LEARNING.md, HANDOFF.md, EXPERIMENTS.md, QUESTION_LOG.md) and save them manually. Send the changed files with SendUserFile if it helps.
+- The repo is still public (open question: make it private). Only upload to Drive again if the owner asks.
