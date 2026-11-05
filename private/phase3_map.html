@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phase 3 map</title>
+<style>
+:root{--bg:#faf8f4;--fg:#1d1b18;--mut:#6b655c;--card:#fff;--line:#d9d2c5;--acc:#9a3b1e;--ok:#2f6b3a;--warn:#a06a00;--tag:#f0e9dc}
+@media (prefers-color-scheme:dark){:root{--bg:#171512;--fg:#ece7de;--mut:#a39b8d;--card:#201d19;--line:#3a352e;--acc:#e0795a;--ok:#7bc58a;--warn:#e0b25a;--tag:#2b2721}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;padding:20px 16px 60px}
+main{max-width:860px;margin:0 auto}h1{font-size:1.5rem;margin:0 0 4px}h2{font-size:1.1rem;margin:28px 0 10px;color:var(--acc)}
+p{margin:6px 0}.mut{color:var(--mut)}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.box{background:var(--tag);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.92rem}
+.box.hot{border-color:var(--acc);font-weight:600}.arrow{color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:7px 6px}th{color:var(--mut);font-weight:600}
+.s{display:inline-block;padding:1px 8px;border-radius:99px;font-size:.78rem;border:1px solid var(--line)}.done{color:var(--ok)}.next{color:var(--acc);font-weight:700}.later{color:var(--mut)}
+ol,ul{margin:6px 0;padding-left:22px}li{margin:3px 0}details{margin:6px 0}summary{cursor:pointer;font-weight:600}
+@media(max-width:560px){th:nth-child(4),td:nth-child(4){display:none}}
+</style></head><body><main>
+<h1>Phase 3 map: where we are and where we're going</h1>
+<p class="mut">Session notes for understanding, not committed to the repo. Source of truth: <code>private/CLAUDE.md</code> (roadmap) and <code>private/LEARNING.md</code> (Phase 2 retrospective).</p>
+
+<h2>1. The goal in one sentence</h2>
+<div class="card"><p><b>Take the baseline RAG apart one stage at a time. For each stage: learn the options, build 2–3, measure each against the baseline, keep the winner.</b> The point is that you can explain every stage and why we chose what we chose, with numbers.</p></div>
+
+<h2>2. The loop we repeat for every stage</h2>
+<div class="card flow">
+<span class="box hot">1 Teach</span><span class="arrow">→</span><span class="box">2 Build 2–3 methods</span><span class="arrow">→</span><span class="box">3 Change ONE thing, score working set</span><span class="arrow">→</span><span class="box">4 Compare with previous result</span><span class="arrow">→</span><span class="box">5 Keep winner, log it</span></div>
+<p class="mut">You choose which methods to build ("ask, don't assume"). Log goes to <code>EXPERIMENTS.md</code>; the lesson goes to <code>LEARNING.md</code>.</p>
+
+<h2>3. The pipeline and what each stage fixes</h2>
+<div class="card flow">
+<span class="box">Ingest</span><span class="arrow">→</span><span class="box hot">Chunk</span><span class="arrow">→</span><span class="box">Embed</span><span class="arrow">→</span><span class="box">Index</span><span class="arrow">→</span><span class="box hot">Retrieve</span><span class="arrow">→</span><span class="box">Rerank</span><span class="arrow">→</span><span class="box">Generate</span></div>
+<p class="mut">Query transformation sits in front of Retrieve (it rewrites the question before searching).</p>
+<table><tr><th>Stage</th><th>Methods to compare</th><th>Baseline problem it targets</th><th>Status</th></tr>
+<tr><td>Ingestion</td><td>HTML cleaning, page-break merging</td><td>Done in Phase 1 (1,306 paragraphs)</td><td><span class="s done">done</span></td></tr>
+<tr><td>Chunking</td><td>Fixed (baseline 1000/200), recursive, sentence, semantic, structure-aware, parent-child</td><td>Chunk edges cut the key sentence (R01, R20, R26, R34); right section, wrong paragraph</td><td><span class="s next">proposed first</span></td></tr>
+<tr><td>Embeddings</td><td>Several models; dense vs BM25 keyword</td><td>Names and spellings (Hidimba/Hidimva, Vyasa/Dwaipayana)</td><td><span class="s later">later</span></td></tr>
+<tr><td>Indexing</td><td>numpy brute force → FAISS (Flat, IVF, HNSW) → a vector database</td><td>No quality gain at 1,670 chunks. Learn speed/memory trade-offs; matters when we add more texts</td><td><span class="s later">later</span></td></tr>
+<tr><td>Retrieval</td><td>top-k, MMR (diversity), metadata filters, hybrid search with RRF</td><td>Near-duplicates and summary passages (Sections 1, 2, 95) fill the top 5</td><td><span class="s later">later</span></td></tr>
+<tr><td>Query transformation</td><td>Rewriting, multi-query, HyDE, decomposition</td><td>Aliases (Partha = Arjuna); multi-hop questions (R31, R32)</td><td><span class="s later">later</span></td></tr>
+<tr><td>Reranking</td><td>Cross-encoder, LLM reranker</td><td>Right section, wrong paragraph. Retrieve ~30, keep best 5</td><td><span class="s later">later</span></td></tr>
+<tr><td>Generation</td><td>Prompt assembly, context order, citations, "I don't know" handling</td><td>False refusals (3 of 12 held-out); citation support 0.74</td><td><span class="s later">later</span></td></tr>
+</table>
+<p class="mut">Order is open: roadmap order, or biggest-failure-first. Both start at chunking because ingestion is done. Ragas runs alongside, after the first couple of changes.</p>
+
+<h2>4. The yardstick (frozen in Phase 2, do not change)</h2>
+<div class="card"><table><tr><th>Measure</th><th>Baseline (working set)</th></tr>
+<tr><td>Retrieval hit@5, strict phrase</td><td>0.67 (16 of 24)</td></tr>
+<tr><td>Retrieval MRR@5</td><td>0.35</td></tr>
+<tr><td>Correctness, end-to-end / ideal context</td><td>0.81 / 0.96</td></tr>
+<tr><td>Faithfulness, end-to-end / ideal</td><td>0.92 / 0.82</td></tr>
+<tr><td>Citation support, end-to-end / ideal</td><td>0.74 / 0.71</td></tr></table>
+<p class="mut">Retrieval gap (0.81 → 0.96 with perfect passages) is why retrieval-side stages come first.</p></div>
+
+<h2>5. Rules that never change</h2>
+<ul><li>One variable at a time; score the working set after each change.</li>
+<li>Held-out set only at milestones, with <code>--confirm-milestone</code>. Never tune on its failures.</li>
+<li>Do not change the judge without a new calibration (fingerprint 2578221ecdd4).</li>
+<li>Report retrieval numbers with and without the summary passages.</li>
+<li>Do not edit eval questions to flatter results.</li></ul>
+
+<h2>6. The whole roadmap (where "types of RAG" live)</h2>
+<div class="card"><table><tr><th>Phase</th><th>What</th><th>Status</th></tr>
+<tr><td>0–1</td><td>Setup, naive baseline RAG</td><td><span class="s done">done</span></td></tr>
+<tr><td>2</td><td>Evaluation harness, calibrated judge</td><td><span class="s done">done</span></td></tr>
+<tr><td><b>3</b></td><td><b>Deep dive: one stage at a time</b></td><td><span class="s next">you are here</span></td></tr>
+<tr><td>4</td><td>Rebuild with a framework (LlamaIndex/LangChain), compare with mine</td><td><span class="s later">later</span></td></tr>
+<tr><td>5</td><td><b>Types of RAG:</b> corrective, Self-RAG, agentic, GraphRAG (knowledge graph from LLM-extracted triples)</td><td><span class="s later">later</span></td></tr>
+<tr><td>6</td><td>Production: latency, cost, caching, re-indexing, tracing</td><td><span class="s later">later</span></td></tr>
+<tr><td>7</td><td>Lineage project: knowledge graph + RAG + family-tree explorer</td><td><span class="s later">later</span></td></tr></table></div>
+
+<h2>7. Next decision</h2>
+<div class="card"><p>Start the chunking stage with a teaching session on all strategies (with examples from our text), then <b>you pick which 2–3 to build and compare</b>.</p></div>
+</main></body></html>

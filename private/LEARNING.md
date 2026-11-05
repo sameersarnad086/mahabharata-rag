@@ -49,7 +49,9 @@ Alternatives → Gotchas → Results.**
         - [6e. Held-out baseline](#6e-held-out-generation-baseline-run-once)
         - [7. How a run works (worked example R01)](#7-how-a-run-works-shown-on-one-real-question-r01-who-was-sakuntalas-mother)
 14. [Phase 2 retrospective (final)](#phase-2-retrospective-final)
-15. [Public post drafts](#public-post-drafts)
+15. [Phase 3 — Deep dive, one stage at a time](#phase-3--deep-dive-one-stage-at-a-time)
+    - [Stage: Chunking — the strategies](#stage-chunking--the-strategies-learning-first-choosing-later)
+16. [Public post drafts](#public-post-drafts)
 
 ---
 
@@ -1385,6 +1387,136 @@ Order of work, with the evidence for each. One change at a time, scored on the w
 
 ### Carried over
 Ragas comparison; the owner's list of retrieval observations (above); R05 correctness and R12 faithfulness remain judge disagreements; Item 1 citations in round 2 were left as "?" and excluded; the page web address in citations is still pending; prices quoted from third-party sources are unverified; the session-start hook for Graphify and claude-mem has not yet been seen running on a fresh cloud session.
+
+---
+
+## Phase 3 — Deep dive, one stage at a time
+
+### What Phase 3 is (and is not)
+**Goal:** take the Phase 1 baseline apart one stage at a time. For each stage: **teach the concept → build 2 or 3 methods → change ONE thing and score the working set → compare with the previous result → keep the winner and log it** (`EXPERIMENTS.md` for numbers, this file for the lesson). The point is that I can explain every stage, and why we chose what we chose, with numbers.
+
+**Not in Phase 3:** the *types* of RAG (corrective, Self-RAG, agentic, GraphRAG) belong to Phase 5. A framework rebuild (LlamaIndex or LangChain) is Phase 4.
+
+**Stages and the baseline problem each one targets:**
+| Stage | Methods to compare | Baseline problem it targets |
+|---|---|---|
+| Ingestion | done in Phase 1 | |
+| Chunking | fixed, recursive, sentence, semantic, structure-aware, parent-child (and sentence window) | chunk edges cutting the key sentence (R01, R20, R26, R34); right section, wrong paragraph |
+| Embeddings | several models; dense vs BM25 keyword | names and spellings (Hidimba/Hidimva, Vyasa/Dwaipayana) |
+| Indexing | numpy brute force, FAISS (Flat, IVF, HNSW), a vector database | no quality gain at 1,670 chunks; learn speed and memory trade-offs for when the corpus grows |
+| Retrieval | top-k, MMR, metadata filters, hybrid with RRF | near-duplicates and summary passages (Sections 1, 2, 95) filling the top 5 |
+| Query transformation | rewriting, multi-query, HyDE, decomposition | aliases (Partha = Arjuna); multi-hop questions |
+| Reranking | cross-encoder, LLM reranker | right section, wrong paragraph (retrieve about 30, keep the best 5) |
+| Generation | prompt assembly, context order, citations, "I don't know" | false refusals; citation support |
+
+**Order:** open. Roadmap order and biggest-failure-first both start at chunking, because ingestion is done. Ragas runs alongside after the first couple of changes (moved from Phase 2).
+
+**Rules that stay:** one variable at a time; held-out only at milestones with `--confirm-milestone`; never tune on held-out failures; frozen judge (fingerprint `2578221ecdd4`); report retrieval with and without the summary passages; do not edit the question set.
+
+**Starting point (2026-11-05):** the data was rebuilt from the committed seed `data_seed/paragraphs.jsonl` because sacred-texts.com returned 403. Baseline reproduced exactly: hit@5 strict phrase 0.67 (16 of 24), MRR@5 0.35, section-level hit@5 0.92.
+
+---
+
+### Stage: Chunking — the strategies (learning first, choosing later)
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive. Taught at overview level, detail still to come: the rest. Nothing is built or measured yet.
+
+#### Concept
+The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
+
+#### What our data looks like (why this matters here)
+- 1,306 paragraphs; median 653 characters, longest 10,838; about 35% are over 1,000 and about 31% under 400.
+- Each paragraph is one block of text with **no line breaks inside it**. Paragraphs are separated by blank lines when joined. So in practice only two kinds of boundary exist for us: paragraph and (inside a paragraph) sentence or word.
+- 297 of the 1,670 baseline chunks span two sections.
+- A real cut in the baseline: chunk 478 (Section 63) ends "…And from Drupada wa", and chunk 479 starts with the same 200 characters (the overlap) and continues "…Drupada was born a daughter Sikhandin…". The overlap rescued this cut, but it also makes near-twin chunks, one reason duplicates fill the top 5.
+
+#### Strategy 1 — Fixed-size (our baseline)
+- **How it works:** join all paragraphs into one long string, cut a 1,000-character window, step forward by 800 (overlap 200), repeat.
+- **Built with:** plain string slicing, no library (`src/rag/chunking.py`).
+- **Disadvantages:** cuts mid-word; mixes sections; loses the speaker in the middle of a long speech; overlap creates duplicates.
+- **Role:** the control. Every other strategy is judged against it.
+
+#### Strategy 2 — Recursive (learned in detail)
+*Written from my own study notes (example setting: `chunk_size = 500`, `chunk_overlap = 50`), with two points checked by running the library, marked below.*
+
+Recursive Character Text Splitting breaks a document using progressively finer separators, then merges the resulting pieces into chunks that fit within the configured size.
+
+**1. Recursive splitting: find logical boundaries.** Default LangChain separator hierarchy: paragraph break, then line break, then space, then single character. The splitter processes the document in its original order:
+1. **Paragraph:** first, split the entire document at paragraph boundaries.
+2. **Line:** if an individual paragraph exceeds the size, recursively split that paragraph into lines.
+3. **Space:** if an individual line still exceeds the size, split it into word-level pieces.
+4. **Character:** final fallback if an individual piece is still oversized.
+
+It does **not** automatically split every paragraph into lines or every line into words. It only moves to a finer separator for pieces that exceed the chunk-size limit.
+
+**2. Merging: build chunks sequentially.** After recursive splitting, the resulting pieces are merged from the beginning of the document:
+- Add the next piece if the combined size stays within the limit.
+- If adding the next piece exceeds the limit, emit the current chunk.
+- Retain approximately the overlap amount using trailing pieces from the previous chunk.
+- Continue merging the remaining pieces.
+
+A chunk can contain multiple paragraphs, or part of one paragraph followed by another. Reaching a paragraph boundary does not automatically finalize a chunk.
+
+**3. Worked example.** A paragraph contains Line 1 (338 characters) and Line 2 (262 characters), total 600, with a 500-character limit:
+- Line 1 + Line 2 = 600, which exceeds the limit.
+- Chunk 1 is emitted with Line 1 (338 characters).
+- Line 2 remains available for the next chunk.
+- Overlap from the previous chunk is retained when constructing the next chunk.
+- If Line 2 itself exceeded 500 characters, it would recursively split at spaces.
+
+**Mental model:** recursive splitting determines **where** to break; merging determines **how much** text goes into each chunk; overlap preserves context across chunk boundaries.
+
+**Implementation nuances:**
+- `chunk_size` is a maximum target, not a requirement to fill exactly the limit.
+- Words are not normally broken to fill the remaining space; character-level splitting is the final fallback.
+- Overlap is approximate because the merge process retains whole pieces rather than extracting an exact substring.
+- Actual output depends on separator retention and the length function (characters by default).
+
+**Two points checked by running the library (`langchain-text-splitters` 1.1.3, 2026-11-05):**
+1. **The leftover of a big paragraph does NOT merge with the next paragraph.** Test: a paragraph of Line 1 (338) and Line 2 (262), then a next paragraph of 101 characters, limit 500. Output: three chunks of 338, 262 and 101. Line 2 and the next paragraph would have fit together (363), but were not joined. A splitter we write ourselves could join them; that would be a design choice, and a separate experiment. My study notes had said the next paragraph "can be merged"; the test shows it is not, in this library.
+2. **Overlap did nothing in that test** (same three chunks with overlap 0 and 50). Overlap keeps whole pieces from the previous chunk, and a 338-character piece is larger than a 50-character overlap, so nothing was kept. It matters only when the pieces being merged are small.
+
+**On our data:**
+- **The default ladder has no sentence level**, and our paragraphs contain no line breaks. So an oversized paragraph drops straight to splitting at **spaces**, which cuts mid-sentence. Test on our longest paragraph (Section 1, 10,838 characters, limit 1,000, no overlap): **11 chunks, 9 of which end without closing punctuation**, for example ending "…When I", "…race of Madhu," and "…imprisoning Krishna". **I had told the owner earlier that sentence ends were part of the ladder; that was wrong for the default.** To cut at sentence ends we must add a sentence separator ourselves. With a full stop added to the ladder the same paragraph gave 13 chunks; the library appeared to move the full stop to the start of the next chunk (to confirm when we build).
+- Only the first chunk of that speech names the speaker. Recursive chunking does not fix that.
+- Because the baseline joined everything into one string, "run it per section" versus "run it over the whole text" is a choice that decides whether chunks cross section boundaries.
+
+**Disadvantages (summary):** still size-driven; with the default separators it cuts mid-sentence in long paragraphs; the speaker is lost in long speeches; whether related sentences end up together is luck.
+**Built with (if we build it):** our own short loop (an ordered separator list, split, merge) so that I can explain it, using the library only as a reference to compare against.
+**Chunks versus failures:** key line cut at a boundary: improved only if a sentence separator is added; sections crossing: depends on running per section; speaker lost: not fixed.
+
+#### Strategy 3 — Sentence-based (overview; detail to come)
+Whole sentences are packed into a chunk up to a target size, so a chunk never ends mid-sentence. Needs a sentence splitter (candidates: NLTK Punkt, pySBD, spaCy; to be checked for currency and tested on our text). Weaknesses: abbreviations and quotation marks in an 1800s translation; very long sentences (chunk 478's list of sons is one sentence joined by semicolons) still need a fallback; ignores paragraph structure.
+
+#### Strategy 4 — Semantic (overview; detail to come)
+Embed each sentence, compare each with the next, start a new chunk where the similarity drops sharply. Needs the embedding model plus numpy, and a threshold (often a percentile of the drops). Weaknesses: genealogy lists make neighbours look alike (huge chunks); dialogue alternates topics (over-splitting); costs an embedding pass over every sentence; published comparisons often show little gain over simpler methods, so to be tested, not assumed.
+
+#### Strategy 5 — Structure-aware / paragraph-based (overview; detail to come)
+Use the text's own units: one chunk per paragraph; merge tiny ones ("Thus endeth the section called Parva-sangraha…", 90 characters); split very long ones at sentence breaks and repeat the speaker as a header ("Dhritarashtra said:"); never cross a section boundary. Works from `paragraphs.jsonl`, which already carries section, sub-parva and position. Weaknesses: very uneven sizes; depends on how well ingestion found paragraph boundaries; the merge and split thresholds are variables of their own.
+
+#### Strategy 6 — Parent-child (overview; detail to come)
+Search small "child" pieces; give the model the larger "parent". Needs a child-to-parent table and a swap step after retrieval. Weaknesses: several children from one parent give duplicates (de-duplicate by parent); large parents use reading space. **Measurement trap:** score the parent text, because that is what the model sees; scoring the child would flatter the result.
+
+#### Strategy 7 — Sentence window (overview; detail to come)
+Embed single sentences; at answer time return each with the sentences before and after. Like parent-child but with a sliding window instead of a fixed parent, so it ignores paragraph structure. Weakness: heavily overlapping windows give duplicates.
+
+#### Side-by-side
+| Strategy | Respects sentences | Respects paragraphs and sections | Keeps the speaker | Extra cost | Main risk |
+|---|---|---|---|---|---|
+| Fixed | no | no | no | none | cuts anywhere |
+| Recursive | only if a sentence separator is added | paragraphs yes | no | none | arbitrary packing; mid-sentence cuts by default |
+| Sentence | yes | no | no | splitter | splitter errors; long sentences |
+| Semantic | yes | no | no | embeds every sentence | unstable; threshold |
+| Structure-aware | on long ones | yes | with a header | rules to tune | uneven sizes |
+| Parent-child | child yes | via parent | via parent | extra lookup | duplicates; scoring |
+| Sentence window | yes | no | partly | extra lookup | duplicates |
+
+#### Alternatives and what comes next
+Libraries mentioned are references only; no frameworks until Phase 4. **Next:** learn strategies 3 to 7 in the same detail as recursive, log each here, then choose which 2 or 3 to build and compare (the owner chooses). Before the first run, confirm that the retrieval scoring does not depend on chunk IDs (it checks the evidence phrase and the gold section), so results from different chunkings are comparable.
+
+#### Gotchas so far
+- I described the recursive ladder with a sentence level; the default has none. **Lesson:** test the library before describing its behaviour.
+- My claim that leftovers do not merge was correct for this library; the owner's study notes said they can. **Lesson:** when two sources disagree, run the code.
+- A pip-installed splitter can differ by version; the checks above were on `langchain-text-splitters` 1.1.3.
 
 ---
 
