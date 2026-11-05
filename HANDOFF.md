@@ -1,5 +1,7 @@
 # HANDOFF.md — read this first in a new chat
 
+> **File locations (2026-11-05):** `LEARNING.md` and the project rules now live in `private/` (`private/LEARNING.md`, `private/CLAUDE.md`). The root `CLAUDE.md` is a one-line stub that imports `private/CLAUDE.md`. If a new session does not seem to follow the project rules (teach first, one variable at a time, update LEARNING.md and EXPERIMENTS.md), read `private/CLAUDE.md` yourself first.
+
 Short status file so a fresh session (or a fresh chat) can continue without the old conversation.
 Update it at the end of every step. Detail lives elsewhere: `CLAUDE.md` (rules), `LEARNING.md` (study notes and decisions),
 `EXPERIMENTS.md` (experiment log), `QUESTION_LOG.md` (every question asked, with chunks and verdicts).

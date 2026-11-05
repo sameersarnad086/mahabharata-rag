@@ -1,6 +1,6 @@
 # whatsnext — Mahabharata RAG (learning project)
 
-See `CLAUDE.md` for goals and working agreement, `LEARNING.md` and `EXPERIMENTS.md` for notes.
+See `EXPERIMENTS.md` for the experiment log.
 
 ```
 config.py                  all tunables
