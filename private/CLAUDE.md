@@ -1,3 +1,5 @@
+RULES-LOADED-MARKER: the project rules from private/CLAUDE.md are loaded.
+
 # Mahabharata RAG — Learning Project
 
 ## Purpose
