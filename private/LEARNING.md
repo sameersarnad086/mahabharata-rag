@@ -1418,7 +1418,7 @@ Ragas comparison; the owner's list of retrieval observations (above); R05 correc
 ---
 
 ### Stage: Chunking — the strategies (learning first, choosing later)
-Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive. Taught at overview level, detail still to come: the rest. Nothing is built or measured yet.
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked) and sentence-based (concept detailed; splitters not yet tested on our text). Taught at overview level, detail still to come: semantic, structure-aware, parent-child, sentence window. Nothing is built or measured yet.
 
 #### Concept
 The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
@@ -1484,8 +1484,60 @@ A chunk can contain multiple paragraphs, or part of one paragraph followed by an
 **Built with (if we build it):** our own short loop (an ordered separator list, split, merge) so that I can explain it, using the library only as a reference to compare against.
 **Chunks versus failures:** key line cut at a boundary: improved only if a sentence separator is added; sections crossing: depends on running per section; speaker lost: not fixed.
 
-#### Strategy 3 — Sentence-based (overview; detail to come)
-Whole sentences are packed into a chunk up to a target size, so a chunk never ends mid-sentence. Needs a sentence splitter (candidates: NLTK Punkt, pySBD, spaCy; to be checked for currency and tested on our text). Weaknesses: abbreviations and quotation marks in an 1800s translation; very long sentences (chunk 478's list of sons is one sentence joined by semicolons) still need a fallback; ignores paragraph structure.
+#### Strategy 3 — Sentence-based / sentence-aware (concept learned; splitters not yet tested)
+*Written from my own study notes (example setting: `chunk_size = 1000`, `chunk_overlap = 200`), with additions from our data marked "Our data" and two checks marked "Checked".*
+
+Sentence-aware chunking identifies complete sentences first, then combines consecutive sentences into chunks that fit within the configured size. Unlike Recursive Character Splitting, it uses linguistic sentence boundaries rather than progressively trying paragraph, line and word separators.
+
+**Step 1 — Split the entire document into sentences.** The sentence tokenizer processes the input text and returns an ordered list of sentences (Sentence 1, Sentence 2, Sentence 3, and so on). Available options:
+
+| Approach | How it works | Considerations |
+|---|---|---|
+| Regex-based | Splits on punctuation such as `.`, `?`, `!` | Simple, but can mistake abbreviations and decimals for sentence boundaries |
+| NLTK | Uses Punkt sentence tokenization | Handles many common abbreviations and sentence patterns |
+| spaCy | Uses a language pipeline to identify sentence boundaries | Can use parser-based or rule-based sentence segmentation |
+| Language-specific tokenizers | Uses segmentation designed for a particular language | Useful for languages with different sentence-boundary conventions |
+| Custom rules | Combines punctuation, abbreviations and domain-specific rules | Requires maintenance and testing |
+
+Common implementations: NLTK `sent_tokenize()` and spaCy's sentence segmentation. (Also on my list for our test: pySBD, a rule-based splitter.)
+
+**Step 2 — Handle oversized sentences.** Each sentence is checked against the 1,000-character limit: 300 characters is retained as one sentence; 800 characters is retained as one sentence; 1,200 characters exceeds the limit. Available options:
+
+| Strategy | How it works | Trade-off |
+|---|---|---|
+| Keep sentence intact | Allow a chunk to exceed the limit | Preserves sentence integrity, but violates the size target |
+| Word-level fallback | Split the sentence at word boundaries | Avoids breaking words, but may split one thought |
+| Recursive fallback | Try spaces, punctuation and progressively smaller separators | More flexible, but can fragment a sentence |
+| Token-level fallback | Split based on model-token boundaries | Controls token count, but may break linguistic units |
+| Custom semantic fallback | Find a sensible internal boundary using linguistic or semantic rules | More complex to implement |
+
+**Important (from my notes):** standard LangChain `NLTKTextSplitter` and `SpacyTextSplitter` do not automatically apply recursive splitting to an oversized sentence. Their merge logic can produce an oversized chunk. A hybrid implementation is needed if recursive fallback is desired.
+- **Checked (2026-11-11, `langchain-text-splitters` 1.1.3, spaCy 3.8.18, rule-based `sentencizer`):** a 1,231-character sentence with a 500-character limit came out as one 1,231-character chunk, with a warning "Created a chunk of size 1231, which is longer than the specified 500". Confirmed for the spaCy splitter. **Not checked for the NLTK splitter:** its sentence data (`punkt_tab`) could not be downloaded in the cloud environment (host not allowed), so the NLTK claim rests on my notes until we can test it.
+
+**Step 3 — Merge consecutive sentences.** Start at the beginning of the sentence list and accumulate sentences: add the next sentence if the combined size remains within 1,000; if it exceeds 1,000, emit the current chunk; continue with the remaining sentences. Example: S1 = 300, S2 = 250, S3 = 350, S4 = 400, S5 = 200 characters. S1 + S2 + S3 = 900. Adding S4 gives 1,300, so Chunk 1 is emitted at 900 characters.
+
+**Step 4 — Apply overlap.** The next chunk retains context from the previous chunk. Two approaches:
+- **Sentence-based overlap:** retain complete trailing sentences. Actual overlap may be less or more than the target, depending on the implementation.
+- **Character-based overlap:** retain the last 200 characters, potentially cutting through a sentence.
+
+Overlap is a separate decision from sentence detection.
+
+**Mental model:** the sentence tokenizer determines **where** sentences end; the merger determines **how many** sentences fit into each chunk; overlap preserves context between adjacent chunks.
+
+**Limits:** sentence-aware chunking preserves grammatical boundaries, but a complete sentence is not necessarily a complete thought. Relationships between consecutive sentences may still require additional context.
+
+**For the Mahabharata corpus:** preserve Parva, section and paragraph metadata alongside the resulting chunks. This allows sentence-level segmentation without losing the source hierarchy or provenance.
+
+**Our data (what the splitters will have to cope with)** — rough counts from a quick pattern search of the 1.3-million-character corpus, covering only the patterns I searched for:
+- Full stop followed by a closing quote (`."` or `.'`): about 1,559. The quote belongs to the sentence that just ended.
+- Abbreviation-like cases ("Mr.", "Dr.", "viz."): about 71. Real examples: "Mr. Pickford", "Dr. Rost's letter", "viz. he would grant…".
+- Semicolons: about 727. Splitters do not split at them, so lists such as chunk 478's "from Arjuna, Srutakirti; from Nakula, Satanika; …" stay one very long sentence (longer than 1,000 characters), so the oversized-sentence rule (Step 2) will matter.
+- Source typos that look like sentence ends: "When I heard that Nakula. the son of Madri…" has a full stop where a comma belongs, and "my union with the? took place" has a stray question mark. A splitter will cut there; no splitter can fix a typo in the source.
+- Paragraph and speaker are still not handled by this strategy: a chunk can hold the end of one speech and the start of another unless sentences are packed within a paragraph only, and a chunk from the middle of a long speech does not say who is speaking.
+
+**Design questions to decide when we build it:** pack within a paragraph only, or across paragraphs; what to do with sentences longer than the limit (keep intact, or fall back); sentence overlap or character overlap or none. Each is its own one-variable experiment.
+
+**Still to do for this strategy:** test pySBD, NLTK Punkt and spaCy (rule-based and parser-based) on our paragraphs, compare their sentence counts, and hand-check the hard cases above. NLTK needs its sentence data, which the cloud environment currently blocks; options are to allow the download host, or to commit the small data file. Then build and measure.
 
 #### Strategy 4 — Semantic (overview; detail to come)
 Embed each sentence, compare each with the next, start a new chunk where the similarity drops sharply. Needs the embedding model plus numpy, and a threshold (often a percentile of the drops). Weaknesses: genealogy lists make neighbours look alike (huge chunks); dialogue alternates topics (over-splitting); costs an embedding pass over every sentence; published comparisons often show little gain over simpler methods, so to be tested, not assumed.
