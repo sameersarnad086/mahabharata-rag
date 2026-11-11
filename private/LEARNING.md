@@ -1418,7 +1418,7 @@ Ragas comparison; the owner's list of retrieval observations (above); R05 correc
 ---
 
 ### Stage: Chunking — the strategies (learning first, choosing later)
-Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). Taught at overview level, detail still to come: structure-aware, parent-child, sentence window. Nothing is built or scored yet.
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), structure-aware (concept detailed, paragraph statistics measured), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). Taught at overview level, detail still to come: parent-child, sentence window. Nothing is built or scored yet.
 
 #### Concept
 The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
@@ -1657,10 +1657,60 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 4. NLTK data: allow the download host in the environment settings, or commit the small data file.
 5. Idea to test: retrain Punkt on our own text (no labels needed).
 
-#### Strategy 5 — Structure-aware / paragraph-based (overview; detail to come)
-Use the text's own units: one chunk per paragraph; merge tiny ones ("Thus endeth the section called Parva-sangraha…", 90 characters); split very long ones at sentence breaks and repeat the speaker as a header ("Dhritarashtra said:"); never cross a section boundary. Works from `paragraphs.jsonl`, which already carries section, sub-parva and position. Weaknesses: very uneven sizes; depends on how well ingestion found paragraph boundaries; the merge and split thresholds are variables of their own.
+#### Strategy 5 — Structure-aware / paragraph-based (concept learned; not built or scored)
+*Written 2026-11-11. "Measured" means computed from `data/processed/paragraphs.jsonl` this session.*
 
-**Pending (structure-aware):** learn in detail first; then list the experiments (what counts as tiny and long, speaker header or not, per-section runs).
+**The problem it solves.** Fixed-size cuts by character count, and sentence-based and semantic chunking guess where thoughts end. Structure-aware chunking uses the boundaries the text already marks: **paragraphs, sections and the "X said…" speaker tags**. The translator already decided where one thought ends, so a chunk should follow that instead of a count.
+
+**What structure our data carries.** Each cleaned paragraph already has: source file, heading (for example "SECTION V"), sub-parva, paragraph index, printed page, how many page-break fragments were merged, and the section number (`None` for the translator's preface). So the section, position and page of every chunk are known, which citations need.
+
+**The method, step by step**
+1. **One paragraph, one chunk** when the paragraph is a sensible size.
+2. **Merge tiny paragraphs** with a neighbour, only within the same section.
+3. **Split very long paragraphs** into pieces at sentence boundaries (this needs a sentence splitter; see "Sentence splitting").
+4. **Repeat the speaker as a header** on the pieces ("Sauti said: …"), so each piece still says who is talking.
+5. **Never cross a section boundary;** attach section, paragraph and page metadata to every chunk.
+
+**Measured on our corpus (1,306 paragraphs, median 653 characters, mean 1,021)**
+
+| Paragraph length (characters) | Share |
+|---|---|
+| under 100 | 3.2% |
+| 100 to 200 | 10.8% |
+| 200 to 400 | 17.0% |
+| 400 to 1,000 | 34.4% |
+| 1,000 to 2,000 | 21.5% |
+| 2,000 to 5,000 | 11.7% |
+| over 5,000 | 1.4% |
+
+- **Most of the text sits in long paragraphs.** 452 paragraphs (35%) are over 1,000 characters and hold about **71% of all the text** (951,271 of 1,333,251 characters). So step 3 applies to most of the corpus: for us, structure-aware chunking is largely "split long paragraphs well", so it depends on the sentence splitter and inherits its quote and abbreviation problems.
+- **Speaker tags are common.** About 52% of paragraphs (685) start with "X said / answered / replied…" (rough pattern match that only catches a few verbs, so an undercount). Of the 452 long paragraphs, 250 start with a speaker tag. If such a paragraph is split, only the first piece names the speaker; that is the case for a header.
+- **Sections are small.** 237 sections, median 4 paragraphs (smallest 1, largest 48). Never crossing a section means a short section gives few chunks. (In the baseline, 297 of 1,670 chunks crossed a section boundary.)
+
+**Examples from our text**
+- **Tiny paragraphs:** "Kisari Mohan Ganguli" (20 characters) and "Calcutta" (8) are front matter from the translator's preface (no section number); "So ends the sixth section called "the curse on Agni" in the Adi Parva." (70 characters). Whether these get a chunk, get merged, or are dropped is a rule to choose.
+- **Merging is not always possible.** Section 1's first paragraphs are 138, 990, 180, 1,156, 800, 1,206, 1,341 and 483 characters. With a 1,000-character cap the 138 cannot join the 990 (1,128 together), and the 180 cannot join the 1,156. They would stay as small chunks, unless the cap is loosened or the small paragraph is attached to the next chunk. A design decision with no obvious answer.
+- **The speaker header.** Section 2, paragraph 4 (1,609 characters) begins "Sauti said, 'One chariot, one elephant, five foot-soldiers, and three horses form one Patti…". Split into two, the second piece would no longer say Sauti is speaking. With a header, both read "Sauti said: …". Whether the header is part of the embedded text, or only stored as metadata for display, is a variable to test: in the text it may help questions like "What did Sauti explain?" and may also add noise.
+
+**Disadvantages (understood by the owner)**
+- Very uneven chunk sizes: a few characters up to over 10,000 before splitting. Small chunks give weak vectors; big ones are the problem we wanted to avoid.
+- It depends on the quality of ingestion (our paragraph boundaries came from Phase 1 cleaning, including gluing sentences split by page breaks).
+- A speech running across many paragraphs carries the speaker tag only on the first; later paragraphs open with a quotation mark but no speaker. Carrying the last speaker forward is possible but risky and untested.
+- The thresholds (what counts as tiny, what counts as too long) are our own choices, each a variable.
+- It relies on a sentence splitter for long paragraphs, so the splitter findings apply here too.
+
+**How it would be built.** Our own loop over `paragraphs.jsonl`: group by section; apply the merge and split rules; add the header to split pieces; write each chunk in the same format as the baseline (text, section numbers, positions) so the existing embedding, search and evaluation code works unchanged. Not yet checked: that the retrieval evaluation does not depend on chunk IDs (it scores the evidence phrase and the gold section); confirm before the first run. Crude size estimate, ignoring sentence boundaries: roughly 1,900 chunks against the baseline's 1,670. Treat as rough.
+
+**Which failures it might fix.** Key line cut at a boundary (R01, R20, R26, R34): yes for long paragraphs, if split at sentence ends. Right section but wrong paragraph (R05, R08, R12): paragraph-sized chunks (median 653) should line up better with where answers sit. Speaker lost in long speeches: the header addresses it.
+
+**Pending to experiment (structure-aware):** none run yet; each is one variable at a time.
+1. Decide what counts as "tiny" and whether tiny paragraphs merge, stay, or (for front matter) are dropped.
+2. Decide the maximum size and what to do when a small paragraph cannot merge under it (looser cap, or accept small chunks).
+3. Choose the sentence splitter for long paragraphs (depends on the splitter comparison).
+4. Speaker header: none, metadata only, or part of the embedded text.
+5. Carry the speaker forward across paragraphs of one speech (risky; optional).
+6. Confirm that the retrieval evaluation is independent of chunk IDs before the first run.
+7. Score with retrieval metrics first; the frozen judge only for a likely winner.
 
 #### Strategy 6 — Parent-child (overview; detail to come)
 Search small "child" pieces; give the model the larger "parent". Needs a child-to-parent table and a swap step after retrieval. Weaknesses: several children from one parent give duplicates (de-duplicate by parent); large parents use reading space. **Measurement trap:** score the parent text, because that is what the model sees; scoring the child would flatter the result.
