@@ -1699,6 +1699,21 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 - The thresholds (what counts as tiny, what counts as too long) are our own choices, each a variable.
 - It relies on a sentence splitter for long paragraphs, so the splitter findings apply here too.
 
+**Key problem: large paragraphs, and why a good sentence splitter is essential here (measured 2026-11-11).**
+- **The scale.** 452 of 1,306 paragraphs are over 1,000 characters and hold 951,271 of 1,333,251 characters (**71.3%** of the corpus). 18 paragraphs are over 5,000 characters (122,789 characters in total); the longest is 10,838. 435 of the 452 long paragraphs start with a quotation mark (speeches).
+- **Why this decides the strategy.** "Keep the paragraph whole" works only for the minority of text that sits in short paragraphs. For 71% of the text the strategy must split inside paragraphs, and the only structure left inside a paragraph is sentences. So structure-aware chunking is, in practice, paragraph structure for the short ones plus sentence splitting for the long ones. If the splitter is wrong, the strategy is wrong for most of the corpus.
+- **What a bad splitter does to it (the same long paragraphs, two splitters):**
+
+| | pySBD (default use) | spaCy rule-based |
+|---|---|---|
+| Long paragraphs returned as ONE sentence | **94** (214,681 characters = 22.6% of the long-paragraph text, about 16% of the whole corpus) | 0 |
+| Sentences over 1,000 characters inside long paragraphs | **157** | 8 |
+| Total sentences found in the long paragraphs | 4,735 | 8,006 |
+
+  A paragraph that comes back as one "sentence" cannot be split at a sentence end, so the chunker would have to cut it at a size limit again (the baseline's problem), or keep a huge chunk. That is the quote-pair behaviour described in "Sentence splitting" (a paragraph that opens and closes with a double quote is treated as one unbreakable unit). spaCy's rule-based splitter did not have that problem but has its own errors (it cut after "viz."; see the spot check).
+- **What is still unknown.** The counts show how many long paragraphs a splitter fails to split, not how many it splits in the wrong place; that needs the hand-check sample in the splitter comparison. The 8 spaCy sentences over 1,000 characters are probably semicolon lists like chunk 478's (not checked). The numbers come from the default pySBD call and spaCy's `sentencizer`, with no cleaning (the quote-stripping fix was not applied here).
+- **Consequence for the plan.** The splitter comparison is not optional for this strategy: it comes before any structure-aware experiment, and the maximum chunk size and the oversized-sentence rule (keep intact or fall back) should be decided with the long-sentence counts above in view.
+
 **How it would be built.** Our own loop over `paragraphs.jsonl`: group by section; apply the merge and split rules; add the header to split pieces; write each chunk in the same format as the baseline (text, section numbers, positions) so the existing embedding, search and evaluation code works unchanged. Not yet checked: that the retrieval evaluation does not depend on chunk IDs (it scores the evidence phrase and the gold section); confirm before the first run. Crude size estimate, ignoring sentence boundaries: roughly 1,900 chunks against the baseline's 1,670. Treat as rough.
 
 **Which failures it might fix.** Key line cut at a boundary (R01, R20, R26, R34): yes for long paragraphs, if split at sentence ends. Right section but wrong paragraph (R05, R08, R12): paragraph-sized chunks (median 653) should line up better with where answers sit. Speaker lost in long speeches: the header addresses it.
@@ -1706,7 +1721,7 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 **Pending to experiment (structure-aware):** none run yet; each is one variable at a time.
 1. Decide what counts as "tiny" and whether tiny paragraphs merge, stay, or (for front matter) are dropped.
 2. Decide the maximum size and what to do when a small paragraph cannot merge under it (looser cap, or accept small chunks).
-3. Choose the sentence splitter for long paragraphs (depends on the splitter comparison).
+3. Choose the sentence splitter for long paragraphs (depends on the splitter comparison; this is a prerequisite, because 71% of the text is in long paragraphs and pySBD left 94 of them unsplit; see "Key problem" above).
 4. Speaker header: none, metadata only, or part of the embedded text.
 5. Carry the speaker forward across paragraphs of one speech (risky; optional).
 6. Confirm that the retrieval evaluation is independent of chunk IDs before the first run.
