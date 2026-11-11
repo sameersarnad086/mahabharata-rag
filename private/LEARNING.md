@@ -1418,7 +1418,7 @@ Ragas comparison; the owner's list of retrieval observations (above); R05 correc
 ---
 
 ### Stage: Chunking — the strategies (learning first, choosing later)
-Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), structure-aware (concept detailed, paragraph statistics measured), parent-child (concept detailed, previewed on R05 and R15), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). Taught at overview level, detail still to come: sentence window. Nothing is built or scored yet.
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), structure-aware (concept detailed, paragraph statistics measured), parent-child (concept detailed, previewed on R05 and R15), sentence window (concept detailed, previewed on R05 and R15), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). All seven strategies are now taught in detail (2026-11-11). Nothing is built or scored yet.
 
 #### Concept
 The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
@@ -1784,10 +1784,61 @@ None run yet; one variable at a time; the splitter comparison and the single-lev
 6. Check how the evidence-phrase check treats phrases that span paragraphs before the first scored run.
 7. Optional: parent-level embeddings as an extra retrieval route (not part of the standard method).
 
-#### Strategy 7 — Sentence window (overview; detail to come)
-Embed single sentences; at answer time return each with the sentences before and after. Like parent-child but with a sliding window instead of a fixed parent, so it ignores paragraph structure. Weakness: heavily overlapping windows give duplicates.
+#### Strategy 7 — Sentence window (concept learned; previewed on two questions; not built or scored)
+*Written 2026-11-11. General-knowledge statements are marked; the preview is not an evaluation.*
 
-**Pending (sentence window):** learn in detail first; then list the experiments (window size, de-duplication).
+**The problem it solves.** Same trade-off as parent-child: a single sentence is a precise search target, but a lone sentence is too little for the model to read. The sentence window keeps the precision and adds context.
+
+**How it works**
+1. **Split each paragraph into sentences** (the splitter matters even more here: everything is built from sentences).
+2. **Embed every sentence on its own** and index those vectors.
+3. **At question time, find the best matching sentences.**
+4. **Expand each match into a window:** the matched sentence plus N sentences before and N after (N = 1 or 2, for example), so the model reads 2N + 1 sentences. Windows that overlap or touch are merged so the same sentences are not shown twice.
+5. **Pass the windows to the model,** with the section, paragraph and page metadata of the match.
+
+**How it differs from parent-child.** The context is a **sliding window centred on the match**, not a fixed parent passage. Its size is predictable (2N + 1 sentences), whereas a parent paragraph can be anything from a few hundred to over 10,000 characters. It needs no two-level structure: the neighbours can be looked up by sentence position, or the window text stored with each sentence (general knowledge: LlamaIndex stores the window in the sentence's metadata; not checked here). The cost is that the window ignores paragraph and speech boundaries unless we tell it to stop at them.
+
+**What we measured and saw (2026-11-11; previews, not scores).** Setup as in the parent-child preview: spaCy rule-based splitter per paragraph, all 11,689 sentences embedded, five best matches per question, windows kept inside the paragraph. Working-set questions only.
+- **R05 ("Who set fire to the Khandava forest, and why?").** Windows of 0, 1 and 2 sentences each side: **0 of 5 windows contained an evidence phrase** at every size, although the parent paragraph of the best match did (parent-child preview). So the evidence sentence is more than two sentences away from the best match: the window was too narrow here. Size of the five windows together: about 590 characters (N = 0), 1,625 (N = 1), 2,713 (N = 2); against about 15,000 characters for the five parents in the parent-child preview.
+- **R15 ("Who is Sauti's father?").** 0 of 5 windows contained an evidence phrase at any size. The matches are the same tiny "Sauti said." fragments seen in the parent-child preview, so a window around a name-only match does not help (windows of 71 to 275 characters at N = 1).
+- **Overlap.** The five matches came from five different paragraphs in both questions, so there were 0 overlapping window pairs; the duplicate-window problem did not show up in these two questions, but it would when matches cluster in one paragraph.
+- **Evidence is sentence-sized.** Across the 24 working-set questions, 56 evidence phrases exist; **55 of the 56 lie fully inside one sentence** (spaCy rule-based split). So the best case is that the matched sentence is the right one and a small window adds context. Counting caveat: this depends on the splitter, and a phrase can be cut by it.
+- **What the previews show:** a window gives a small, predictable context (hundreds of characters, not thousands), but it needs the match to land on or near the evidence; where the evidence is further away (R05) a parent catches it and a narrow window does not; and tiny name-only matches (R15) are as much a problem as in parent-child.
+
+**Disadvantages**
+1. **Child noise from tiny sentences,** the same R15 problem; the same minimum-size fix applies (merge sentences under a minimum length with the next).
+2. **Window size is a guess.** Too narrow misses the evidence (R05), too wide brings back the budget and noise problems. Genealogy lists and speeches need different sizes.
+3. **Overlapping and duplicate windows** when several matches cluster in one passage; windows must be merged.
+4. **Windows ignore structure:** a window can end one speaker's words and start another's, and can cross a paragraph or section boundary unless told to stop.
+5. **Total dependence on the sentence splitter.** There is no fallback to paragraph structure.
+6. **About 11,689 vectors** against 1,670 baseline chunks, and the same scoring trap as parent-child: score the window text the model actually sees, and record the characters passed.
+
+**How it would be built.** Our own code: split per paragraph with the chosen splitter, apply the minimum-size rule, embed the sentences (cached), keep each sentence's paragraph and position, expand a match into its window at query time, merge overlapping windows, and write the result in the baseline chunk format so downstream code is unchanged.
+
+**Pending to experiment (sentence window):** none run yet; one variable at a time; after the splitter comparison.
+1. Window size N: 0, 1, 2, 3 (with the splitter and minimum child size fixed).
+2. Windows stay inside the paragraph, or may cross paragraphs within a section.
+3. Minimum sentence size (none, 100, 200 characters).
+4. Merging overlapping windows versus keeping them separate.
+5. Record the characters passed to the model next to hit@5 and MRR@5; end-to-end correctness for the winner only.
+6. Compare with parent-child on the same children: window versus paragraph parent.
+
+#### Learning phase of the chunking stage: wrap-up (2026-11-11)
+All seven strategies are now learned and logged: fixed (the baseline control), recursive, sentence-based, semantic, structure-aware, parent-child and sentence window. **Nothing is built or scored yet.**
+
+**What the strategies have in common**
+- **The sentence splitter is the shared dependency** for sentence-based, semantic, structure-aware (71% of the text is in long paragraphs), parent-child and sentence window. pySBD left 94 of the 452 long paragraphs unsplit (quote-pair rule); spaCy's rule-based splitter left none but cut after "viz."; NLTK and spaCy's parser mode are untested. **The splitter comparison therefore comes first.**
+- **Tiny pieces match on names alone** (R15's "Sauti said." fragments), so any strategy with sentence-sized search units needs a minimum-size rule.
+- **Context size is a budget:** paragraphs reach 10,838 characters, so any approach that hands whole paragraphs to the model needs a cap.
+- **Score what the model sees,** and record the characters passed, so that bigger contexts do not win just because they contain more text.
+
+**Suggested order for the experiments (a suggestion, the owner decides)**
+1. Splitter comparison (pySBD with the quote fix, spaCy rule-based with an abbreviation fix; NLTK once its data is available).
+2. Single-level strategies, retrieval metrics first: recursive (with a sentence-level separator), sentence-based, structure-aware, semantic.
+3. Parent-child and sentence window on top of the best splitter and chunking result.
+4. Judge scoring only for the likely winners; held-out only at a milestone.
+
+**Decisions the owner still has to make:** which two or three strategies to build and compare; the splitter; whether chunks stay inside a paragraph; the first semantic breakpoint rule; size limits (see each strategy's "Pending to experiment" list).
 
 #### Side-by-side
 | Strategy | Respects sentences | Respects paragraphs and sections | Keeps the speaker | Extra cost | Main risk |
