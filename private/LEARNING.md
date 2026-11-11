@@ -1435,6 +1435,10 @@ The embedding model turns each chunk into one vector, search compares the questi
 - **Disadvantages:** cuts mid-word; mixes sections; loses the speaker in the middle of a long speech; overlap creates duplicates.
 - **Role:** the control. Every other strategy is judged against it.
 
+**Pending to experiment (fixed-size):**
+- Keep as the control; never change its settings (1000/200) in the comparison.
+- Optional size sweep (600, 800, 1000, 1500), one value at a time, as proposed in public post 2. Status: not run.
+
 #### Strategy 2 — Recursive (learned in detail)
 *Written from my own study notes (example setting: `chunk_size = 500`, `chunk_overlap = 50`), with two points checked by running the library, marked below.*
 
@@ -1483,6 +1487,13 @@ A chunk can contain multiple paragraphs, or part of one paragraph followed by an
 **Disadvantages (summary):** still size-driven; with the default separators it cuts mid-sentence in long paragraphs; the speaker is lost in long speeches; whether related sentences end up together is luck.
 **Built with (if we build it):** our own short loop (an ordered separator list, split, merge) so that I can explain it, using the library only as a reference to compare against.
 **Chunks versus failures:** key line cut at a boundary: improved only if a sentence separator is added; sections crossing: depends on running per section; speaker lost: not fixed.
+
+**Pending to experiment (recursive):** each is its own one-variable experiment; none run yet.
+1. Add a sentence-level separator to the ladder (paragraph, then sentence, then space), against the default ladder.
+2. Run per section versus over the whole text (whether chunks may cross sections).
+3. Leftover of a big paragraph: stays its own chunk (library behaviour) versus joins the next paragraph (our own version).
+4. Overlap: none versus a small overlap (and note it only matters when pieces are small).
+5. Chunk size (for example 500, 1000), after the ladder question is settled.
 
 #### Strategy 3 — Sentence-based / sentence-aware (concept learned; splitters not yet tested)
 *Written from my own study notes (example setting: `chunk_size = 1000`, `chunk_overlap = 200`), with additions from our data marked "Our data" and two checks marked "Checked".*
@@ -1539,6 +1550,13 @@ Overlap is a separate decision from sentence detection.
 
 **Still to do for this strategy:** test pySBD, NLTK Punkt and spaCy (rule-based and parser-based) on our paragraphs, compare their sentence counts, and hand-check the hard cases above. NLTK needs its sentence data, which the cloud environment currently blocks; options are to allow the download host, or to commit the small data file. Then build and measure.
 
+**Pending to experiment (sentence-based):** none run yet.
+1. Splitter comparison first (see "Sentence splitting" below): pySBD with the quote fix, spaCy rule-based with an abbreviation fix, NLTK Punkt once its data is available (allow the download host, or commit the small data file), spaCy parser mode if its model can be downloaded.
+2. Pack within a paragraph only, or across paragraphs within a section.
+3. Sentences longer than the limit: keep intact, or fall back to a finer split.
+4. Overlap: none, sentence overlap, or character overlap.
+5. Chunk size.
+
 #### Strategy 4 — Semantic (concept learned; not built or scored)
 *Written 2026-11-11. "Checked" marks something I ran or read in the source this session; "general knowledge" marks what I know but did not verify here.*
 
@@ -1592,6 +1610,14 @@ Range 0.50 to 0.81, mean 0.64. Reading it:
 **How we would score it:** retrieval metrics first (hit@5, MRR@5, with and without the summary passages; free and fast, after a re-embed of about 90 seconds); the frozen judge only for a setting that looks like a winner (it costs money and shows run-to-run noise, for example faithfulness flipping 1.0, 0.75, 1.0 on one answer earlier). The winner is compared with the baseline and with the other strategies we choose.
 **Status:** concept only. The four choices above are not made; the owner wanted to learn each option first.
 
+**Pending to experiment (semantic):** none run yet. The owner chose to learn each option before deciding.
+1. Choose the splitter (depends on the splitter comparison below); hold it fixed.
+2. Decide: chunks stay inside one paragraph, or may span paragraphs within a section.
+3. Vary the breakpoint rule one at a time: percentile (start near the lowest 10%), standard deviation, fixed threshold; then its value.
+4. Minimum and maximum chunk size.
+5. Single sentences versus a window of sentences for the comparison.
+6. Score with retrieval metrics first; the frozen judge only for a likely winner.
+
 #### Sentence splitting: the crucial first step (for sentence-based and semantic chunking)
 Both strategies depend on knowing where sentences end, so every splitting mistake flows into the chunks. Our text is hard for splitters: about 1,559 full stops followed by a closing quote, about 71 abbreviation-like cases ("Mr.", "Dr.", "viz."), about 727 semicolons (lists stay one long sentence), and typos in the source ("When I heard that Nakula. the son of Madri…", "my union with the? took place"). These counts are rough, from a quick pattern search of the corpus, and cover only the patterns I searched for.
 
@@ -1624,14 +1650,27 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 **Conclusion so far.** No splitter is free of errors on our text; each has different weak spots. pySBD needs a quote-stripping step; spaCy's rule-based version needs an abbreviation fix ("viz."). NLTK and spaCy's parser mode are not tested. **Earlier I listed "pySBD only" as the recommended choice for the first semantic experiment; I withdrew that after finding the quote problem.** The next step is a splitter comparison: hand-check a sample of paragraphs, count each splitter's errors, then choose a base splitter and add small fixes for its known gaps.
 **Gotchas:** (a) test the splitter on joined text and on single paragraphs; they differ hugely; (b) a count of "sentences" does not show correctness, only reading the output does; (c) the rule-based splitters hide full stops inside quotes by design.
 
+**Pending to experiment (sentence splitting):** none run yet.
+1. Re-run the corpus scan after stripping outer double quotes, to see how many of the 178 quote-wrapped paragraphs are fixed and whether anything else breaks.
+2. Splitter comparison: hand-check a sample of paragraphs and count each splitter's errors (pySBD with the quote fix, spaCy rule-based, NLTK Punkt, spaCy parser mode).
+3. Fix known gaps: an abbreviation list for spaCy ("viz."), the "i. e. ," case for pySBD.
+4. NLTK data: allow the download host in the environment settings, or commit the small data file.
+5. Idea to test: retrain Punkt on our own text (no labels needed).
+
 #### Strategy 5 — Structure-aware / paragraph-based (overview; detail to come)
 Use the text's own units: one chunk per paragraph; merge tiny ones ("Thus endeth the section called Parva-sangraha…", 90 characters); split very long ones at sentence breaks and repeat the speaker as a header ("Dhritarashtra said:"); never cross a section boundary. Works from `paragraphs.jsonl`, which already carries section, sub-parva and position. Weaknesses: very uneven sizes; depends on how well ingestion found paragraph boundaries; the merge and split thresholds are variables of their own.
+
+**Pending (structure-aware):** learn in detail first; then list the experiments (what counts as tiny and long, speaker header or not, per-section runs).
 
 #### Strategy 6 — Parent-child (overview; detail to come)
 Search small "child" pieces; give the model the larger "parent". Needs a child-to-parent table and a swap step after retrieval. Weaknesses: several children from one parent give duplicates (de-duplicate by parent); large parents use reading space. **Measurement trap:** score the parent text, because that is what the model sees; scoring the child would flatter the result.
 
+**Pending (parent-child):** learn in detail first; then list the experiments (child unit, parent unit, de-duplication by parent, scoring the parent).
+
 #### Strategy 7 — Sentence window (overview; detail to come)
 Embed single sentences; at answer time return each with the sentences before and after. Like parent-child but with a sliding window instead of a fixed parent, so it ignores paragraph structure. Weakness: heavily overlapping windows give duplicates.
+
+**Pending (sentence window):** learn in detail first; then list the experiments (window size, de-duplication).
 
 #### Side-by-side
 | Strategy | Respects sentences | Respects paragraphs and sections | Keeps the speaker | Extra cost | Main risk |
