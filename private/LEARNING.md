@@ -1418,7 +1418,7 @@ Ragas comparison; the owner's list of retrieval observations (above); R05 correc
 ---
 
 ### Stage: Chunking — the strategies (learning first, choosing later)
-Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), structure-aware (concept detailed, paragraph statistics measured), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). Taught at overview level, detail still to come: parent-child, sentence window. Nothing is built or scored yet.
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), structure-aware (concept detailed, paragraph statistics measured), parent-child (concept detailed, previewed on R05 and R15), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). Taught at overview level, detail still to come: sentence window. Nothing is built or scored yet.
 
 #### Concept
 The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
@@ -1727,10 +1727,62 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 6. Confirm that the retrieval evaluation is independent of chunk IDs before the first run.
 7. Score with retrieval metrics first; the frozen judge only for a likely winner.
 
-#### Strategy 6 — Parent-child (overview; detail to come)
-Search small "child" pieces; give the model the larger "parent". Needs a child-to-parent table and a swap step after retrieval. Weaknesses: several children from one parent give duplicates (de-duplicate by parent); large parents use reading space. **Measurement trap:** score the parent text, because that is what the model sees; scoring the child would flatter the result.
+#### Strategy 6 — Parent-child (concept learned; previewed on two questions; not built or scored)
+*Method section written from my own study notes (example setting: parent = 1,000 tokens, child = 200 tokens, "illustrative values, not fixed requirements"). The sections "What we saw" and below were written 2026-11-11; the previews are not evaluations.*
 
-**Pending (parent-child):** learn in detail first; then list the experiments (child unit, parent unit, de-duplication by parent, scoring the parent).
+**Parent-child chunking: how it works (my notes)**
+**Overview.** Parent-child chunking is a hierarchical retrieval strategy that separates **retrieval precision from context delivery**. It creates two levels of chunks:
+- **Parent chunks:** larger passages that preserve broader context.
+- **Child chunks:** smaller passages used for embedding and vector retrieval.
+
+The retriever searches child chunks but fetches their corresponding parent chunks to provide context to the LLM.
+
+**Step 1 — Create parent chunks.** Parent chunks preserve meaningful context. Parent creation has no prescribed splitting algorithm. Options: fixed-size splitting, recursive splitting, structure-aware splitting, semantic splitting. For the Mahabharata corpus, a structure-first approach is worth investigating: create parents from coherent groups of paragraphs while respecting section boundaries. A parent does not have to represent an entire section; one section can contain multiple parents.
+
+**Step 2 — Split parents into child chunks.** Each parent is divided into smaller units, which become the primary retrieval units. Options: fixed-size, recursive, sentence-aware, semantic, structure-aware splitting. A possible hybrid: sentence-aware splitting within each parent, with recursive fallback for oversized sentences or groups. Children do not need to be independently understandable in every implementation; they can rely on their parent for additional context.
+
+**Step 3 — Maintain parent-child relationships.** Every child must have a reference to its parent. Example fields: a parent has `parent_id` (for example "ADI_66_P001"), `text`, parva ("Adi Parva") and section (66); a child has `child_id` (for example "ADI_66_P001_C001"), `parent_id` and `text`. Important implementation choices:
+- Assign unique parent and child IDs.
+- Preserve source metadata.
+- Store the parent text separately from the child embeddings.
+- Maintain deterministic parent lookup.
+- Avoid relying on text similarity to reconstruct parent-child relationships.
+
+**Step 4 — Embed and index child chunks.** Generate embeddings for the child chunks and store them in the vector database. Typical flow: generate an embedding for each child; store the vector and child text; store the corresponding parent ID as metadata; keep parent text in a document store or another retrievable storage layer. **Do parent chunks also need embeddings?** Not in the standard child-retrieval approach. Parent embeddings are optional and only needed if you want an additional parent-level retrieval mechanism.
+
+**Step 5 — Retrieval and parent lookup.** When a user submits a question: (1) generate the question embedding; (2) search the vector database for relevant child chunks; (3) retrieve the matching child IDs and parent IDs; (4) fetch the corresponding parent chunks; (5) deduplicate parents if multiple children point to the same parent; (6) pass the selected parent context to the LLM. Example: for "Who were Dhara's sons?", vector search identifies the child discussing Dhara's descendants, the system obtains its parent ID, the parent passage is fetched, and the LLM receives the broader genealogy context.
+
+**Key principle:** retrieval operates on children; context delivery operates on parents.
+
+**How it fits our project (my additions)**
+- **A real instance of the Dhara example.** In our text the sentence "And Dhara had two sons, Dravina and Huta-havya-vaha." sits in Section 66 (heading SECTION LXVI, file `section_067.html`, paragraph index 1, sub-parva Sambhava Parva), a 2,002-character paragraph listing the Vasus and their sons. That paragraph would be the parent and the sentence the child. Illustration only: I did not run this search.
+- **Sizes in our terms (approximate).** Our baseline chunks of 1,000 characters measured about 247 tokens at the median (roughly 4 characters per token). So a 200-token child is about 800 characters, close to a whole baseline chunk, and a 1,000-token parent is about 4,000 characters, larger than most of our paragraphs (median 653 characters). The parents are not embedded, so the embedding model's 512-token limit applies only to children.
+- **It is a pattern that touches two stages, not a standalone splitter.** The chunking part defines two levels and the link between them; the retrieval part does the swap and the de-duplication after the search. It needs a method for each level: children can come from any earlier strategy (sentence-based, small recursive chunks, semantic), parents from structure-aware paragraphs or larger recursive chunks. It is a layer on top of the earlier strategies, so it multiplies the experiments (two levels to choose).
+- **Index size.** With sentence-sized children the index would hold about 11,689 vectors instead of 1,670 baseline chunks (count from the spaCy rule-based splitter; median child 99 characters).
+
+**What we saw: a preview on two working-set questions (2026-11-11; previews, not scores)**
+Setup: children were all 11,689 sentences (spaCy rule-based splitter, per paragraph; median 99 characters, 837 under 40 characters); the parent was the paragraph a sentence came from; the five best children per question. Script not committed (scratchpad only). Both questions are from the working set.
+- **R05, "Who set fire to the Khandava forest, and why?"** The baseline found no evidence phrase in its top 10. Here the best child was a sentence from Section 225 ("Beholding Khandava on fire…") whose parent paragraph (2,745 characters) contains an evidence phrase. So the swap rescued this question in the preview: an example of "right section, wrong paragraph" being fixed. The other four children were about Khandava but came from other passages (Sections 230, 2, 232, 231), and their parents contain no evidence phrase. All five parents were distinct. Parent sizes ranged from about 1,800 to 5,900 characters.
+- **R15, "Who is Sauti's father?"** The baseline found the evidence at rank 1. Here the top five children were tiny fragments such as `"Sauti said. '` (14 characters, twice), `"Sauti continued, 'O son of Bhrigu!` (35) and `'Sauti continued, 'Then Agni replied…` (68), plus "He was the father of Vasudeva." They match through the name "Sauti" only; none of their parents contain an evidence phrase. In the preview it did worse than the baseline.
+- **What the previews show:** (1) the swap can fix "right section, wrong paragraph"; (2) very short children match on a name alone, and our text has many short "X said." fragments, so the name problem (our central challenge) returns through tiny children; (3) parents are large; (4) two questions show behaviour, not performance.
+
+**Disadvantages (what we know)**
+1. **Child noise.** Small children make noisy matches, as in R15. A better sentence splitter helps, but the R15 fragments are real short sentences, not splitter errors, so the fix also needs a **minimum child size** (merge any sentence under some length with the next, so "Sauti said." travels with the speech it introduces) or sentences grouped into small pieces.
+2. **Large parents and the reading budget.** A parent can be thousands of characters (one paragraph is 10,838), so five parents can use up the model's reading space. Parents need a cap (for example about 2,000 characters), with the part of the paragraph around the matching child used when a paragraph is longer.
+3. **Duplicate parents.** Several children of one parent can match, so the same parent appears more than once. Rather than a fixed top 20, rank all children, walk down the list and collect parents, skipping repeats, **until there are 5 distinct parents**; the number of children looked at then adjusts itself.
+4. **Balancing the sizes.** Child size, parent size, minimum child size and the parent cap are all variables; each is tested one at a time.
+5. **More moving parts:** two levels, an ID lookup, a swap step, about 11,689 vectors instead of 1,670, and quality that depends on the splitter when children are sentences.
+6. **The scoring trap.** We must score the **parent text**, because that is what the model sees. A larger text contains an evidence phrase more easily, so the hit rate rises almost by construction. For a fair comparison, also record how many characters each method hands to the model, and rely on end-to-end correctness for the final judgement. Not yet checked: how the evidence-phrase check treats a phrase that spans two paragraphs.
+
+**Pending to experiment (parent-child)**
+None run yet; one variable at a time; the splitter comparison and the single-level strategies come first, so parent-child builds on the best of them.
+1. Fix the child method (best splitter and chunking result so far), then vary the **minimum child size** (none, then a minimum such as 100 and 200 characters).
+2. Fix the children, then vary the **parent unit**: the paragraph, the paragraph capped (for example 2,000 characters), a group of paragraphs within a section.
+3. **Retrieval rule:** walk down the ranked children until 5 distinct parents (versus a fixed number of children).
+4. Order the parents by their best child's score; compare with keeping book order.
+5. Measure the **characters passed to the model** next to hit@5 and MRR@5, and use end-to-end correctness from the frozen judge for the winner only.
+6. Check how the evidence-phrase check treats phrases that span paragraphs before the first scored run.
+7. Optional: parent-level embeddings as an extra retrieval route (not part of the standard method).
 
 #### Strategy 7 — Sentence window (overview; detail to come)
 Embed single sentences; at answer time return each with the sentences before and after. Like parent-child but with a sliding window instead of a fixed parent, so it ignores paragraph structure. Weakness: heavily overlapping windows give duplicates.
