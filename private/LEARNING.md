@@ -1418,7 +1418,7 @@ Ragas comparison; the owner's list of retrieval observations (above); R05 correc
 ---
 
 ### Stage: Chunking — the strategies (learning first, choosing later)
-Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked) and sentence-based (concept detailed; splitters not yet tested on our text). Taught at overview level, detail still to come: semantic, structure-aware, parent-child, sentence window. Nothing is built or measured yet.
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). Taught at overview level, detail still to come: structure-aware, parent-child, sentence window. Nothing is built or scored yet.
 
 #### Concept
 The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
@@ -1539,8 +1539,90 @@ Overlap is a separate decision from sentence detection.
 
 **Still to do for this strategy:** test pySBD, NLTK Punkt and spaCy (rule-based and parser-based) on our paragraphs, compare their sentence counts, and hand-check the hard cases above. NLTK needs its sentence data, which the cloud environment currently blocks; options are to allow the download host, or to commit the small data file. Then build and measure.
 
-#### Strategy 4 — Semantic (overview; detail to come)
-Embed each sentence, compare each with the next, start a new chunk where the similarity drops sharply. Needs the embedding model plus numpy, and a threshold (often a percentile of the drops). Weaknesses: genealogy lists make neighbours look alike (huge chunks); dialogue alternates topics (over-splitting); costs an embedding pass over every sentence; published comparisons often show little gain over simpler methods, so to be tested, not assumed.
+#### Strategy 4 — Semantic (concept learned; not built or scored)
+*Written 2026-11-11. "Checked" marks something I ran or read in the source this session; "general knowledge" marks what I know but did not verify here.*
+
+**The problem it solves.** Fixed-size, recursive and sentence-based chunking cut by size or punctuation; none looks at meaning. Semantic chunking asks: **where does the topic actually change?** It cuts there, so each chunk is about one thing.
+
+**The method, step by step**
+1. **Split into sentences**, per paragraph (never on joined text). This step is crucial and has its own section below ("Sentence splitting").
+2. **Embed every sentence** with the embedding model, so each sentence becomes a vector (here `BAAI/bge-small-en-v1.5`, vectors of length 384, normalised to length 1).
+3. **Measure how similar each sentence is to the next** (cosine similarity; for normalised vectors this is just the dot product). High means "still on the same topic"; low means "something changed". For n sentences there are n − 1 similarity values; value i sits between sentence i and sentence i + 1.
+4. **Choose the cut points with a breakpoint rule:**
+   - **Percentile:** cut where the similarity is in the lowest N% of all values (for example the lowest 10%). The number of cuts is predictable, but a fixed share of boundaries is cut by construction, whether or not a real topic change exists.
+   - **Standard deviation:** cut where a value is more than N standard deviations below the average. It adapts to each passage: if all similarities are close together, few or no cuts happen.
+   - **Fixed threshold:** cut wherever similarity is below a set number (for example 0.6). Simple, but the right number belongs to the embedding model and must be re-tuned if the model changes.
+   - Other rules exist (general knowledge: for example interquartile range and gradient-based rules in LangChain's experimental semantic splitter); not studied.
+5. **Apply size limits and group.** Without limits, the rule can produce one-sentence chunks and giant chunks. A minimum and a maximum size are usual. Sentences between two cuts become one chunk, carrying section and paragraph metadata.
+
+**Variations (general knowledge, not built):** compare a small window of sentences with the next window instead of single sentences (smooths noisy short sentences); compare each new sentence with the whole chunk built so far instead of only its neighbour; let an LLM decide where to cut (expensive; out of scope).
+
+**Embedding is used twice:** once to choose the chunks, and again to index the chunks for search. The two models need not be the same. Using the same one keeps things simple.
+
+**Worked example on our text — Section 66 (file `section_067.html`), the genealogy paragraph of Brahman, Manu and the Vasus.** Checked: pySBD split it into 12 sentences, `bge-small-en-v1.5` embedded each, and neighbour similarity (value after sentence i) came out as:
+
+| After sentence | Opening words | Similarity to the next |
+|---|---|---|
+| 1 | "And Brahman had another son named Manu." | 0.81 |
+| 2 | "And Manu had a son of the name of Prajapati." | 0.76 |
+| 3 | "And the sons of Prajapati were eight…" | 0.61 |
+| 4 | "They were Dhara, Dhruva, Soma, Aha…" | 0.56 |
+| 5 | "These eight are known as the Vasus." | **0.50** (lowest) |
+| 6 | "Of these, Dhara and the truth-knowing Dhruva were born of Dhumra…" | 0.72 |
+| 7 to 11 | one-line "And X had a son Y" sentences | 0.56 to 0.69 |
+
+Range 0.50 to 0.81, mean 0.64. Reading it:
+- The lowest dip (0.50) is between "These eight are known as the Vasus." and "Of these, Dhara and Dhruva were born…". Sensible as a topic shift (introducing the eight versus their children), but a question such as "Who were the sons of the Vasus?" needs both halves, so the cut separates two parts of one answer.
+- The whole range is narrow and values from 0.56 to 0.69 are everywhere. In a genealogy all sentences look alike, so cuts are mostly noise; a percentile rule cuts a fixed share regardless.
+
+**Disadvantages on our data**
+- **Genealogies:** few real topic shifts, so the cuts are noise, or (with a strict rule) the chunks become very long.
+- **Dialogue:** "X said…" turns alternate, so neighbours can look dissimilar inside one conversation.
+- **Short sentences** ("These eight are known as the Vasus.") give noisy vectors, so comparisons are unreliable.
+- **Sentence splitting errors come in** (see below): a wrong split makes the comparison between wrong pieces.
+- **Cost:** every sentence in the corpus is embedded once to choose chunks and again to index them. Not prohibitive (the full corpus embedded in about 90 seconds as chunks), but it is an extra pass and the rule needs tuning.
+- **Expectation (general knowledge, not checked):** published comparisons are mixed, and semantic chunking often does not beat simpler methods by much. Our data (lists, dialogue, short sentences) is where it should struggle, so the value for us is learning how it behaves and letting our own measurement decide.
+
+**Design choices that become experiment variables (one at a time)**
+1. Sentence splitter, and any cleaning before it (see the section below).
+2. Whether a chunk may span paragraphs, or stays inside one paragraph. Inside one paragraph: never mixes two speeches, but a short paragraph (median paragraph 653 characters; about 31% under 400) becomes its own chunk. Across paragraphs within a section: a question and its answer (Section 5, first two paragraphs) could join, but a chunk can mix speakers. Never across sections.
+3. The breakpoint rule and its value (percentile, standard deviation, fixed threshold).
+4. Minimum and maximum chunk size.
+5. Single sentences or a window of sentences for the comparison.
+**How we would score it:** retrieval metrics first (hit@5, MRR@5, with and without the summary passages; free and fast, after a re-embed of about 90 seconds); the frozen judge only for a setting that looks like a winner (it costs money and shows run-to-run noise, for example faithfulness flipping 1.0, 0.75, 1.0 on one answer earlier). The winner is compared with the baseline and with the other strategies we choose.
+**Status:** concept only. The four choices above are not made; the owner wanted to learn each option first.
+
+#### Sentence splitting: the crucial first step (for sentence-based and semantic chunking)
+Both strategies depend on knowing where sentences end, so every splitting mistake flows into the chunks. Our text is hard for splitters: about 1,559 full stops followed by a closing quote, about 71 abbreviation-like cases ("Mr.", "Dr.", "viz."), about 727 semicolons (lists stay one long sentence), and typos in the source ("When I heard that Nakula. the son of Madri…", "my union with the? took place"). These counts are rough, from a quick pattern search of the corpus, and cover only the patterns I searched for.
+
+**Rule 1 — split each paragraph separately, never joined text.** Checked: on the first six paragraphs of Section 5 pySBD returned 1, 3, 9, 3, 8 and 3 sentences when run on each paragraph; on the same text joined together it returned a 2,639-character "sentence" plus two more, because quotes opened in one paragraph paired with quotes much later.
+
+**The three families of splitter**
+- **pySBD (rule-based; version 0.3.4).** Checked in the source (`between_punctuation.py`, `punctuation_replacer.py`): it finds text enclosed in a matching pair of quotes (`"…"`, `'…'`, curly quotes, brackets, parentheses, dashes) and replaces every `.`, `?` and `!` inside with a placeholder, so the boundary step cannot see them; the placeholders are restored afterwards. A quoted span is therefore one unbreakable unit.
+- **NLTK Punkt (statistical; version 3.10.4 installed).** General knowledge, **not run here**: unsupervised. It learns from text which words are abbreviations (short words, often with internal full stops, often written with a full stop attached), plus common word pairs ("Mr. Smith") and common sentence starters, and looks at whether the next word is capitalised. It ships a trained English model and can be retrained on our own text without labels (an idea to test: it might learn "viz." and "i. e." from our corpus). It depends on the full stop; as far as I know it has no special quote handling. It might avoid cutting at "Nakula. the son" because the next word is lowercase (to be tested). **Its data file (`punkt_tab`) could not be downloaded in the cloud environment** (host not allowed; NLTK's proxy safeguard refuses, and I did not override it).
+- **spaCy (version 3.8.18).** Two modes. The **rule-based `sentencizer`** (checked, works offline): ends a sentence after a `.`, `?` or `!` token and keeps a following closing quote with that sentence; no abbreviation list of its own (the tokenizer treats many common abbreviations as single tokens; general knowledge). The **parser mode** (general knowledge, not tested): a trained neural model that reads the grammar and predicts where sentences begin; copes with missing punctuation, but needs a downloaded language model (probably blocked here), is slower, and was trained on modern English, so "thou hast" and "hath" may confuse it. A light statistical `senter` component also exists in the trained models (same download).
+- **Regex and custom rules** (general knowledge): split on `. ? !` followed by a capital; simple but fooled by abbreviations; custom rules need upkeep and testing.
+
+**What went wrong on our text (checked)**
+1. **pySBD returns one sentence for whole-paragraph speeches.** Example: Section 5, paragraph index 0 (heading "SECTION V", file `section_006.html`), Saunaka's question: 487 characters, five sentences, opens with `"` and closes with `."`, so pySBD sees a quote pair and hides the full stops. Result: 1 sentence of 487. Rough scan: **178 of 1,306 paragraphs** (about 14%) where pySBD returns one sentence although the paragraph has two or more apparent sentence ends (criterion: more than 300 characters and at least two apparent ends); **177 of those 178 start with an opening quote**. Paragraphs in the middle of a long speech open with `"` but do not close it (the speech continues), so there is no pair and they split normally.
+   - Test on the real paragraph: as is gives 1 sentence (487); removing both outer double quotes gives 5 sentences (136, 35, 168, 79, 63); removing only the opening or only the closing quote also gives 5. Toy checks agree: `"One. Two. Three."` stays one sentence; `"One. Two. Three.` (never closed) splits into three.
+   - **Possible fix, untested at scale:** strip the outer double quotes before splitting, and restore them (or record that the paragraph was quoted) when building the chunk. To do: re-run the scan and see how many of the 178 this fixes and whether it breaks anything.
+2. **spaCy's rule-based splitter did not have the quote problem:** none of the same 178 paragraphs came back as one sentence.
+3. **Each splitter fails somewhere else (spot check on six short strings modelled on corpus sentences; a spot check, not a benchmark):**
+
+| Case | pySBD | spaCy rule-based |
+|---|---|---|
+| "Mr. C.H. Tawney says…" | correct | correct |
+| "…habit, viz. he would grant…" | correct (kept whole) | **cut after "viz."** |
+| "…i. e. , without providing…" | **cut into 3 pieces** | correct (kept whole) |
+| "Nakula. the son of Madri" (source typo) | cut | cut |
+| closing quotes `."` and `.'` | correct | correct |
+| semicolon-joined list | one long sentence | one long sentence |
+
+4. **Neither can fix a typo in the source:** a full stop where a comma belongs is cut by both.
+
+**Conclusion so far.** No splitter is free of errors on our text; each has different weak spots. pySBD needs a quote-stripping step; spaCy's rule-based version needs an abbreviation fix ("viz."). NLTK and spaCy's parser mode are not tested. **Earlier I listed "pySBD only" as the recommended choice for the first semantic experiment; I withdrew that after finding the quote problem.** The next step is a splitter comparison: hand-check a sample of paragraphs, count each splitter's errors, then choose a base splitter and add small fixes for its known gaps.
+**Gotchas:** (a) test the splitter on joined text and on single paragraphs; they differ hugely; (b) a count of "sentences" does not show correctness, only reading the output does; (c) the rule-based splitters hide full stops inside quotes by design.
 
 #### Strategy 5 — Structure-aware / paragraph-based (overview; detail to come)
 Use the text's own units: one chunk per paragraph; merge tiny ones ("Thus endeth the section called Parva-sangraha…", 90 characters); split very long ones at sentence breaks and repeat the speaker as a header ("Dhritarashtra said:"); never cross a section boundary. Works from `paragraphs.jsonl`, which already carries section, sub-parva and position. Weaknesses: very uneven sizes; depends on how well ingestion found paragraph boundaries; the merge and split thresholds are variables of their own.
