@@ -1751,6 +1751,40 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 **Conclusion so far.** No splitter is free of errors on our text; each has different weak spots. pySBD needs a quote-stripping step; spaCy's rule-based version needs an abbreviation fix ("viz."). NLTK and spaCy's parser mode are not tested. **Earlier I listed "pySBD only" as the recommended choice for the first semantic experiment; I withdrew that after finding the quote problem.** The next step is a splitter comparison: hand-check a sample of paragraphs, count each splitter's errors, then choose a base splitter and add small fixes for its known gaps.
 **Gotchas:** (a) test the splitter on joined text and on single paragraphs; they differ hugely; (b) a count of "sentences" does not show correctness, only reading the output does; (c) the rule-based splitters hide full stops inside quotes by design.
 
+**Splitter comparison: plan and criteria (written 2026-11-12, BEFORE running, so they cannot be bent afterwards).**
+*Goal: choose a base sentence splitter (and a list of small fixes) for every strategy that depends on sentences. Nothing is built into the main pipeline.*
+
+**Candidates**
+- **A.** pySBD as it comes, run per paragraph.
+- **B.** pySBD with the outer double quotes of a paragraph stripped before splitting (and put back on the first and last sentence).
+- **C.** spaCy's rule-based `sentencizer`.
+- **D.** spaCy rule-based plus a small abbreviation fix (an abbreviation list such as "viz.", "i.e.", "Mr.", "Dr.", so a full stop after them is not a boundary).
+- **E.** NLTK Punkt **trained on our own corpus** (needs no download; feasibility checked: trains in about 1 second, learned 13 abbreviations including "mr", "dr", "i.e").
+- **Control:** a plain rule that splits after `.`, `?` or `!` followed by a capital letter or an opening quote.
+- **Not testable here:** NLTK's pre-trained English Punkt model (its data lives on `raw.githubusercontent.com`, which is not on the environment's allowlist, and NLTK additionally refuses proxied fetches unless `NLTK_ALLOW_PROXIED_URLOPEN=1` is set, a security opt-in left to the owner; allowing that host would also open raw files from any GitHub repository) and spaCy's parser mode (its language model is not available from the package index here). Ways round NLTK later: train Punkt on our corpus (candidate E), or commit the small data file downloaded on the owner's computer.
+
+**Gates (a candidate must pass to stay in)**
+1. **Speeches get split:** the share of long paragraphs (over 1,000 characters) returned as one sentence is **under 2%** (pySBD as it comes had 94 of 452, which is 21%).
+2. **Works in our environment:** needs no download and gives the same output every time.
+
+**Scores (the lower the better)**
+| Score | What it means | Example from our text | How measured |
+|---|---|---|---|
+| False splits | Cuts where the sentence has not ended | spaCy cut after "viz."; pySBD cut "i. e. ," into three pieces | hand-check count; automatic sign: share of sentences that start with a lowercase letter |
+| Missed splits | Sentences left stuck together | pySBD returned Saunaka's 487-character paragraph (five sentences) as one | hand-check count; automatic sign: sentences over 1,000 characters (a hint only: some are genuine semicolon lists such as chunk 478) |
+| Hard-case errors | Specific known traps, each reported on its own | "Mr. C.H. Tawney says…", closing quotes `."` and `.'`, the typo "Nakula. the son of Madri" | a fixed list of test sentences, right or wrong per candidate |
+| Junk fragments | Tiny pieces the splitter creates | spaCy produced `"Sauti said. '` (14 characters; the next sentence's opening quote stuck to the previous one) | count of pieces under about 15 characters; count of sentences ending in a dangling opening quote; a read of a sample |
+| Fixes needed | Extra rules needed on top of the splitter | pySBD: strip outer quotes; spaCy: abbreviation list | count and complexity of custom rules |
+| Speed (minor) | Seconds for one full pass over the corpus | | timing |
+
+**How the winner is chosen**
+1. Remove any candidate that fails a gate.
+2. Among the rest, take the one with the **fewest errors in the hand-check**, false and missed splits together as a share of the spots checked. Suggested bar for a winner: **under 5%**.
+3. If a candidate's errors are concentrated in one fixable category (for example "viz."), add the fix and measure again; the fixed version competes.
+4. If two are close, the tie-breaker is fewer custom fixes, then simplicity.
+
+**Method.** Automatic indicators over all 1,306 paragraphs for every candidate; then a **hand-check of about 60 spots where the candidates disagree** about a boundary, drawn with a fixed random seed and stratified across kinds of text (quote-wrapped speeches, abbreviations, lowercase after a full stop, other). I read each spot and judge which cut is right; the owner spot-checks a sample of my judgements. **Limits:** if every splitter makes the same mistake (the typo "Nakula. the son") disagreement-checking does not see it, so such cases stay on the hard-case list; judgements are mine, one author, not independently verified; and the stratified sample gives counts per candidate on the sample, not corpus-wide error rates. **This comparison is only a first filter:** what finally matters is whether chunks retrieve better, which is tested later with the retrieval metrics.
+
 **Pending to experiment (sentence splitting):** none run yet.
 1. Re-run the corpus scan after stripping outer double quotes, to see how many of the 178 quote-wrapped paragraphs are fixed and whether anything else breaks.
 2. Splitter comparison: hand-check a sample of paragraphs and count each splitter's errors (pySBD with the quote fix, spaCy rule-based, NLTK Punkt, spaCy parser mode).
