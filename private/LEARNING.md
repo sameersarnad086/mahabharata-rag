@@ -1430,6 +1430,8 @@ The embedding model turns each chunk into one vector, search compares the questi
 - A real cut in the baseline: chunk 478 (Section 63) ends "…And from Drupada wa", and chunk 479 starts with the same 200 characters (the overlap) and continues "…Drupada was born a daughter Sikhandin…". The overlap rescued this cut, but it also makes near-twin chunks, one reason duplicates fill the top 5.
 
 #### Strategy 1 — Fixed-size (our baseline)
+
+**Is a chunk size needed? MANDATORY.** The size is the cutting rule itself: the window length decides where every chunk ends. Overlap is the optional extra.
 - **How it works:** join all paragraphs into one long string, cut a 1,000-character window, step forward by 800 (overlap 200), repeat.
 - **Built with:** plain string slicing, no library (`src/rag/chunking.py`).
 - **Disadvantages:** cuts mid-word; mixes sections; loses the speaker in the middle of a long speech; overlap creates duplicates.
@@ -1440,6 +1442,8 @@ The embedding model turns each chunk into one vector, search compares the questi
 - Optional size sweep (600, 800, 1000, 1500), one value at a time, as proposed in public post 2. Status: not run.
 
 #### Strategy 2 — Recursive (learned in detail)
+
+**Is a chunk size needed? MANDATORY.** The size does two jobs: it decides whether a piece is "too big" and must be split with a finer separator, and it is the cap when small pieces are merged back together. Without it the method has nothing to trigger the recursion. (Checked in `langchain-text-splitters` 1.1.3: the library fills in a default of 4,000 characters with overlap 200 if you do not set one, so the method always runs with some size.)
 *Written from my own study notes (example setting: `chunk_size = 500`, `chunk_overlap = 50`), with two points checked by running the library, marked below.*
 
 Recursive Character Text Splitting breaks a document using progressively finer separators, then merges the resulting pieces into chunks that fit within the configured size.
@@ -1496,6 +1500,8 @@ A chunk can contain multiple paragraphs, or part of one paragraph followed by an
 5. Chunk size (for example 500, 1000), after the ladder question is settled.
 
 #### Strategy 3 — Sentence-based / sentence-aware (concept learned; splitters not yet tested)
+
+**Is a chunk size needed? MANDATORY (as a target or limit for packing).** Splitting into sentences needs no size, but packing sentences into chunks does: without a size, each sentence would be its own chunk or a whole paragraph would be one chunk. The size decides how many sentences go in. A separate rule is needed for sentences longer than the limit.
 *Written from my own study notes (example setting: `chunk_size = 1000`, `chunk_overlap = 200`), with additions from our data marked "Our data" and two checks marked "Checked".*
 
 Sentence-aware chunking identifies complete sentences first, then combines consecutive sentences into chunks that fit within the configured size. Unlike Recursive Character Splitting, it uses linguistic sentence boundaries rather than progressively trying paragraph, line and word separators.
@@ -1558,6 +1564,8 @@ Overlap is a separate decision from sentence detection.
 5. Chunk size.
 
 #### Strategy 4 — Semantic (concept learned; not built or scored)
+
+**Is a chunk size needed? NOT MANDATORY: complementary, and a minimum and a maximum are RECOMMENDED.** The cuts come from the similarity scores and the breakpoint rule, not from a size (shown in the step-by-step story: no chunk got near 1,000 characters). Size appears only as guards applied afterwards: a minimum (our example had a 36-character chunk) and a maximum (to split rare giants). The breakpoint value (threshold, percentile or standard deviations) is the setting that matters, and it is not a size.
 *Written 2026-11-11. "Checked" marks something I ran or read in the source this session; "general knowledge" marks what I know but did not verify here.*
 
 **The problem it solves.** Fixed-size, recursive and sentence-based chunking cut by size or punctuation; none looks at meaning. Semantic chunking asks: **where does the topic actually change?** It cuts there, so each chunk is about one thing.
@@ -1716,6 +1724,8 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 5. Idea to test: retrain Punkt on our own text (no labels needed).
 
 #### Strategy 5 — Structure-aware / paragraph-based (concept learned; not built or scored)
+
+**Is a chunk size needed? COMPLEMENTARY, but a maximum is effectively REQUIRED for our corpus, and a minimum is RECOMMENDED.** The main boundaries come from the text's own structure (paragraphs, sections), not from a size. But 71% of our text sits in paragraphs over 1,000 characters, so we need a maximum to decide when a paragraph must be split, and a minimum to decide when a tiny paragraph is merged. Both are thresholds we choose.
 *Written 2026-11-11. "Measured" means computed from `data/processed/paragraphs.jsonl` this session.*
 
 **The problem it solves.** Fixed-size cuts by character count, and sentence-based and semantic chunking guess where thoughts end. Structure-aware chunking uses the boundaries the text already marks: **paragraphs, sections and the "X said…" speaker tags**. The translator already decided where one thought ends, so a chunk should follow that instead of a count.
@@ -1786,6 +1796,8 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 7. Score with retrieval metrics first; the frozen judge only for a likely winner.
 
 #### Strategy 6 — Parent-child (concept learned; previewed on two questions; not built or scored)
+
+**Is a chunk size needed? MANDATORY for each of the two levels, but it can be a size or a unit.** A child level and a parent level must each be defined: either by a size (the notes' example: parent 1,000 tokens, child 200 tokens, illustrative) or by a unit (child = sentence, parent = paragraph). When a unit is used, a cap on the parent (budget) and a minimum on the child (noise) are RECOMMENDED; the R05 and R15 previews showed why.
 *Method section written from my own study notes (example setting: parent = 1,000 tokens, child = 200 tokens, "illustrative values, not fixed requirements"). The sections "What we saw" and below were written 2026-11-11; the previews are not evaluations.*
 
 **Parent-child chunking: how it works (my notes)**
@@ -1843,6 +1855,8 @@ None run yet; one variable at a time; the splitter comparison and the single-lev
 7. Optional: parent-level embeddings as an extra retrieval route (not part of the standard method).
 
 #### Strategy 7 — Sentence window (concept learned; previewed on two questions; not built or scored)
+
+**Is a chunk size needed? MANDATORY, but as a window width, not a character size.** The setting that must be chosen is N, the number of sentences on each side of the match (2N + 1 sentences in all). No character size is defined. A minimum sentence length is RECOMMENDED, because tiny sentences match on names alone (R15).
 *Written 2026-11-11. General-knowledge statements are marked; the preview is not an evaluation.*
 
 **The problem it solves.** Same trade-off as parent-child: a single sentence is a precise search target, but a lone sentence is too little for the model to read. The sentence window keeps the precision and adds context.
@@ -1908,6 +1922,18 @@ All seven strategies are now learned and logged: fixed (the baseline control), r
 | Structure-aware | on long ones | yes | with a header | rules to tune | uneven sizes |
 | Parent-child | child yes | via parent | via parent | extra lookup | duplicates; scoring |
 | Sentence window | yes | no | partly | extra lookup | duplicates |
+
+#### Is a chunk size needed? Summary for the seven strategies
+| Strategy | Chunk size | What sets the cut points | What the size does |
+|---|---|---|---|
+| Fixed-size | **Mandatory** | the size itself | defines every cut |
+| Recursive | **Mandatory** | separators, triggered by the size | decides when to split finer; caps the merging |
+| Sentence-based | **Mandatory** (target or limit) | sentence ends | decides how many sentences go in a chunk |
+| Semantic | **Not mandatory**; min and max **recommended** | similarity scores and the breakpoint rule | guards against tiny and giant chunks |
+| Structure-aware | Complementary; maximum **effectively required** for us, minimum **recommended** | paragraphs and sections | decides when to split long and merge tiny paragraphs |
+| Parent-child | **Mandatory** per level, as a size or a unit | the methods chosen for each level | sets child and parent scale; parent cap and child minimum recommended |
+| Sentence window | **Mandatory**, as window width N (sentences) | sentence matches | sets how much context surrounds a match |
+Rule of thumb from the table: methods that cut by **size** need it; methods that cut by **meaning or structure** need only guards; methods that **expand a match** need a width.
 
 #### Alternatives and what comes next
 Libraries mentioned are references only; no frameworks until Phase 4. **Next:** learn strategies 3 to 7 in the same detail as recursive, log each here, then choose which 2 or 3 to build and compare (the owner chooses). Before the first run, confirm that the retrieval scoring does not depend on chunk IDs (it checks the evidence phrase and the gold section), so results from different chunkings are comparable.
