@@ -1839,7 +1839,74 @@ Errors by kind of spot (out of 12): quote-wrapped speech A 12, B 6, C 0, D 0, E 
 *Where this leaves us (rule from the plan).* A is out. Nobody is under the 5% bar. D's errors are concentrated in one fixable problem (stuck opening quotes and brackets) and E's in another (the "viz." cuts), so the plan says: add the fix, measure again. **Next step: build D2 (D plus moving a stuck opening quote or bracket to the next sentence) and E2 (E plus the abbreviation list), and judge them on a FRESH sample of disagreement spots (a new seed), not the 60 above, because the fixes were designed from those spots; also re-run the automatic counts and the 9 hard cases. B and C are superseded (C is D without its fix; B needs more than a wrapper).** Possible extra shared fix: the lowercase-next rule (observation 7).
 *Gotchas:* a script named `signal.py` shadowed a Python built-in module; `python -I` hides packages installed in the user site and broke the spaCy import; a check that looks at the last word of a sentence fails when the splitter attaches trailing punctuation to it.
 
-**Pending to experiment (sentence splitting):** none run yet.
+**Splitter comparison, round 2: D2, E2 and D3 (run 2026-11-12; scripts in the scratchpad, not committed).** Following the rule in the plan (fix concentrated errors, then measure again).
+
+*What was built (all in plain words).*
+- **D2** = D (spaCy rule-based splitter plus the abbreviation merge) plus **an opening-quote move**: an opening quote or bracket left at the end of a piece, with the next word attached directly to it, moves to the start of the next piece.
+- **E2** = E (Punkt trained on our corpus) plus the same abbreviation merge.
+- **D3** = D2 plus **two more fixes**: (1) a **lowercase merge**: a piece that starts with a lowercase letter (skipping quotes, brackets, commas and dashes) is joined to the previous piece; (2) a **closing-quote-before-a-dash move**: a piece that starts with a quote mark directly followed by `-` begins with the closing quote of the previous sentence, so that quote moves back.
+- **A correction to my first D3 attempt.** I first built fix (2) as a "dash exception" in the quote-move rule, expecting D2 to have moved a closing quote wrongly. It changed nothing on the real text, because in the corpus the text is `world.'--The reply` (no space before the quote) and **spaCy itself leaves that quote at the start of the next piece**; my first test sentence also had a wrong space before the quote. The revised fix (2) acts on the real cause. The 5 hard-case results for the real pattern are in the table below.
+
+*Automatic counts over the whole corpus.*
+| | D | D2 | E | E2 | D3 |
+|---|---|---|---|---|---|
+| Sentences found | 11,584 | 11,584 | 11,627 | 11,594 | 11,561 |
+| Long paragraphs left as one sentence | 0 | 0 | 0 | 0 | 0 |
+| Sentences over 1,000 characters | 9 | 9 | 9 | 9 | 10 |
+| Start with a lowercase letter | 23 | 23 | 40 | 24 | 0 (by construction, so not evidence) |
+| Start with , ; : or ) | 0 | 0 | 31 | 0 | 0 |
+| Pieces under 15 characters | 44 | 46 | 50 | 49 | 43 |
+| Opening quote stuck at the end of a piece | 50 | 11 | 11 | 11 | 10 |
+The remaining 10 to 11 "stuck" quotes are probably real closing quotes with a stray space before them (for example "husband! ' the great god"), so that count over-reports.
+
+*The hard cases (13; I added the last two after seeing the first results).*
+| Hard case (what is expected) | D | D2 | E | E2 | D3 |
+|---|---|---|---|---|---|
+| "Mr." abbreviation (Mr. C.H. Tawney says, …) [2 sentences] | ok | ok | ok | ok | ok |
+| "Dr." abbreviation (Dr. Rost's letter) [2 sentences] | ok | ok | ok | ok | ok |
+| "viz." in the middle of a sentence [1 sentences] | ok | ok | **wrong** | ok | ok |
+| "viz. ," followed by a name (Section 65 style) [2 sentences] | ok | ok | **wrong** | ok | ok |
+| "i. e. ," with spaces [1 sentences] | ok | ok | ok | ok | ok |
+| Source typo: "Nakula. the son of Madri" [1 sentences] | **wrong** | **wrong** | **wrong** | **wrong** | ok |
+| Closing quotes `."` and `.'` [3 sentences] | ok | ok | ok | ok | ok |
+| Semicolon-joined list (chunk 478 style) [1 sentences] | ok | ok | ok | ok | ok |
+| Speech wrapped in quotes (Section 5, 5 sentences) [5 sentences] | ok | ok | ok | ok | ok |
+| Opening quote stuck to the previous piece ("Sauti said. '") [no piece ends in an opening quote] | **wrong** | ok | ok | ok | ok |
+| Opening bracket after a stop ("dog. (Destitute…") [3 sentences] | ok | ok | ok | ok | ok |
+| Closing quote before a dash (Section 147, "world.'--The reply") [2 sentences, quote on the first] | **wrong** | **wrong** | ok | ok | ok |
+| "etc.)," followed by a lowercase word (Section 7) [2 sentences] | **wrong** | **wrong** | ok | ok | ok |
+| **Wrong out of 13** | 4 | 3 | 3 | 1 | 0 |
+Only the **typo "Nakula. the son"** separates D3 from the rest (it is the one case every other candidate fails); the "etc.)," case and the closing-quote-before-a-dash case are fixed only by D3 and E2.
+
+*Fresh check of D2 against E2 (all 27 disagreements in the whole corpus).* D2 and E2 agree on **10,267 boundaries and differ in only 27 places**, so the "sample" is all of them (my judgement).
+| Result | D2 | E2 |
+|---|---|---|
+| Wrong | 7 | 16 |
+| Debatable (either is fine) | 5 | 5 |
+| Right | 15 | 6 |
+- **D2's 7 errors:** 3 closing quotes left at the start of the next piece (Section 147 `…the whole world.'--The reply`, Section 192 `…my arms.'--'Mark`, Section 133 `…one night.'--Thus addressed`); 2 false cuts (Section 23 `…Agni, Pavana, etc. ( | i.e. , the presiding deity…` and Section 7 `…marriage, etc.), | and at other sacrifices.`); 1 missed cut (Section 29 `…and so am I. | But, father…`, which spaCy never cuts but Punkt does); 1 garbled spot both candidates cut (Section 177, `( ???--JBH )`, corrupted source text).
+- **E2's 16 errors:** 8 false cuts in dash-linked runs of cries (Section 137 `'This is the foremost of those versed in arms!' | --'This is the foremost of all cherishers of virtue!'`, and Section 127 `…'O my son, my son!' | --and fell down senseless…`); 5 missed cuts, partly because Punkt learned ordinary words as abbreviations ("fro", "raw", "etc", also "ass", "kin", "ore"), so `…swaying to and fro. | In this manner…` and `…appear raw. | Conducting himself…` were not cut, plus Section 95 `…and Puru., | And the descendants…` and Section 85 `Vaisampayana continued., | 'The son of Nahusha…`; 2 stray closing quotes cut off as 1-character pieces at paragraph ends; and the garbled Section 177 spot.
+- **Debatable (5):** an em dash after a closing quote followed by a capital letter (for example Section 133 `…know me for thy friend!' | --Saying this, I approached him…`), where a cut is plausible either way.
+- **Shared-mistake checks.** 15 random boundaries that both cut: all 15 real sentence ends (if the true error rate were 20% or more, seeing none in 15 would be unlikely, about 4%; 15 is a small sample). Places where both leave a possible boundary (a full stop, then a capital letter) uncut: only 9 in the whole corpus, all "Dr.", "Mr." and initials ("Dr. Sambhu C. | Mookherjee"), all correctly uncut.
+
+*D3 compared with D2 across the whole corpus (every change was read).* D3 differs from D2 in 29 boundaries: **23 lowercase merges and 3 moved closing quotes** (6 boundary changes). Judgement: **all 23 merges are correct or acceptable and none is wrong**, for example Section 1 `'O guide of the Ganas ! | be thou the writer…`, Section 1 `…When I heard that Nakula. | the son of Madri…` (the source typo), Section 7 `…etc.), | and at other sacrifices.`, Section 23 `…Pavana, etc. ( | i.e. , the presiding deity…`, Section 74 `…my union with the? | took place privately`, Section 95 `…brought away by force Subhadra. | the sweet-speeched sister of Vasudeva`, Section 200 `…give me a husband! ' | the great god himself…`; two are merely acceptable (Section 116 `Tell me this, O Rishi! | my curiosity hath been great.`, Section 172). The 3 quote moves (Sections 133, 147, 192) are right.
+*D3 on the 27 fresh spots:* 20 right, **2 wrong** (the garbled `( ???--JBH )` text and the missed `…and so am I. | But, father…`), 5 debatable (D2: 7 wrong). **Caveat:** D3's fixes were designed from these spots, so this overstates its accuracy; there is no new independent sample for D3. What does hold up is that all 29 changes it makes to D2 were examined and none was wrong.
+
+*Decision.* **D3 is kept as the base sentence splitter:** spaCy's rule-based `sentencizer`, then an abbreviation merge ("viz.", "i.e.", "e.g.", "Mr.", "Mrs.", "Dr.", "St.", "&c.", "vs."), a lowercase merge, an opening-quote move, and a closing-quote-before-a-dash move. It passes all 13 hard cases, needs no download, is deterministic, and runs the whole corpus in under a second. E2 is the runner-up (1 of 13 hard cases wrong, but 16 errors against D2's 7 in the disagreements, and it learned junk abbreviations); B and C are superseded; A is out.
+
+*What works and what still does not (D3).*
+| Works | Still does not work or is unknown |
+|---|---|
+| Speeches wrapped in one pair of quotes are split (long paragraphs left unsplit: A 21%, D3 0%) | The garbled source text `( ???--JBH )` (Section 177) is cut inside the garbage |
+| "viz.", "viz. ,", "viz ." followed by a name or lowercase word; "i. e. ,"; "Mr."; "Dr." | One missed cut where spaCy never splits: `…and so am I. | But, father…` (Section 29); how often spaCy misses like this across the corpus is unknown (Punkt cut it correctly) |
+| "etc.)," and "etc. (" followed by lowercase | 10 sentences over 1,000 characters remain (mostly semicolon lists like chunk 478): the chunker needs a size rule for them |
+| Closing quotes `."` and `.'`, and a closing quote before a dash (`world.'--The reply`) | Dash-linked runs of cries (`…arms!'--'This is the foremost…`) stay as one long sentence; a judgement call, and the 5 debatable em-dash spots are decided either way |
+| Opening quotes and brackets go with the next sentence (`ear-rings. 'Utanka'…`, `dog. (Destitute…`) | Mistakes both D3 and E2 would make are invisible to a disagreement check; only 15 + 9 random places were checked for them |
+| The source typo "Nakula. the son of Madri" and 22 similar full-stop-then-lowercase typos are joined | A genuinely new sentence that begins with a lowercase letter would be wrongly joined (none was found among the 23 merges) |
+| No stray 1-character closing-quote pieces at paragraph ends | NLTK's pre-trained Punkt model and spaCy's parser mode were never tested (not available in this environment) |
+| Semicolon lists are kept whole, as intended; no download needed; deterministic; about 0.4 s for the corpus | Hand-check judgements are mine (one author) and the samples are small; D3's fixes were tuned on spots already seen |
+
+**Pending to experiment (sentence splitting):** items 2, 3 and 5 below were done on 2026-11-12 (see the two results blocks above; D3 is the chosen splitter); items 1 and 4 remain, plus a final independent check of D3 through the retrieval metrics when chunks are built on it.
 1. Re-run the corpus scan after stripping outer double quotes, to see how many of the 178 quote-wrapped paragraphs are fixed and whether anything else breaks.
 2. Splitter comparison: hand-check a sample of paragraphs and count each splitter's errors (pySBD with the quote fix, spaCy rule-based, NLTK Punkt, spaCy parser mode).
 3. Fix known gaps: an abbreviation list for spaCy ("viz."), the "i. e. ," case for pySBD.
