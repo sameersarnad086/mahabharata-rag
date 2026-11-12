@@ -1562,40 +1562,89 @@ Overlap is a separate decision from sentence detection.
 
 **The problem it solves.** Fixed-size, recursive and sentence-based chunking cut by size or punctuation; none looks at meaning. Semantic chunking asks: **where does the topic actually change?** It cuts there, so each chunk is about one thing.
 
-**The method, step by step**
-1. **Split into sentences**, per paragraph (never on joined text). This step is crucial and has its own section below ("Sentence splitting").
-2. **Embed every sentence** with the embedding model, so each sentence becomes a vector (here `BAAI/bge-small-en-v1.5`, vectors of length 384, normalised to length 1).
-3. **Measure how similar each sentence is to the next** (cosine similarity; for normalised vectors this is just the dot product). High means "still on the same topic"; low means "something changed". For n sentences there are n − 1 similarity values; value i sits between sentence i and sentence i + 1.
-4. **Choose the cut points with a breakpoint rule:**
-   - **Percentile:** cut where the similarity is in the lowest N% of all values (for example the lowest 10%). The number of cuts is predictable, but a fixed share of boundaries is cut by construction, whether or not a real topic change exists.
-   - **Standard deviation:** cut where a value is more than N standard deviations below the average. It adapts to each passage: if all similarities are close together, few or no cuts happen.
-   - **Fixed threshold:** cut wherever similarity is below a set number (for example 0.6). Simple, but the right number belongs to the embedding model and must be re-tuned if the model changes.
-   - Other rules exist (general knowledge: for example interquartile range and gradient-based rules in LangChain's experimental semantic splitter); not studied.
-5. **Apply size limits and group.** Without limits, the rule can produce one-sentence chunks and giant chunks. A minimum and a maximum size are usual. Sentences between two cuts become one chunk, carrying section and paragraph metadata.
+**The method, step by step (rewritten 2026-11-12 as a worked story on one real paragraph)**
+*The story uses the Section 66 genealogy paragraph (file `section_067.html`, paragraph index 1; Brahman, Manu and the Vasus). Checked by running: pySBD for the sentences, `BAAI/bge-small-en-v1.5` for the vectors, a fixed threshold of 0.65 (the owner's example value). The paragraph has 23 sentences of 33 to 252 characters, about 1,980 characters in all.*
 
-**How chunks actually form (the owner's question, 2026-11-12): no chunk size is needed.** The cut points come from the similarity values and the breakpoint rule, not from a size. Size appears only as optional guards (a minimum and a maximum) applied afterwards. Worked example, checked on the whole Section 66 genealogy paragraph (23 sentences, sentence lengths 33 to 252 characters, about 1,980 characters in all; pySBD for the sentences, `bge-small-en-v1.5` for the vectors):
-1. **22 similarity values** sit between the 23 sentences (0.81, 0.76, 0.61, 0.56, 0.50, 0.72, 0.58, 0.56, 0.69, 0.61, 0.60, 0.55, 0.68, 0.52, 0.77, 0.71, 0.52, 0.57, 0.67, 0.61, 0.58, 0.64).
-2. **Breakpoint rule = percentile.** The 10th percentile of the 22 values is 0.523; every gap below it is a cut. Chunks: S1-S5 (281 characters), S6-S14 (789), S15-S17 (261), S18-S23 (649). A chunk is simply the run of sentences between two cuts.
-3. **A looser rule (25th percentile, threshold 0.563)** cuts more: S1-S4 (245), **S5 alone (36 characters)**, S6-S8 (386), S9-S12 (242), S13-S14 (161), S15-S17 (261), S18-S23 (649). One chunk is a single 36-character sentence: this is why a **minimum size** guard is needed.
-4. **Minimum size guard (300 characters) on that result:** a chunk smaller than the minimum is merged into the next chunk. Result: S1-S8 (667), S9-S14 (403), S15-S23 (910).
-5. **Maximum size guard (500 characters) on the 10th-percentile result:** a chunk over the maximum is split again at its own lowest-similarity gap, repeating until every piece fits. S6-S14 (789) became S6-S8 (386) and S9-S12 (242) and S13-S14 (161); S18-S23 (649) became S18 (188) and S19-S23 (461). The chunk list: S1-S5, S6-S8, S9-S12, S13-S14, S15-S17, S18, S19-S23.
-So the order is: **embed, compare neighbours, cut by the rule, then enforce minimum and maximum.** The minimum and maximum are design choices (which merge direction, which split point) and are variables of their own. The numbers are one paragraph and one embedding model, so they show the mechanism, not how the rules behave on the corpus.
+**Step 1 — Break the corpus into paragraphs.** We start from the 1,306 cleaned paragraphs produced by ingestion (`paragraphs.jsonl`); each carries its section, sub-parva, position and page. **Every paragraph is processed on its own and never joined to its neighbours** (joined text breaks the sentence splitter; see "Sentence splitting"). Two consequences: the end of a paragraph is always a cut, so a chunk never crosses a paragraph; and a short paragraph (about 31% are under 400 characters) becomes a chunk of its own unless a merge rule says otherwise. This is the "stay inside one paragraph" option from the design choices; it is how the owner described the process, but it is not yet decided as the design.
+
+**Step 2 — Split each paragraph into sentences** with a sentence splitter (the crucial step, covered in its own section below). Our paragraph gives S1 to S23.
+
+**Step 3 — Embed every sentence** with the embedding model, so each sentence becomes a vector (vectors of length 384, normalised to length 1).
+
+**Step 4 — Score each gap.** For every pair of neighbouring sentences, compute the cosine similarity (for normalised vectors, the dot product). High means "still on the same topic"; low means "something changed". For 23 sentences there are 22 scores; the score is stored on the sentence above the gap ("to next"), and the last sentence has none.
+
+**Step 5 — Decide the cuts with a breakpoint rule.** The rule turns the scores into cut or join:
+- **Fixed threshold** (used in this story, 0.65): a score of 0.65 or higher means join with the next sentence; below 0.65 means cut after this sentence. Simple, but the right number belongs to the embedding model and the text and must be set from the actual distribution of the scores.
+- **Percentile:** cut where the score is in the lowest N% of all values (for example the lowest 10%). The number of cuts is predictable, but a fixed share of gaps is cut by construction, whether or not a real topic change exists.
+- **Standard deviation:** cut where a score is more than N standard deviations below the average. It adapts to each passage: if all scores are close together, few or no cuts happen.
+- Other rules exist (general knowledge: interquartile range and gradient-based rules in LangChain's experimental semantic splitter); not studied.
+- **The last sentence of a paragraph always ends a chunk.**
+
+Here are our paragraph's 23 sentences with their scores and the decision at 0.65:
+
+| # | Chars | Sentence (shortened) | Score to next | Decision |
+|---|---|---|---|---|
+| S1 | 40 | "And Brahman had another son named Manu. | 0.81 | join |
+| S2 | 44 | And Manu had a son of the name of Prajapati. | 0.76 | join |
+| S3 | 87 | And the sons of Prajapati were eight and were called Vasus whom I shall name in detail. | 0.61 | **cut** |
+| S4 | 74 | They were Dhara, Dhruva, Soma, Aha, Anila, Anala, Pratyusha, and Prabhasa. | 0.56 | **cut** |
+| S5 | 36 | These eight are known as the Vasus . | 0.50 | **cut** |
+| S6 | 252 | Of these, Dhara and the truth-knowing Dhruva were born of Dhumra; Chandramas (Soma) and Swasana… | 0.72 | join |
+| S7 | 52 | And Dhara had two sons, Dravina and Huta-havya-vaha. | 0.58 | **cut** |
+| S8 | 82 | And the son of Dhruva is the illustrious Kala (Time), the destroyer of the worlds. | 0.56 | **cut** |
+| S9 | 42 | And Soma's son is the resplendent Varchas. | 0.69 | join |
+| S10 | 72 | And Varchas begot upon his wife Manohara three sons--Sisira, and Ramana. | 0.61 | **cut** |
+| S11 | 59 | And the son of Aha were Jyotih, Sama, Santa, and also Muni. | 0.60 | **cut** |
+| S12 | 69 | And the son of Agni is the handsome Kumara born in a forest of reeds. | 0.55 | **cut** |
+| S13 | 78 | And, he is also called Kartikeya because he was reared by Krittika and others. | 0.68 | join |
+| S14 | 83 | And, after Kartikeya, there were born his three brothers Sakha, Visakha, Naigameya. | 0.52 | **cut** |
+| S15 | 78 | And the wife of Anila is Siva, and Siva's son were Manojava and Avijnataagati. | 0.77 | join |
+| S16 | 33 | These two were the sons of Anila. | 0.71 | join |
+| S17 | 150 | The son of Pratyusha, you must know, is the Rishi named Devala; and Devala had two sons who wer… | 0.52 | **cut** |
+| S18 | 188 | And the sister of Vrihaspati, the first of women, uttering the sacred truth, engaged in ascetic… | 0.57 | **cut** |
+| S19 | 75 | And she brought forth the illustrious Viswakarman, the founder of all arts. | 0.67 | join |
+| S20 | 139 | And he was the originator of a thousand arts, the engineer of the immortals, the maker of all k… | 0.61 | **cut** |
+| S21 | 151 | And he it was who constructed the celestial cars of the gods, and mankind are enabled to live i… | 0.58 | **cut** |
+| S22 | 46 | And he is worshipped, for that reason, by men. | 0.64 | **cut** |
+| S23 | 50 | And he is eternal and immutable, this Viswakarman. | none (end of paragraph) | **cut** |
+
+**Step 6 — Chunks are the runs of sentences between two cuts.** Walking from the top: S1 to S2 scores 0.81, join; S2 to S3 scores 0.76, join; S3 to S4 scores 0.61, **cut**, so chunk 1 is S1 + S2 + S3. S4 starts a new chunk; S4 to S5 scores 0.56, cut, so chunk 2 is **S4 alone**. S5 to S6 scores 0.50, cut, so chunk 3 is **S5 alone**. S6 to S7 scores 0.72, join; S7 to S8 scores 0.58, cut, so chunk 4 is S6 + S7. The same rule continues down the list. Result: 15 chunks.
+
+| Chunk | Sentences | Approx. characters |
+|---|---|---|
+| 1 | S1 to S3 | 173 |
+| 2 | S4 | 74 |
+| 3 | S5 | 36 |
+| 4 | S6 to S7 | 306 |
+| 5 | S8 | 82 |
+| 6 | S9 to S10 | 116 |
+| 7 | S11 | 59 |
+| 8 | S12 | 69 |
+| 9 | S13 to S14 | 163 |
+| 10 | S15 to S17 | 265 |
+| 11 | S18 | 188 |
+| 12 | S19 to S20 | 216 |
+| 13 | S21 | 151 |
+| 14 | S22 | 46 |
+| 15 | S23 | 50 |
+
+What this shows:
+- **No chunk size was needed.** The cut points come from the scores and the rule alone. No chunk gets near 1,000 characters, so a "chunk size of 1,000" would play no part here. (The owner's assumption that the method needs a fixed size was corrected: size appears only as optional guards, Step 7.)
+- **0.65 is too high for this paragraph.** The 22 scores run from 0.50 to 0.81 with a mean of 0.63, so 14 of the 22 gaps fall below 0.65 and the paragraph shatters into 15 chunks of about 130 characters. A fixed number must be chosen from the real distribution of scores. **Not yet measured across the whole corpus** (a run for thresholds 0.55 to 0.75 was started and stopped); that is the next measurement to take.
+- **The cost for our questions.** The sentences that introduce the eight Vasus (S3, S4, S5) end up in three separate chunks, and chunk 4 holds "Dhara… born of Dhumra" together with "Dhara had two sons". A question like "Who were the Vasus, and who were Dhara's sons?" needs two or three of these chunks.
+- **Paragraph ends are forced cuts** (Step 1), so the process never merges across paragraphs.
+
+**Step 7 — Optional size guards, applied after the cuts.** Size enters only here:
+- **Maximum (for example 500 or 1,000 characters):** a chunk over the maximum is split again at its own lowest-score gap, repeating until every piece fits. With a high threshold like 0.65 it would almost never apply. Checked on the same paragraph with the 10th-percentile rule (threshold 0.523): the raw chunks were S1-S5 (281 characters), S6-S14 (789), S15-S17 (261), S18-S23 (649); a 500-character maximum then split S6-S14 into S6-S8 (386), S9-S12 (242) and S13-S14 (161), and S18-S23 into S18 (188) and S19-S23 (461).
+- **Minimum (for example 300 characters):** a chunk below the minimum is merged into the next chunk. Checked with the 25th-percentile rule (threshold 0.563): the raw result included **S5 alone (36 characters)**; a 300-character minimum gave S1-S8 (667), S9-S14 (403) and S15-S23 (910). With 0.65 this guard would apply to most of the 15 chunks.
+- **"Fill up to 1,000" as a target** is a different method: it would merge neighbouring chunks until about 1,000, overriding the cuts; it is closer to sentence-based packing with similarity as a tie-breaker.
+- Which way to merge and where to split are design choices and variables of their own. The numbers are one paragraph and one embedding model, so they show the mechanism, not how the rules behave on the corpus.
 
 **Variations (general knowledge, not built):** compare a small window of sentences with the next window instead of single sentences (smooths noisy short sentences); compare each new sentence with the whole chunk built so far instead of only its neighbour; let an LLM decide where to cut (expensive; out of scope).
 
 **Embedding is used twice:** once to choose the chunks, and again to index the chunks for search. The two models need not be the same. Using the same one keeps things simple.
 
-**Worked example on our text — Section 66 (file `section_067.html`), the genealogy paragraph of Brahman, Manu and the Vasus.** Checked: pySBD split the paragraph into **23 sentences**; the table below covers only the **first 12** (my display limit when I first measured it; I wrongly described the paragraph as having 12 sentences until 2026-11-12). `bge-small-en-v1.5` embedded each sentence, and neighbour similarity (value after sentence i) for the first 12 came out as:
-
-| After sentence | Opening words | Similarity to the next |
-|---|---|---|
-| 1 | "And Brahman had another son named Manu." | 0.81 |
-| 2 | "And Manu had a son of the name of Prajapati." | 0.76 |
-| 3 | "And the sons of Prajapati were eight…" | 0.61 |
-| 4 | "They were Dhara, Dhruva, Soma, Aha…" | 0.56 |
-| 5 | "These eight are known as the Vasus." | **0.50** (lowest) |
-| 6 | "Of these, Dhara and the truth-knowing Dhruva were born of Dhumra…" | 0.72 |
-| 7 to 11 | one-line "And X had a son Y" sentences | 0.56 to 0.69 |
+**Reading the scores on our paragraph (Section 66, file `section_067.html`).** The full table of sentences and scores is in Step 5 above. (Correction, 2026-11-12: I first measured only the first 12 of the paragraph's 23 sentences, because of a display limit, and wrongly described the paragraph as having 12 sentences.) `bge-small-en-v1.5` embedded each sentence. For the first 12 sentences:
 
 Over these first 12 sentences (11 values): range 0.50 to 0.81, mean 0.64. Over all 23 sentences (22 values): range 0.50 to 0.81, mean 0.63; the values after sentences 12 to 22 are 0.55, 0.68, 0.52, 0.77, 0.71, 0.52, 0.57, 0.67, 0.61, 0.58, 0.64. Reading it:
 - The lowest dip (0.50) is between "These eight are known as the Vasus." and "Of these, Dhara and Dhruva were born…". Sensible as a topic shift (introducing the eight versus their children), but a question such as "Who were the sons of the Vasus?" needs both halves, so the cut separates two parts of one answer.
@@ -1619,12 +1668,13 @@ Over these first 12 sentences (11 values): range 0.50 to 0.81, mean 0.64. Over a
 **Status:** concept only. The four choices above are not made; the owner wanted to learn each option first.
 
 **Pending to experiment (semantic):** none run yet. The owner chose to learn each option before deciding.
-1. Choose the splitter (depends on the splitter comparison below); hold it fixed.
-2. Decide: chunks stay inside one paragraph, or may span paragraphs within a section.
-3. Vary the breakpoint rule one at a time: percentile (start near the lowest 10%), standard deviation, fixed threshold; then its value.
-4. Minimum and maximum chunk size.
-5. Single sentences versus a window of sentences for the comparison.
-6. Score with retrieval metrics first; the frozen judge only for a likely winner.
+1. **Measure the distribution of neighbour scores over the whole corpus** (per paragraph) and what fixed thresholds 0.55, 0.60, 0.65, 0.70 and 0.75 do: number of chunks, sizes, share of tiny chunks. Started on 2026-11-12 and stopped before it ran; read-only, about a minute. This sets the threshold from data instead of guessing.
+2. Choose the splitter (depends on the splitter comparison below); hold it fixed.
+3. Decide: chunks stay inside one paragraph (the working assumption in the step-by-step story), or may span paragraphs within a section.
+4. Vary the breakpoint rule one at a time: percentile (start near the lowest 10%), standard deviation, fixed threshold; then its value.
+5. Minimum and maximum chunk size.
+6. Single sentences versus a window of sentences for the comparison.
+7. Score with retrieval metrics first; the frozen judge only for a likely winner.
 
 #### Sentence splitting: the crucial first step (for sentence-based and semantic chunking)
 Both strategies depend on knowing where sentences end, so every splitting mistake flows into the chunks. Our text is hard for splitters: about 1,559 full stops followed by a closing quote, about 71 abbreviation-like cases ("Mr.", "Dr.", "viz."), about 727 semicolons (lists stay one long sentence), and typos in the source ("When I heard that Nakula. the son of Madri…", "my union with the? took place"). These counts are rough, from a quick pattern search of the corpus, and cover only the patterns I searched for.
