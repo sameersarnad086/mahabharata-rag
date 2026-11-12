@@ -1573,11 +1573,19 @@ Overlap is a separate decision from sentence detection.
    - Other rules exist (general knowledge: for example interquartile range and gradient-based rules in LangChain's experimental semantic splitter); not studied.
 5. **Apply size limits and group.** Without limits, the rule can produce one-sentence chunks and giant chunks. A minimum and a maximum size are usual. Sentences between two cuts become one chunk, carrying section and paragraph metadata.
 
+**How chunks actually form (the owner's question, 2026-11-12): no chunk size is needed.** The cut points come from the similarity values and the breakpoint rule, not from a size. Size appears only as optional guards (a minimum and a maximum) applied afterwards. Worked example, checked on the whole Section 66 genealogy paragraph (23 sentences, sentence lengths 33 to 252 characters, about 1,980 characters in all; pySBD for the sentences, `bge-small-en-v1.5` for the vectors):
+1. **22 similarity values** sit between the 23 sentences (0.81, 0.76, 0.61, 0.56, 0.50, 0.72, 0.58, 0.56, 0.69, 0.61, 0.60, 0.55, 0.68, 0.52, 0.77, 0.71, 0.52, 0.57, 0.67, 0.61, 0.58, 0.64).
+2. **Breakpoint rule = percentile.** The 10th percentile of the 22 values is 0.523; every gap below it is a cut. Chunks: S1-S5 (281 characters), S6-S14 (789), S15-S17 (261), S18-S23 (649). A chunk is simply the run of sentences between two cuts.
+3. **A looser rule (25th percentile, threshold 0.563)** cuts more: S1-S4 (245), **S5 alone (36 characters)**, S6-S8 (386), S9-S12 (242), S13-S14 (161), S15-S17 (261), S18-S23 (649). One chunk is a single 36-character sentence: this is why a **minimum size** guard is needed.
+4. **Minimum size guard (300 characters) on that result:** a chunk smaller than the minimum is merged into the next chunk. Result: S1-S8 (667), S9-S14 (403), S15-S23 (910).
+5. **Maximum size guard (500 characters) on the 10th-percentile result:** a chunk over the maximum is split again at its own lowest-similarity gap, repeating until every piece fits. S6-S14 (789) became S6-S8 (386) and S9-S12 (242) and S13-S14 (161); S18-S23 (649) became S18 (188) and S19-S23 (461). The chunk list: S1-S5, S6-S8, S9-S12, S13-S14, S15-S17, S18, S19-S23.
+So the order is: **embed, compare neighbours, cut by the rule, then enforce minimum and maximum.** The minimum and maximum are design choices (which merge direction, which split point) and are variables of their own. The numbers are one paragraph and one embedding model, so they show the mechanism, not how the rules behave on the corpus.
+
 **Variations (general knowledge, not built):** compare a small window of sentences with the next window instead of single sentences (smooths noisy short sentences); compare each new sentence with the whole chunk built so far instead of only its neighbour; let an LLM decide where to cut (expensive; out of scope).
 
 **Embedding is used twice:** once to choose the chunks, and again to index the chunks for search. The two models need not be the same. Using the same one keeps things simple.
 
-**Worked example on our text — Section 66 (file `section_067.html`), the genealogy paragraph of Brahman, Manu and the Vasus.** Checked: pySBD split it into 12 sentences, `bge-small-en-v1.5` embedded each, and neighbour similarity (value after sentence i) came out as:
+**Worked example on our text — Section 66 (file `section_067.html`), the genealogy paragraph of Brahman, Manu and the Vasus.** Checked: pySBD split the paragraph into **23 sentences**; the table below covers only the **first 12** (my display limit when I first measured it; I wrongly described the paragraph as having 12 sentences until 2026-11-12). `bge-small-en-v1.5` embedded each sentence, and neighbour similarity (value after sentence i) for the first 12 came out as:
 
 | After sentence | Opening words | Similarity to the next |
 |---|---|---|
@@ -1589,7 +1597,7 @@ Overlap is a separate decision from sentence detection.
 | 6 | "Of these, Dhara and the truth-knowing Dhruva were born of Dhumra…" | 0.72 |
 | 7 to 11 | one-line "And X had a son Y" sentences | 0.56 to 0.69 |
 
-Range 0.50 to 0.81, mean 0.64. Reading it:
+Over these first 12 sentences (11 values): range 0.50 to 0.81, mean 0.64. Over all 23 sentences (22 values): range 0.50 to 0.81, mean 0.63; the values after sentences 12 to 22 are 0.55, 0.68, 0.52, 0.77, 0.71, 0.52, 0.57, 0.67, 0.61, 0.58, 0.64. Reading it:
 - The lowest dip (0.50) is between "These eight are known as the Vasus." and "Of these, Dhara and Dhruva were born…". Sensible as a topic shift (introducing the eight versus their children), but a question such as "Who were the sons of the Vasus?" needs both halves, so the cut separates two parts of one answer.
 - The whole range is narrow and values from 0.56 to 0.69 are everywhere. In a genealogy all sentences look alike, so cuts are mostly noise; a percentile rule cuts a fixed share regardless.
 
