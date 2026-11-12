@@ -1418,7 +1418,7 @@ Ragas comparison; the owner's list of retrieval observations (above); R05 correc
 ---
 
 ### Stage: Chunking — the strategies (learning first, choosing later)
-Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive. Taught at overview level, detail still to come: the rest. Nothing is built or measured yet.
+Status: **learning each strategy in detail and logging it here before we choose which to build.** Done so far: recursive (detailed, library-checked), sentence-based (concept detailed) and semantic (concept detailed, measured on two passages), structure-aware (concept detailed, paragraph statistics measured), parent-child (concept detailed, previewed on R05 and R15), sentence window (concept detailed, previewed on R05 and R15), plus a section on sentence splitting (pySBD, NLTK, spaCy; pySBD and spaCy rule-based tested, NLTK not). All seven strategies are now taught in detail (2026-11-11). Nothing is built or scored yet.
 
 #### Concept
 The embedding model turns each chunk into one vector, search compares the question with those vectors, and the LLM reads the chunks it is given. So the chunk is both the unit that gets found and the unit that gets read. **Too small:** a chunk lacks context ("He then married her" with no names). **Too big:** a chunk mixes topics, its vector becomes a blurry average, and it uses up the model's reading space.
@@ -1430,12 +1430,20 @@ The embedding model turns each chunk into one vector, search compares the questi
 - A real cut in the baseline: chunk 478 (Section 63) ends "…And from Drupada wa", and chunk 479 starts with the same 200 characters (the overlap) and continues "…Drupada was born a daughter Sikhandin…". The overlap rescued this cut, but it also makes near-twin chunks, one reason duplicates fill the top 5.
 
 #### Strategy 1 — Fixed-size (our baseline)
+
+**Is a chunk size needed? MANDATORY.** The size is the cutting rule itself: the window length decides where every chunk ends. Overlap is the optional extra.
 - **How it works:** join all paragraphs into one long string, cut a 1,000-character window, step forward by 800 (overlap 200), repeat.
 - **Built with:** plain string slicing, no library (`src/rag/chunking.py`).
 - **Disadvantages:** cuts mid-word; mixes sections; loses the speaker in the middle of a long speech; overlap creates duplicates.
 - **Role:** the control. Every other strategy is judged against it.
 
+**Pending to experiment (fixed-size):**
+- Keep as the control; never change its settings (1000/200) in the comparison.
+- Optional size sweep (600, 800, 1000, 1500), one value at a time, as proposed in public post 2. Status: not run.
+
 #### Strategy 2 — Recursive (learned in detail)
+
+**Is a chunk size needed? MANDATORY.** The size does two jobs: it decides whether a piece is "too big" and must be split with a finer separator, and it is the cap when small pieces are merged back together. Without it the method has nothing to trigger the recursion. (Checked in `langchain-text-splitters` 1.1.3: the library fills in a default of 4,000 characters with overlap 200 if you do not set one, so the method always runs with some size.)
 *Written from my own study notes (example setting: `chunk_size = 500`, `chunk_overlap = 50`), with two points checked by running the library, marked below.*
 
 Recursive Character Text Splitting breaks a document using progressively finer separators, then merges the resulting pieces into chunks that fit within the configured size.
@@ -1484,20 +1492,425 @@ A chunk can contain multiple paragraphs, or part of one paragraph followed by an
 **Built with (if we build it):** our own short loop (an ordered separator list, split, merge) so that I can explain it, using the library only as a reference to compare against.
 **Chunks versus failures:** key line cut at a boundary: improved only if a sentence separator is added; sections crossing: depends on running per section; speaker lost: not fixed.
 
-#### Strategy 3 — Sentence-based (overview; detail to come)
-Whole sentences are packed into a chunk up to a target size, so a chunk never ends mid-sentence. Needs a sentence splitter (candidates: NLTK Punkt, pySBD, spaCy; to be checked for currency and tested on our text). Weaknesses: abbreviations and quotation marks in an 1800s translation; very long sentences (chunk 478's list of sons is one sentence joined by semicolons) still need a fallback; ignores paragraph structure.
+**Pending to experiment (recursive):** each is its own one-variable experiment; none run yet.
+1. Add a sentence-level separator to the ladder (paragraph, then sentence, then space), against the default ladder.
+2. Run per section versus over the whole text (whether chunks may cross sections).
+3. Leftover of a big paragraph: stays its own chunk (library behaviour) versus joins the next paragraph (our own version).
+4. Overlap: none versus a small overlap (and note it only matters when pieces are small).
+5. Chunk size (for example 500, 1000), after the ladder question is settled.
 
-#### Strategy 4 — Semantic (overview; detail to come)
-Embed each sentence, compare each with the next, start a new chunk where the similarity drops sharply. Needs the embedding model plus numpy, and a threshold (often a percentile of the drops). Weaknesses: genealogy lists make neighbours look alike (huge chunks); dialogue alternates topics (over-splitting); costs an embedding pass over every sentence; published comparisons often show little gain over simpler methods, so to be tested, not assumed.
+#### Strategy 3 — Sentence-based / sentence-aware (concept learned; splitters not yet tested)
 
-#### Strategy 5 — Structure-aware / paragraph-based (overview; detail to come)
-Use the text's own units: one chunk per paragraph; merge tiny ones ("Thus endeth the section called Parva-sangraha…", 90 characters); split very long ones at sentence breaks and repeat the speaker as a header ("Dhritarashtra said:"); never cross a section boundary. Works from `paragraphs.jsonl`, which already carries section, sub-parva and position. Weaknesses: very uneven sizes; depends on how well ingestion found paragraph boundaries; the merge and split thresholds are variables of their own.
+**Is a chunk size needed? MANDATORY (as a target or limit for packing).** Splitting into sentences needs no size, but packing sentences into chunks does: without a size, each sentence would be its own chunk or a whole paragraph would be one chunk. The size decides how many sentences go in. A separate rule is needed for sentences longer than the limit.
+*Written from my own study notes (example setting: `chunk_size = 1000`, `chunk_overlap = 200`), with additions from our data marked "Our data" and two checks marked "Checked".*
 
-#### Strategy 6 — Parent-child (overview; detail to come)
-Search small "child" pieces; give the model the larger "parent". Needs a child-to-parent table and a swap step after retrieval. Weaknesses: several children from one parent give duplicates (de-duplicate by parent); large parents use reading space. **Measurement trap:** score the parent text, because that is what the model sees; scoring the child would flatter the result.
+Sentence-aware chunking identifies complete sentences first, then combines consecutive sentences into chunks that fit within the configured size. Unlike Recursive Character Splitting, it uses linguistic sentence boundaries rather than progressively trying paragraph, line and word separators.
 
-#### Strategy 7 — Sentence window (overview; detail to come)
-Embed single sentences; at answer time return each with the sentences before and after. Like parent-child but with a sliding window instead of a fixed parent, so it ignores paragraph structure. Weakness: heavily overlapping windows give duplicates.
+**Step 1 — Split the entire document into sentences.** The sentence tokenizer processes the input text and returns an ordered list of sentences (Sentence 1, Sentence 2, Sentence 3, and so on). Available options:
+
+| Approach | How it works | Considerations |
+|---|---|---|
+| Regex-based | Splits on punctuation such as `.`, `?`, `!` | Simple, but can mistake abbreviations and decimals for sentence boundaries |
+| NLTK | Uses Punkt sentence tokenization | Handles many common abbreviations and sentence patterns |
+| spaCy | Uses a language pipeline to identify sentence boundaries | Can use parser-based or rule-based sentence segmentation |
+| Language-specific tokenizers | Uses segmentation designed for a particular language | Useful for languages with different sentence-boundary conventions |
+| Custom rules | Combines punctuation, abbreviations and domain-specific rules | Requires maintenance and testing |
+
+Common implementations: NLTK `sent_tokenize()` and spaCy's sentence segmentation. (Also on my list for our test: pySBD, a rule-based splitter.)
+
+**Step 2 — Handle oversized sentences.** Each sentence is checked against the 1,000-character limit: 300 characters is retained as one sentence; 800 characters is retained as one sentence; 1,200 characters exceeds the limit. Available options:
+
+| Strategy | How it works | Trade-off |
+|---|---|---|
+| Keep sentence intact | Allow a chunk to exceed the limit | Preserves sentence integrity, but violates the size target |
+| Word-level fallback | Split the sentence at word boundaries | Avoids breaking words, but may split one thought |
+| Recursive fallback | Try spaces, punctuation and progressively smaller separators | More flexible, but can fragment a sentence |
+| Token-level fallback | Split based on model-token boundaries | Controls token count, but may break linguistic units |
+| Custom semantic fallback | Find a sensible internal boundary using linguistic or semantic rules | More complex to implement |
+
+**Important (from my notes):** standard LangChain `NLTKTextSplitter` and `SpacyTextSplitter` do not automatically apply recursive splitting to an oversized sentence. Their merge logic can produce an oversized chunk. A hybrid implementation is needed if recursive fallback is desired.
+- **Checked (2026-11-11, `langchain-text-splitters` 1.1.3, spaCy 3.8.18, rule-based `sentencizer`):** a 1,231-character sentence with a 500-character limit came out as one 1,231-character chunk, with a warning "Created a chunk of size 1231, which is longer than the specified 500". Confirmed for the spaCy splitter. **Not checked for the NLTK splitter:** its sentence data (`punkt_tab`) could not be downloaded in the cloud environment (host not allowed), so the NLTK claim rests on my notes until we can test it.
+
+**Step 3 — Merge consecutive sentences.** Start at the beginning of the sentence list and accumulate sentences: add the next sentence if the combined size remains within 1,000; if it exceeds 1,000, emit the current chunk; continue with the remaining sentences. Example: S1 = 300, S2 = 250, S3 = 350, S4 = 400, S5 = 200 characters. S1 + S2 + S3 = 900. Adding S4 gives 1,300, so Chunk 1 is emitted at 900 characters.
+
+**Step 4 — Apply overlap.** The next chunk retains context from the previous chunk. Two approaches:
+- **Sentence-based overlap:** retain complete trailing sentences. Actual overlap may be less or more than the target, depending on the implementation.
+- **Character-based overlap:** retain the last 200 characters, potentially cutting through a sentence.
+
+Overlap is a separate decision from sentence detection.
+
+**Mental model:** the sentence tokenizer determines **where** sentences end; the merger determines **how many** sentences fit into each chunk; overlap preserves context between adjacent chunks.
+
+**Limits:** sentence-aware chunking preserves grammatical boundaries, but a complete sentence is not necessarily a complete thought. Relationships between consecutive sentences may still require additional context.
+
+**For the Mahabharata corpus:** preserve Parva, section and paragraph metadata alongside the resulting chunks. This allows sentence-level segmentation without losing the source hierarchy or provenance.
+
+**Our data (what the splitters will have to cope with)** — rough counts from a quick pattern search of the 1.3-million-character corpus, covering only the patterns I searched for:
+- Full stop followed by a closing quote (`."` or `.'`): about 1,559. The quote belongs to the sentence that just ended.
+- Abbreviation-like cases ("Mr.", "Dr.", "viz."): about 71. Real examples: "Mr. Pickford", "Dr. Rost's letter", "viz. he would grant…".
+- Semicolons: about 727. Splitters do not split at them, so lists such as chunk 478's "from Arjuna, Srutakirti; from Nakula, Satanika; …" stay one very long sentence (longer than 1,000 characters), so the oversized-sentence rule (Step 2) will matter.
+- Source typos that look like sentence ends: "When I heard that Nakula. the son of Madri…" has a full stop where a comma belongs, and "my union with the? took place" has a stray question mark. A splitter will cut there; no splitter can fix a typo in the source.
+- Paragraph and speaker are still not handled by this strategy: a chunk can hold the end of one speech and the start of another unless sentences are packed within a paragraph only, and a chunk from the middle of a long speech does not say who is speaking.
+
+**Design questions to decide when we build it:** pack within a paragraph only, or across paragraphs; what to do with sentences longer than the limit (keep intact, or fall back); sentence overlap or character overlap or none. Each is its own one-variable experiment.
+
+**Still to do for this strategy:** test pySBD, NLTK Punkt and spaCy (rule-based and parser-based) on our paragraphs, compare their sentence counts, and hand-check the hard cases above. NLTK needs its sentence data, which the cloud environment currently blocks; options are to allow the download host, or to commit the small data file. Then build and measure.
+
+**Pending to experiment (sentence-based):** none run yet.
+1. Splitter comparison first (see "Sentence splitting" below): pySBD with the quote fix, spaCy rule-based with an abbreviation fix, NLTK Punkt once its data is available (allow the download host, or commit the small data file), spaCy parser mode if its model can be downloaded.
+2. Pack within a paragraph only, or across paragraphs within a section.
+3. Sentences longer than the limit: keep intact, or fall back to a finer split.
+4. Overlap: none, sentence overlap, or character overlap.
+5. Chunk size.
+
+#### Strategy 4 — Semantic (concept learned; not built or scored)
+
+**Is a chunk size needed? NOT MANDATORY: complementary, and a minimum and a maximum are RECOMMENDED.** The cuts come from the similarity scores and the breakpoint rule, not from a size (shown in the step-by-step story: no chunk got near 1,000 characters). Size appears only as guards applied afterwards: a minimum (our example had a 36-character chunk) and a maximum (to split rare giants). The breakpoint value (threshold, percentile or standard deviations) is the setting that matters, and it is not a size.
+*Written 2026-11-11. "Checked" marks something I ran or read in the source this session; "general knowledge" marks what I know but did not verify here.*
+
+**The problem it solves.** Fixed-size, recursive and sentence-based chunking cut by size or punctuation; none looks at meaning. Semantic chunking asks: **where does the topic actually change?** It cuts there, so each chunk is about one thing.
+
+**The method, step by step (rewritten 2026-11-12 as a worked story on one real paragraph)**
+*The story uses the Section 66 genealogy paragraph (file `section_067.html`, paragraph index 1; Brahman, Manu and the Vasus). Checked by running: pySBD for the sentences, `BAAI/bge-small-en-v1.5` for the vectors, a fixed threshold of 0.65 (the owner's example value). The paragraph has 23 sentences of 33 to 252 characters, about 1,980 characters in all.*
+
+**Step 1 — Break the corpus into paragraphs.** We start from the 1,306 cleaned paragraphs produced by ingestion (`paragraphs.jsonl`); each carries its section, sub-parva, position and page. **Every paragraph is processed on its own and never joined to its neighbours** (joined text breaks the sentence splitter; see "Sentence splitting"). Two consequences: the end of a paragraph is always a cut, so a chunk never crosses a paragraph; and a short paragraph (about 31% are under 400 characters) becomes a chunk of its own unless a merge rule says otherwise. This is the "stay inside one paragraph" option from the design choices; it is how the owner described the process, but it is not yet decided as the design.
+
+**Step 2 — Split each paragraph into sentences** with a sentence splitter (the crucial step, covered in its own section below). Our paragraph gives S1 to S23.
+
+**Step 3 — Embed every sentence** with the embedding model, so each sentence becomes a vector (vectors of length 384, normalised to length 1).
+
+**Step 4 — Score each gap.** For every pair of neighbouring sentences, compute the cosine similarity (for normalised vectors, the dot product). High means "still on the same topic"; low means "something changed". For 23 sentences there are 22 scores; the score is stored on the sentence above the gap ("to next"), and the last sentence has none.
+
+**Step 5 — Decide the cuts with a breakpoint rule.** The rule turns the scores into cut or join:
+- **Fixed threshold** (used in this story, 0.65): a score of 0.65 or higher means join with the next sentence; below 0.65 means cut after this sentence. Simple, but the right number belongs to the embedding model and the text and must be set from the actual distribution of the scores.
+- **Percentile:** cut where the score is in the lowest N% of all values (for example the lowest 10%). The number of cuts is predictable, but a fixed share of gaps is cut by construction, whether or not a real topic change exists.
+- **Standard deviation:** cut where a score is more than N standard deviations below the average. It adapts to each passage: if all scores are close together, few or no cuts happen.
+- Other rules exist (general knowledge: interquartile range and gradient-based rules in LangChain's experimental semantic splitter); not studied.
+- **The last sentence of a paragraph always ends a chunk.**
+
+Here are our paragraph's 23 sentences with their scores and the decision at 0.65:
+
+| # | Chars | Sentence (shortened) | Score to next | Decision |
+|---|---|---|---|---|
+| S1 | 40 | "And Brahman had another son named Manu. | 0.81 | join |
+| S2 | 44 | And Manu had a son of the name of Prajapati. | 0.76 | join |
+| S3 | 87 | And the sons of Prajapati were eight and were called Vasus whom I shall name in detail. | 0.61 | **cut** |
+| S4 | 74 | They were Dhara, Dhruva, Soma, Aha, Anila, Anala, Pratyusha, and Prabhasa. | 0.56 | **cut** |
+| S5 | 36 | These eight are known as the Vasus . | 0.50 | **cut** |
+| S6 | 252 | Of these, Dhara and the truth-knowing Dhruva were born of Dhumra; Chandramas (Soma) and Swasana… | 0.72 | join |
+| S7 | 52 | And Dhara had two sons, Dravina and Huta-havya-vaha. | 0.58 | **cut** |
+| S8 | 82 | And the son of Dhruva is the illustrious Kala (Time), the destroyer of the worlds. | 0.56 | **cut** |
+| S9 | 42 | And Soma's son is the resplendent Varchas. | 0.69 | join |
+| S10 | 72 | And Varchas begot upon his wife Manohara three sons--Sisira, and Ramana. | 0.61 | **cut** |
+| S11 | 59 | And the son of Aha were Jyotih, Sama, Santa, and also Muni. | 0.60 | **cut** |
+| S12 | 69 | And the son of Agni is the handsome Kumara born in a forest of reeds. | 0.55 | **cut** |
+| S13 | 78 | And, he is also called Kartikeya because he was reared by Krittika and others. | 0.68 | join |
+| S14 | 83 | And, after Kartikeya, there were born his three brothers Sakha, Visakha, Naigameya. | 0.52 | **cut** |
+| S15 | 78 | And the wife of Anila is Siva, and Siva's son were Manojava and Avijnataagati. | 0.77 | join |
+| S16 | 33 | These two were the sons of Anila. | 0.71 | join |
+| S17 | 150 | The son of Pratyusha, you must know, is the Rishi named Devala; and Devala had two sons who wer… | 0.52 | **cut** |
+| S18 | 188 | And the sister of Vrihaspati, the first of women, uttering the sacred truth, engaged in ascetic… | 0.57 | **cut** |
+| S19 | 75 | And she brought forth the illustrious Viswakarman, the founder of all arts. | 0.67 | join |
+| S20 | 139 | And he was the originator of a thousand arts, the engineer of the immortals, the maker of all k… | 0.61 | **cut** |
+| S21 | 151 | And he it was who constructed the celestial cars of the gods, and mankind are enabled to live i… | 0.58 | **cut** |
+| S22 | 46 | And he is worshipped, for that reason, by men. | 0.64 | **cut** |
+| S23 | 50 | And he is eternal and immutable, this Viswakarman. | none (end of paragraph) | **cut** |
+
+**Step 6 — Chunks are the runs of sentences between two cuts.** Walking from the top: S1 to S2 scores 0.81, join; S2 to S3 scores 0.76, join; S3 to S4 scores 0.61, **cut**, so chunk 1 is S1 + S2 + S3. S4 starts a new chunk; S4 to S5 scores 0.56, cut, so chunk 2 is **S4 alone**. S5 to S6 scores 0.50, cut, so chunk 3 is **S5 alone**. S6 to S7 scores 0.72, join; S7 to S8 scores 0.58, cut, so chunk 4 is S6 + S7. The same rule continues down the list. Result: 15 chunks.
+
+| Chunk | Sentences | Approx. characters |
+|---|---|---|
+| 1 | S1 to S3 | 173 |
+| 2 | S4 | 74 |
+| 3 | S5 | 36 |
+| 4 | S6 to S7 | 306 |
+| 5 | S8 | 82 |
+| 6 | S9 to S10 | 116 |
+| 7 | S11 | 59 |
+| 8 | S12 | 69 |
+| 9 | S13 to S14 | 163 |
+| 10 | S15 to S17 | 265 |
+| 11 | S18 | 188 |
+| 12 | S19 to S20 | 216 |
+| 13 | S21 | 151 |
+| 14 | S22 | 46 |
+| 15 | S23 | 50 |
+
+What this shows:
+- **No chunk size was needed.** The cut points come from the scores and the rule alone. No chunk gets near 1,000 characters, so a "chunk size of 1,000" would play no part here. (The owner's assumption that the method needs a fixed size was corrected: size appears only as optional guards, Step 7.)
+- **0.65 is too high for this paragraph.** The 22 scores run from 0.50 to 0.81 with a mean of 0.63, so 14 of the 22 gaps fall below 0.65 and the paragraph shatters into 15 chunks of about 130 characters. A fixed number must be chosen from the real distribution of scores. **Not yet measured across the whole corpus** (a run for thresholds 0.55 to 0.75 was started and stopped); that is the next measurement to take.
+- **The cost for our questions.** The sentences that introduce the eight Vasus (S3, S4, S5) end up in three separate chunks, and chunk 4 holds "Dhara… born of Dhumra" together with "Dhara had two sons". A question like "Who were the Vasus, and who were Dhara's sons?" needs two or three of these chunks.
+- **Paragraph ends are forced cuts** (Step 1), so the process never merges across paragraphs.
+
+**Step 7 — Optional size guards, applied after the cuts.** Size enters only here:
+- **Maximum (for example 500 or 1,000 characters):** a chunk over the maximum is split again at its own lowest-score gap, repeating until every piece fits. With a high threshold like 0.65 it would almost never apply. Checked on the same paragraph with the 10th-percentile rule (threshold 0.523): the raw chunks were S1-S5 (281 characters), S6-S14 (789), S15-S17 (261), S18-S23 (649); a 500-character maximum then split S6-S14 into S6-S8 (386), S9-S12 (242) and S13-S14 (161), and S18-S23 into S18 (188) and S19-S23 (461).
+- **Minimum (for example 300 characters):** a chunk below the minimum is merged into the next chunk. Checked with the 25th-percentile rule (threshold 0.563): the raw result included **S5 alone (36 characters)**; a 300-character minimum gave S1-S8 (667), S9-S14 (403) and S15-S23 (910). With 0.65 this guard would apply to most of the 15 chunks.
+- **"Fill up to 1,000" as a target** is a different method: it would merge neighbouring chunks until about 1,000, overriding the cuts; it is closer to sentence-based packing with similarity as a tie-breaker.
+- Which way to merge and where to split are design choices and variables of their own. The numbers are one paragraph and one embedding model, so they show the mechanism, not how the rules behave on the corpus.
+
+**Variations (general knowledge, not built):** compare a small window of sentences with the next window instead of single sentences (smooths noisy short sentences); compare each new sentence with the whole chunk built so far instead of only its neighbour; let an LLM decide where to cut (expensive; out of scope).
+
+**Embedding is used twice:** once to choose the chunks, and again to index the chunks for search. The two models need not be the same. Using the same one keeps things simple.
+
+**Reading the scores on our paragraph (Section 66, file `section_067.html`).** The full table of sentences and scores is in Step 5 above. (Correction, 2026-11-12: I first measured only the first 12 of the paragraph's 23 sentences, because of a display limit, and wrongly described the paragraph as having 12 sentences.) `bge-small-en-v1.5` embedded each sentence. For the first 12 sentences:
+
+Over these first 12 sentences (11 values): range 0.50 to 0.81, mean 0.64. Over all 23 sentences (22 values): range 0.50 to 0.81, mean 0.63; the values after sentences 12 to 22 are 0.55, 0.68, 0.52, 0.77, 0.71, 0.52, 0.57, 0.67, 0.61, 0.58, 0.64. Reading it:
+- The lowest dip (0.50) is between "These eight are known as the Vasus." and "Of these, Dhara and Dhruva were born…". Sensible as a topic shift (introducing the eight versus their children), but a question such as "Who were the sons of the Vasus?" needs both halves, so the cut separates two parts of one answer.
+- The whole range is narrow and values from 0.56 to 0.69 are everywhere. In a genealogy all sentences look alike, so cuts are mostly noise; a percentile rule cuts a fixed share regardless.
+
+**Disadvantages on our data**
+- **Genealogies:** few real topic shifts, so the cuts are noise, or (with a strict rule) the chunks become very long.
+- **Dialogue:** "X said…" turns alternate, so neighbours can look dissimilar inside one conversation.
+- **Short sentences** ("These eight are known as the Vasus.") give noisy vectors, so comparisons are unreliable.
+- **Sentence splitting errors come in** (see below): a wrong split makes the comparison between wrong pieces.
+- **Cost:** every sentence in the corpus is embedded once to choose chunks and again to index them. Not prohibitive (the full corpus embedded in about 90 seconds as chunks), but it is an extra pass and the rule needs tuning.
+- **Expectation (general knowledge, not checked):** published comparisons are mixed, and semantic chunking often does not beat simpler methods by much. Our data (lists, dialogue, short sentences) is where it should struggle, so the value for us is learning how it behaves and letting our own measurement decide.
+
+**Design choices that become experiment variables (one at a time)**
+1. Sentence splitter, and any cleaning before it (see the section below).
+2. Whether a chunk may span paragraphs, or stays inside one paragraph. Inside one paragraph: never mixes two speeches, but a short paragraph (median paragraph 653 characters; about 31% under 400) becomes its own chunk. Across paragraphs within a section: a question and its answer (Section 5, first two paragraphs) could join, but a chunk can mix speakers. Never across sections.
+3. The breakpoint rule and its value (percentile, standard deviation, fixed threshold).
+4. Minimum and maximum chunk size.
+5. Single sentences or a window of sentences for the comparison.
+**How we would score it:** retrieval metrics first (hit@5, MRR@5, with and without the summary passages; free and fast, after a re-embed of about 90 seconds); the frozen judge only for a setting that looks like a winner (it costs money and shows run-to-run noise, for example faithfulness flipping 1.0, 0.75, 1.0 on one answer earlier). The winner is compared with the baseline and with the other strategies we choose.
+**Status:** concept only. The four choices above are not made; the owner wanted to learn each option first.
+
+**Pending to experiment (semantic):** none run yet. The owner chose to learn each option before deciding.
+1. **Measure the distribution of neighbour scores over the whole corpus** (per paragraph) and what fixed thresholds 0.55, 0.60, 0.65, 0.70 and 0.75 do: number of chunks, sizes, share of tiny chunks. Started on 2026-11-12 and stopped before it ran; read-only, about a minute. This sets the threshold from data instead of guessing.
+2. Choose the splitter (depends on the splitter comparison below); hold it fixed.
+3. Decide: chunks stay inside one paragraph (the working assumption in the step-by-step story), or may span paragraphs within a section.
+4. Vary the breakpoint rule one at a time: percentile (start near the lowest 10%), standard deviation, fixed threshold; then its value.
+5. Minimum and maximum chunk size.
+6. Single sentences versus a window of sentences for the comparison.
+7. Score with retrieval metrics first; the frozen judge only for a likely winner.
+
+#### Sentence splitting: the crucial first step (for sentence-based and semantic chunking)
+Both strategies depend on knowing where sentences end, so every splitting mistake flows into the chunks. Our text is hard for splitters: about 1,559 full stops followed by a closing quote, about 71 abbreviation-like cases ("Mr.", "Dr.", "viz."), about 727 semicolons (lists stay one long sentence), and typos in the source ("When I heard that Nakula. the son of Madri…", "my union with the? took place"). These counts are rough, from a quick pattern search of the corpus, and cover only the patterns I searched for.
+
+**Rule 1 — split each paragraph separately, never joined text.** Checked: on the first six paragraphs of Section 5 pySBD returned 1, 3, 9, 3, 8 and 3 sentences when run on each paragraph; on the same text joined together it returned a 2,639-character "sentence" plus two more, because quotes opened in one paragraph paired with quotes much later.
+
+**The three families of splitter**
+- **pySBD (rule-based; version 0.3.4).** Checked in the source (`between_punctuation.py`, `punctuation_replacer.py`): it finds text enclosed in a matching pair of quotes (`"…"`, `'…'`, curly quotes, brackets, parentheses, dashes) and replaces every `.`, `?` and `!` inside with a placeholder, so the boundary step cannot see them; the placeholders are restored afterwards. A quoted span is therefore one unbreakable unit.
+- **NLTK Punkt (statistical; version 3.10.4 installed).** General knowledge, **not run here**: unsupervised. It learns from text which words are abbreviations (short words, often with internal full stops, often written with a full stop attached), plus common word pairs ("Mr. Smith") and common sentence starters, and looks at whether the next word is capitalised. It ships a trained English model and can be retrained on our own text without labels (an idea to test: it might learn "viz." and "i. e." from our corpus). It depends on the full stop; as far as I know it has no special quote handling. It might avoid cutting at "Nakula. the son" because the next word is lowercase (to be tested). **Its data file (`punkt_tab`) could not be downloaded in the cloud environment** (host not allowed; NLTK's proxy safeguard refuses, and I did not override it).
+- **spaCy (version 3.8.18).** Two modes. The **rule-based `sentencizer`** (checked, works offline): ends a sentence after a `.`, `?` or `!` token and keeps a following closing quote with that sentence; no abbreviation list of its own (the tokenizer treats many common abbreviations as single tokens; general knowledge). The **parser mode** (general knowledge, not tested): a trained neural model that reads the grammar and predicts where sentences begin; copes with missing punctuation, but needs a downloaded language model (probably blocked here), is slower, and was trained on modern English, so "thou hast" and "hath" may confuse it. A light statistical `senter` component also exists in the trained models (same download).
+- **Regex and custom rules** (general knowledge): split on `. ? !` followed by a capital; simple but fooled by abbreviations; custom rules need upkeep and testing.
+
+**What went wrong on our text (checked)**
+1. **pySBD returns one sentence for whole-paragraph speeches.** Example: Section 5, paragraph index 0 (heading "SECTION V", file `section_006.html`), Saunaka's question: 487 characters, five sentences, opens with `"` and closes with `."`, so pySBD sees a quote pair and hides the full stops. Result: 1 sentence of 487. Rough scan: **178 of 1,306 paragraphs** (about 14%) where pySBD returns one sentence although the paragraph has two or more apparent sentence ends (criterion: more than 300 characters and at least two apparent ends); **177 of those 178 start with an opening quote**. Paragraphs in the middle of a long speech open with `"` but do not close it (the speech continues), so there is no pair and they split normally.
+   - Test on the real paragraph: as is gives 1 sentence (487); removing both outer double quotes gives 5 sentences (136, 35, 168, 79, 63); removing only the opening or only the closing quote also gives 5. Toy checks agree: `"One. Two. Three."` stays one sentence; `"One. Two. Three.` (never closed) splits into three.
+   - **Possible fix, untested at scale:** strip the outer double quotes before splitting, and restore them (or record that the paragraph was quoted) when building the chunk. To do: re-run the scan and see how many of the 178 this fixes and whether it breaks anything.
+2. **spaCy's rule-based splitter did not have the quote problem:** none of the same 178 paragraphs came back as one sentence.
+3. **Each splitter fails somewhere else (spot check on six short strings modelled on corpus sentences; a spot check, not a benchmark):**
+
+| Case | pySBD | spaCy rule-based |
+|---|---|---|
+| "Mr. C.H. Tawney says…" | correct | correct |
+| "…habit, viz. he would grant…" | correct (kept whole) | **cut after "viz."** |
+| "…i. e. , without providing…" | **cut into 3 pieces** | correct (kept whole) |
+| "Nakula. the son of Madri" (source typo) | cut | cut |
+| closing quotes `."` and `.'` | correct | correct |
+| semicolon-joined list | one long sentence | one long sentence |
+
+4. **Neither can fix a typo in the source:** a full stop where a comma belongs is cut by both.
+
+**Conclusion so far.** No splitter is free of errors on our text; each has different weak spots. pySBD needs a quote-stripping step; spaCy's rule-based version needs an abbreviation fix ("viz."). NLTK and spaCy's parser mode are not tested. **Earlier I listed "pySBD only" as the recommended choice for the first semantic experiment; I withdrew that after finding the quote problem.** The next step is a splitter comparison: hand-check a sample of paragraphs, count each splitter's errors, then choose a base splitter and add small fixes for its known gaps.
+**Gotchas:** (a) test the splitter on joined text and on single paragraphs; they differ hugely; (b) a count of "sentences" does not show correctness, only reading the output does; (c) the rule-based splitters hide full stops inside quotes by design.
+
+**Pending to experiment (sentence splitting):** none run yet.
+1. Re-run the corpus scan after stripping outer double quotes, to see how many of the 178 quote-wrapped paragraphs are fixed and whether anything else breaks.
+2. Splitter comparison: hand-check a sample of paragraphs and count each splitter's errors (pySBD with the quote fix, spaCy rule-based, NLTK Punkt, spaCy parser mode).
+3. Fix known gaps: an abbreviation list for spaCy ("viz."), the "i. e. ," case for pySBD.
+4. NLTK data: allow the download host in the environment settings, or commit the small data file.
+5. Idea to test: retrain Punkt on our own text (no labels needed).
+
+#### Strategy 5 — Structure-aware / paragraph-based (concept learned; not built or scored)
+
+**Is a chunk size needed? COMPLEMENTARY, but a maximum is effectively REQUIRED for our corpus, and a minimum is RECOMMENDED.** The main boundaries come from the text's own structure (paragraphs, sections), not from a size. But 71% of our text sits in paragraphs over 1,000 characters, so we need a maximum to decide when a paragraph must be split, and a minimum to decide when a tiny paragraph is merged. Both are thresholds we choose.
+*Written 2026-11-11. "Measured" means computed from `data/processed/paragraphs.jsonl` this session.*
+
+**The problem it solves.** Fixed-size cuts by character count, and sentence-based and semantic chunking guess where thoughts end. Structure-aware chunking uses the boundaries the text already marks: **paragraphs, sections and the "X said…" speaker tags**. The translator already decided where one thought ends, so a chunk should follow that instead of a count.
+
+**What structure our data carries.** Each cleaned paragraph already has: source file, heading (for example "SECTION V"), sub-parva, paragraph index, printed page, how many page-break fragments were merged, and the section number (`None` for the translator's preface). So the section, position and page of every chunk are known, which citations need.
+
+**The method, step by step**
+1. **One paragraph, one chunk** when the paragraph is a sensible size.
+2. **Merge tiny paragraphs** with a neighbour, only within the same section.
+3. **Split very long paragraphs** into pieces at sentence boundaries (this needs a sentence splitter; see "Sentence splitting").
+4. **Repeat the speaker as a header** on the pieces ("Sauti said: …"), so each piece still says who is talking.
+5. **Never cross a section boundary;** attach section, paragraph and page metadata to every chunk.
+
+**Measured on our corpus (1,306 paragraphs, median 653 characters, mean 1,021)**
+
+| Paragraph length (characters) | Share |
+|---|---|
+| under 100 | 3.2% |
+| 100 to 200 | 10.8% |
+| 200 to 400 | 17.0% |
+| 400 to 1,000 | 34.4% |
+| 1,000 to 2,000 | 21.5% |
+| 2,000 to 5,000 | 11.7% |
+| over 5,000 | 1.4% |
+
+- **Most of the text sits in long paragraphs.** 452 paragraphs (35%) are over 1,000 characters and hold about **71% of all the text** (951,271 of 1,333,251 characters). So step 3 applies to most of the corpus: for us, structure-aware chunking is largely "split long paragraphs well", so it depends on the sentence splitter and inherits its quote and abbreviation problems.
+- **Speaker tags are common.** About 52% of paragraphs (685) start with "X said / answered / replied…" (rough pattern match that only catches a few verbs, so an undercount). Of the 452 long paragraphs, 250 start with a speaker tag. If such a paragraph is split, only the first piece names the speaker; that is the case for a header.
+- **Sections are small.** 237 sections, median 4 paragraphs (smallest 1, largest 48). Never crossing a section means a short section gives few chunks. (In the baseline, 297 of 1,670 chunks crossed a section boundary.)
+
+**Examples from our text**
+- **Tiny paragraphs:** "Kisari Mohan Ganguli" (20 characters) and "Calcutta" (8) are front matter from the translator's preface (no section number); "So ends the sixth section called "the curse on Agni" in the Adi Parva." (70 characters). Whether these get a chunk, get merged, or are dropped is a rule to choose.
+- **Merging is not always possible.** Section 1's first paragraphs are 138, 990, 180, 1,156, 800, 1,206, 1,341 and 483 characters. With a 1,000-character cap the 138 cannot join the 990 (1,128 together), and the 180 cannot join the 1,156. They would stay as small chunks, unless the cap is loosened or the small paragraph is attached to the next chunk. A design decision with no obvious answer.
+- **The speaker header.** Section 2, paragraph 4 (1,609 characters) begins "Sauti said, 'One chariot, one elephant, five foot-soldiers, and three horses form one Patti…". Split into two, the second piece would no longer say Sauti is speaking. With a header, both read "Sauti said: …". Whether the header is part of the embedded text, or only stored as metadata for display, is a variable to test: in the text it may help questions like "What did Sauti explain?" and may also add noise.
+
+**Disadvantages (understood by the owner)**
+- Very uneven chunk sizes: a few characters up to over 10,000 before splitting. Small chunks give weak vectors; big ones are the problem we wanted to avoid.
+- It depends on the quality of ingestion (our paragraph boundaries came from Phase 1 cleaning, including gluing sentences split by page breaks).
+- A speech running across many paragraphs carries the speaker tag only on the first; later paragraphs open with a quotation mark but no speaker. Carrying the last speaker forward is possible but risky and untested.
+- The thresholds (what counts as tiny, what counts as too long) are our own choices, each a variable.
+- It relies on a sentence splitter for long paragraphs, so the splitter findings apply here too.
+
+**Key problem: large paragraphs, and why a good sentence splitter is essential here (measured 2026-11-11).**
+- **The scale.** 452 of 1,306 paragraphs are over 1,000 characters and hold 951,271 of 1,333,251 characters (**71.3%** of the corpus). 18 paragraphs are over 5,000 characters (122,789 characters in total); the longest is 10,838. 435 of the 452 long paragraphs start with a quotation mark (speeches).
+- **Why this decides the strategy.** "Keep the paragraph whole" works only for the minority of text that sits in short paragraphs. For 71% of the text the strategy must split inside paragraphs, and the only structure left inside a paragraph is sentences. So structure-aware chunking is, in practice, paragraph structure for the short ones plus sentence splitting for the long ones. If the splitter is wrong, the strategy is wrong for most of the corpus.
+- **What a bad splitter does to it (the same long paragraphs, two splitters):**
+
+| | pySBD (default use) | spaCy rule-based |
+|---|---|---|
+| Long paragraphs returned as ONE sentence | **94** (214,681 characters = 22.6% of the long-paragraph text, about 16% of the whole corpus) | 0 |
+| Sentences over 1,000 characters inside long paragraphs | **157** | 8 |
+| Total sentences found in the long paragraphs | 4,735 | 8,006 |
+
+  A paragraph that comes back as one "sentence" cannot be split at a sentence end, so the chunker would have to cut it at a size limit again (the baseline's problem), or keep a huge chunk. That is the quote-pair behaviour described in "Sentence splitting" (a paragraph that opens and closes with a double quote is treated as one unbreakable unit). spaCy's rule-based splitter did not have that problem but has its own errors (it cut after "viz."; see the spot check).
+- **What is still unknown.** The counts show how many long paragraphs a splitter fails to split, not how many it splits in the wrong place; that needs the hand-check sample in the splitter comparison. The 8 spaCy sentences over 1,000 characters are probably semicolon lists like chunk 478's (not checked). The numbers come from the default pySBD call and spaCy's `sentencizer`, with no cleaning (the quote-stripping fix was not applied here).
+- **Consequence for the plan.** The splitter comparison is not optional for this strategy: it comes before any structure-aware experiment, and the maximum chunk size and the oversized-sentence rule (keep intact or fall back) should be decided with the long-sentence counts above in view.
+
+**How it would be built.** Our own loop over `paragraphs.jsonl`: group by section; apply the merge and split rules; add the header to split pieces; write each chunk in the same format as the baseline (text, section numbers, positions) so the existing embedding, search and evaluation code works unchanged. Not yet checked: that the retrieval evaluation does not depend on chunk IDs (it scores the evidence phrase and the gold section); confirm before the first run. Crude size estimate, ignoring sentence boundaries: roughly 1,900 chunks against the baseline's 1,670. Treat as rough.
+
+**Which failures it might fix.** Key line cut at a boundary (R01, R20, R26, R34): yes for long paragraphs, if split at sentence ends. Right section but wrong paragraph (R05, R08, R12): paragraph-sized chunks (median 653) should line up better with where answers sit. Speaker lost in long speeches: the header addresses it.
+
+**Pending to experiment (structure-aware):** none run yet; each is one variable at a time.
+1. Decide what counts as "tiny" and whether tiny paragraphs merge, stay, or (for front matter) are dropped.
+2. Decide the maximum size and what to do when a small paragraph cannot merge under it (looser cap, or accept small chunks).
+3. Choose the sentence splitter for long paragraphs (depends on the splitter comparison; this is a prerequisite, because 71% of the text is in long paragraphs and pySBD left 94 of them unsplit; see "Key problem" above).
+4. Speaker header: none, metadata only, or part of the embedded text.
+5. Carry the speaker forward across paragraphs of one speech (risky; optional).
+6. Confirm that the retrieval evaluation is independent of chunk IDs before the first run.
+7. Score with retrieval metrics first; the frozen judge only for a likely winner.
+
+#### Strategy 6 — Parent-child (concept learned; previewed on two questions; not built or scored)
+
+**Is a chunk size needed? MANDATORY for each of the two levels, but it can be a size or a unit.** A child level and a parent level must each be defined: either by a size (the notes' example: parent 1,000 tokens, child 200 tokens, illustrative) or by a unit (child = sentence, parent = paragraph). When a unit is used, a cap on the parent (budget) and a minimum on the child (noise) are RECOMMENDED; the R05 and R15 previews showed why.
+*Method section written from my own study notes (example setting: parent = 1,000 tokens, child = 200 tokens, "illustrative values, not fixed requirements"). The sections "What we saw" and below were written 2026-11-11; the previews are not evaluations.*
+
+**Parent-child chunking: how it works (my notes)**
+**Overview.** Parent-child chunking is a hierarchical retrieval strategy that separates **retrieval precision from context delivery**. It creates two levels of chunks:
+- **Parent chunks:** larger passages that preserve broader context.
+- **Child chunks:** smaller passages used for embedding and vector retrieval.
+
+The retriever searches child chunks but fetches their corresponding parent chunks to provide context to the LLM.
+
+**Step 1 — Create parent chunks.** Parent chunks preserve meaningful context. Parent creation has no prescribed splitting algorithm. Options: fixed-size splitting, recursive splitting, structure-aware splitting, semantic splitting. For the Mahabharata corpus, a structure-first approach is worth investigating: create parents from coherent groups of paragraphs while respecting section boundaries. A parent does not have to represent an entire section; one section can contain multiple parents.
+
+**Step 2 — Split parents into child chunks.** Each parent is divided into smaller units, which become the primary retrieval units. Options: fixed-size, recursive, sentence-aware, semantic, structure-aware splitting. A possible hybrid: sentence-aware splitting within each parent, with recursive fallback for oversized sentences or groups. Children do not need to be independently understandable in every implementation; they can rely on their parent for additional context.
+
+**Step 3 — Maintain parent-child relationships.** Every child must have a reference to its parent. Example fields: a parent has `parent_id` (for example "ADI_66_P001"), `text`, parva ("Adi Parva") and section (66); a child has `child_id` (for example "ADI_66_P001_C001"), `parent_id` and `text`. Important implementation choices:
+- Assign unique parent and child IDs.
+- Preserve source metadata.
+- Store the parent text separately from the child embeddings.
+- Maintain deterministic parent lookup.
+- Avoid relying on text similarity to reconstruct parent-child relationships.
+
+**Step 4 — Embed and index child chunks.** Generate embeddings for the child chunks and store them in the vector database. Typical flow: generate an embedding for each child; store the vector and child text; store the corresponding parent ID as metadata; keep parent text in a document store or another retrievable storage layer. **Do parent chunks also need embeddings?** Not in the standard child-retrieval approach. Parent embeddings are optional and only needed if you want an additional parent-level retrieval mechanism.
+
+**Step 5 — Retrieval and parent lookup.** When a user submits a question: (1) generate the question embedding; (2) search the vector database for relevant child chunks; (3) retrieve the matching child IDs and parent IDs; (4) fetch the corresponding parent chunks; (5) deduplicate parents if multiple children point to the same parent; (6) pass the selected parent context to the LLM. Example: for "Who were Dhara's sons?", vector search identifies the child discussing Dhara's descendants, the system obtains its parent ID, the parent passage is fetched, and the LLM receives the broader genealogy context.
+
+**Key principle:** retrieval operates on children; context delivery operates on parents.
+
+**How it fits our project (my additions)**
+- **A real instance of the Dhara example.** In our text the sentence "And Dhara had two sons, Dravina and Huta-havya-vaha." sits in Section 66 (heading SECTION LXVI, file `section_067.html`, paragraph index 1, sub-parva Sambhava Parva), a 2,002-character paragraph listing the Vasus and their sons. That paragraph would be the parent and the sentence the child. Illustration only: I did not run this search.
+- **Sizes in our terms (approximate).** Our baseline chunks of 1,000 characters measured about 247 tokens at the median (roughly 4 characters per token). So a 200-token child is about 800 characters, close to a whole baseline chunk, and a 1,000-token parent is about 4,000 characters, larger than most of our paragraphs (median 653 characters). The parents are not embedded, so the embedding model's 512-token limit applies only to children.
+- **It is a pattern that touches two stages, not a standalone splitter.** The chunking part defines two levels and the link between them; the retrieval part does the swap and the de-duplication after the search. It needs a method for each level: children can come from any earlier strategy (sentence-based, small recursive chunks, semantic), parents from structure-aware paragraphs or larger recursive chunks. It is a layer on top of the earlier strategies, so it multiplies the experiments (two levels to choose).
+- **Index size.** With sentence-sized children the index would hold about 11,689 vectors instead of 1,670 baseline chunks (count from the spaCy rule-based splitter; median child 99 characters).
+
+**What we saw: a preview on two working-set questions (2026-11-11; previews, not scores)**
+Setup: children were all 11,689 sentences (spaCy rule-based splitter, per paragraph; median 99 characters, 837 under 40 characters); the parent was the paragraph a sentence came from; the five best children per question. Script not committed (scratchpad only). Both questions are from the working set.
+- **R05, "Who set fire to the Khandava forest, and why?"** The baseline found no evidence phrase in its top 10. Here the best child was a sentence from Section 225 ("Beholding Khandava on fire…") whose parent paragraph (2,745 characters) contains an evidence phrase. So the swap rescued this question in the preview: an example of "right section, wrong paragraph" being fixed. The other four children were about Khandava but came from other passages (Sections 230, 2, 232, 231), and their parents contain no evidence phrase. All five parents were distinct. Parent sizes ranged from about 1,800 to 5,900 characters.
+- **R15, "Who is Sauti's father?"** The baseline found the evidence at rank 1. Here the top five children were tiny fragments such as `"Sauti said. '` (14 characters, twice), `"Sauti continued, 'O son of Bhrigu!` (35) and `'Sauti continued, 'Then Agni replied…` (68), plus "He was the father of Vasudeva." They match through the name "Sauti" only; none of their parents contain an evidence phrase. In the preview it did worse than the baseline.
+- **What the previews show:** (1) the swap can fix "right section, wrong paragraph"; (2) very short children match on a name alone, and our text has many short "X said." fragments, so the name problem (our central challenge) returns through tiny children; (3) parents are large; (4) two questions show behaviour, not performance.
+
+**Disadvantages (what we know)**
+1. **Child noise.** Small children make noisy matches, as in R15. A better sentence splitter helps, but the R15 fragments are real short sentences, not splitter errors, so the fix also needs a **minimum child size** (merge any sentence under some length with the next, so "Sauti said." travels with the speech it introduces) or sentences grouped into small pieces.
+2. **Large parents and the reading budget.** A parent can be thousands of characters (one paragraph is 10,838), so five parents can use up the model's reading space. Parents need a cap (for example about 2,000 characters), with the part of the paragraph around the matching child used when a paragraph is longer.
+3. **Duplicate parents.** Several children of one parent can match, so the same parent appears more than once. Rather than a fixed top 20, rank all children, walk down the list and collect parents, skipping repeats, **until there are 5 distinct parents**; the number of children looked at then adjusts itself.
+4. **Balancing the sizes.** Child size, parent size, minimum child size and the parent cap are all variables; each is tested one at a time.
+5. **More moving parts:** two levels, an ID lookup, a swap step, about 11,689 vectors instead of 1,670, and quality that depends on the splitter when children are sentences.
+6. **The scoring trap.** We must score the **parent text**, because that is what the model sees. A larger text contains an evidence phrase more easily, so the hit rate rises almost by construction. For a fair comparison, also record how many characters each method hands to the model, and rely on end-to-end correctness for the final judgement. Not yet checked: how the evidence-phrase check treats a phrase that spans two paragraphs.
+
+**Pending to experiment (parent-child)**
+None run yet; one variable at a time; the splitter comparison and the single-level strategies come first, so parent-child builds on the best of them.
+1. Fix the child method (best splitter and chunking result so far), then vary the **minimum child size** (none, then a minimum such as 100 and 200 characters).
+2. Fix the children, then vary the **parent unit**: the paragraph, the paragraph capped (for example 2,000 characters), a group of paragraphs within a section.
+3. **Retrieval rule:** walk down the ranked children until 5 distinct parents (versus a fixed number of children).
+4. Order the parents by their best child's score; compare with keeping book order.
+5. Measure the **characters passed to the model** next to hit@5 and MRR@5, and use end-to-end correctness from the frozen judge for the winner only.
+6. Check how the evidence-phrase check treats phrases that span paragraphs before the first scored run.
+7. Optional: parent-level embeddings as an extra retrieval route (not part of the standard method).
+
+#### Strategy 7 — Sentence window (concept learned; previewed on two questions; not built or scored)
+
+**Is a chunk size needed? MANDATORY, but as a window width, not a character size.** The setting that must be chosen is N, the number of sentences on each side of the match (2N + 1 sentences in all). No character size is defined. A minimum sentence length is RECOMMENDED, because tiny sentences match on names alone (R15).
+*Written 2026-11-11. General-knowledge statements are marked; the preview is not an evaluation.*
+
+**The problem it solves.** Same trade-off as parent-child: a single sentence is a precise search target, but a lone sentence is too little for the model to read. The sentence window keeps the precision and adds context.
+
+**How it works**
+1. **Split each paragraph into sentences** (the splitter matters even more here: everything is built from sentences).
+2. **Embed every sentence on its own** and index those vectors.
+3. **At question time, find the best matching sentences.**
+4. **Expand each match into a window:** the matched sentence plus N sentences before and N after (N = 1 or 2, for example), so the model reads 2N + 1 sentences. Windows that overlap or touch are merged so the same sentences are not shown twice.
+5. **Pass the windows to the model,** with the section, paragraph and page metadata of the match.
+
+**How it differs from parent-child.** The context is a **sliding window centred on the match**, not a fixed parent passage. Its size is predictable (2N + 1 sentences), whereas a parent paragraph can be anything from a few hundred to over 10,000 characters. It needs no two-level structure: the neighbours can be looked up by sentence position, or the window text stored with each sentence (general knowledge: LlamaIndex stores the window in the sentence's metadata; not checked here). The cost is that the window ignores paragraph and speech boundaries unless we tell it to stop at them.
+
+**What we measured and saw (2026-11-11; previews, not scores).** Setup as in the parent-child preview: spaCy rule-based splitter per paragraph, all 11,689 sentences embedded, five best matches per question, windows kept inside the paragraph. Working-set questions only.
+- **R05 ("Who set fire to the Khandava forest, and why?").** Windows of 0, 1 and 2 sentences each side: **0 of 5 windows contained an evidence phrase** at every size, although the parent paragraph of the best match did (parent-child preview). So the evidence sentence is more than two sentences away from the best match: the window was too narrow here. Size of the five windows together: about 590 characters (N = 0), 1,625 (N = 1), 2,713 (N = 2); against about 15,000 characters for the five parents in the parent-child preview.
+- **R15 ("Who is Sauti's father?").** 0 of 5 windows contained an evidence phrase at any size. The matches are the same tiny "Sauti said." fragments seen in the parent-child preview, so a window around a name-only match does not help (windows of 71 to 275 characters at N = 1).
+- **Overlap.** The five matches came from five different paragraphs in both questions, so there were 0 overlapping window pairs; the duplicate-window problem did not show up in these two questions, but it would when matches cluster in one paragraph.
+- **Evidence is sentence-sized.** Across the 24 working-set questions, 56 evidence phrases exist; **55 of the 56 lie fully inside one sentence** (spaCy rule-based split). So the best case is that the matched sentence is the right one and a small window adds context. Counting caveat: this depends on the splitter, and a phrase can be cut by it.
+- **What the previews show:** a window gives a small, predictable context (hundreds of characters, not thousands), but it needs the match to land on or near the evidence; where the evidence is further away (R05) a parent catches it and a narrow window does not; and tiny name-only matches (R15) are as much a problem as in parent-child.
+
+**Disadvantages**
+1. **Child noise from tiny sentences,** the same R15 problem; the same minimum-size fix applies (merge sentences under a minimum length with the next).
+2. **Window size is a guess.** Too narrow misses the evidence (R05), too wide brings back the budget and noise problems. Genealogy lists and speeches need different sizes.
+3. **Overlapping and duplicate windows** when several matches cluster in one passage; windows must be merged.
+4. **Windows ignore structure:** a window can end one speaker's words and start another's, and can cross a paragraph or section boundary unless told to stop.
+5. **Total dependence on the sentence splitter.** There is no fallback to paragraph structure.
+6. **About 11,689 vectors** against 1,670 baseline chunks, and the same scoring trap as parent-child: score the window text the model actually sees, and record the characters passed.
+
+**How it would be built.** Our own code: split per paragraph with the chosen splitter, apply the minimum-size rule, embed the sentences (cached), keep each sentence's paragraph and position, expand a match into its window at query time, merge overlapping windows, and write the result in the baseline chunk format so downstream code is unchanged.
+
+**Pending to experiment (sentence window):** none run yet; one variable at a time; after the splitter comparison.
+1. Window size N: 0, 1, 2, 3 (with the splitter and minimum child size fixed).
+2. Windows stay inside the paragraph, or may cross paragraphs within a section.
+3. Minimum sentence size (none, 100, 200 characters).
+4. Merging overlapping windows versus keeping them separate.
+5. Record the characters passed to the model next to hit@5 and MRR@5; end-to-end correctness for the winner only.
+6. Compare with parent-child on the same children: window versus paragraph parent.
+
+#### Learning phase of the chunking stage: wrap-up (2026-11-11)
+All seven strategies are now learned and logged: fixed (the baseline control), recursive, sentence-based, semantic, structure-aware, parent-child and sentence window. **Nothing is built or scored yet.**
+
+**What the strategies have in common**
+- **The sentence splitter is the shared dependency** for sentence-based, semantic, structure-aware (71% of the text is in long paragraphs), parent-child and sentence window. pySBD left 94 of the 452 long paragraphs unsplit (quote-pair rule); spaCy's rule-based splitter left none but cut after "viz."; NLTK and spaCy's parser mode are untested. **The splitter comparison therefore comes first.**
+- **Tiny pieces match on names alone** (R15's "Sauti said." fragments), so any strategy with sentence-sized search units needs a minimum-size rule.
+- **Context size is a budget:** paragraphs reach 10,838 characters, so any approach that hands whole paragraphs to the model needs a cap.
+- **Score what the model sees,** and record the characters passed, so that bigger contexts do not win just because they contain more text.
+
+**Suggested order for the experiments (a suggestion, the owner decides)**
+1. Splitter comparison (pySBD with the quote fix, spaCy rule-based with an abbreviation fix; NLTK once its data is available).
+2. Single-level strategies, retrieval metrics first: recursive (with a sentence-level separator), sentence-based, structure-aware, semantic.
+3. Parent-child and sentence window on top of the best splitter and chunking result.
+4. Judge scoring only for the likely winners; held-out only at a milestone.
+
+**Decisions the owner still has to make:** which two or three strategies to build and compare; the splitter; whether chunks stay inside a paragraph; the first semantic breakpoint rule; size limits (see each strategy's "Pending to experiment" list).
 
 #### Side-by-side
 | Strategy | Respects sentences | Respects paragraphs and sections | Keeps the speaker | Extra cost | Main risk |
@@ -1509,6 +1922,18 @@ Embed single sentences; at answer time return each with the sentences before and
 | Structure-aware | on long ones | yes | with a header | rules to tune | uneven sizes |
 | Parent-child | child yes | via parent | via parent | extra lookup | duplicates; scoring |
 | Sentence window | yes | no | partly | extra lookup | duplicates |
+
+#### Is a chunk size needed? Summary for the seven strategies
+| Strategy | Chunk size | What sets the cut points | What the size does |
+|---|---|---|---|
+| Fixed-size | **Mandatory** | the size itself | defines every cut |
+| Recursive | **Mandatory** | separators, triggered by the size | decides when to split finer; caps the merging |
+| Sentence-based | **Mandatory** (target or limit) | sentence ends | decides how many sentences go in a chunk |
+| Semantic | **Not mandatory**; min and max **recommended** | similarity scores and the breakpoint rule | guards against tiny and giant chunks |
+| Structure-aware | Complementary; maximum **effectively required** for us, minimum **recommended** | paragraphs and sections | decides when to split long and merge tiny paragraphs |
+| Parent-child | **Mandatory** per level, as a size or a unit | the methods chosen for each level | sets child and parent scale; parent cap and child minimum recommended |
+| Sentence window | **Mandatory**, as window width N (sentences) | sentence matches | sets how much context surrounds a match |
+Rule of thumb from the table: methods that cut by **size** need it; methods that cut by **meaning or structure** need only guards; methods that **expand a match** need a width.
 
 #### Alternatives and what comes next
 Libraries mentioned are references only; no frameworks until Phase 4. **Next:** learn strategies 3 to 7 in the same detail as recursive, log each here, then choose which 2 or 3 to build and compare (the owner chooses). Before the first run, confirm that the retrieval scoring does not depend on chunk IDs (it checks the evidence phrase and the gold section), so results from different chunkings are comparable.
