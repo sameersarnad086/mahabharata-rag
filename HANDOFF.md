@@ -111,3 +111,10 @@ All tunables are in `config.py`.
 - **Open decisions for the semantic experiment (not made):** splitter, chunks inside or across paragraphs, first breakpoint rule, size limits.
 - **Git:** PR #7 merged. Branch `claude/charming-cori-pre3t4` was restarted from `main` and carries `LEARNING.md` and `HANDOFF.md` updates; no PR open (open one only if the owner asks).
 - **Phase 3 map:** a one-page overview of the goal, loop and stages is at `private/phase3_map.html`.
+
+## Update 2026-11-12 (semantic chunking: signal checks done; PRs #7 and #8 merged)
+- **PR #8 merged** (all seven strategies learned and logged). Branch `claude/charming-cori-pre3t4` was restarted from `main`.
+- **Semantic chunking measurements done (read-only, nothing built):** neighbour-score distribution (median 0.57, 5th percentile 0.42), fixed thresholds 0.55 to 0.75 (0.65 cuts 82% of gaps into 9,793 tiny chunks), neighbours versus random pairs (0.57 against 0.47; 13% of neighbour pairs below the median random pair, passes the agreed 30% rule), and a hand-check of 20 lowest-5% cuts (about 60% reasonable, mostly speaker or speech-to-narration changes). Details in the "Whole-corpus measurements and checks" block of the semantic entry in `private/LEARNING.md`.
+- **Verdict:** semantic chunking stays on the list but last; signal is modest. Open: rule, cut share, value, within-paragraph percentiles, splitter.
+- **Agenda still open:** step 3, choose which strategies to build (suggested order: splitter comparison; single-level strategies; parent-child and sentence window on top). Before the first scored run: confirm the retrieval evaluation does not depend on chunk IDs and how it treats an evidence phrase split across chunks.
+- **Gotcha:** never name a script after a standard-library module (`signal.py` broke imports).

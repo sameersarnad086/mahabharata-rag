@@ -1675,8 +1675,43 @@ Over these first 12 sentences (11 values): range 0.50 to 0.81, mean 0.64. Over a
 **How we would score it:** retrieval metrics first (hit@5, MRR@5, with and without the summary passages; free and fast, after a re-embed of about 90 seconds); the frozen judge only for a setting that looks like a winner (it costs money and shows run-to-run noise, for example faithfulness flipping 1.0, 0.75, 1.0 on one answer earlier). The winner is compared with the baseline and with the other strategies we choose.
 **Status:** concept only. The four choices above are not made; the owner wanted to learn each option first.
 
+**Whole-corpus measurements and checks (2026-11-12): does semantic chunking have a usable signal here?** Setup for all of them: every paragraph split into sentences with spaCy's rule-based splitter (not yet compared with other splitters), 11,689 sentences embedded with `bge-small-en-v1.5`, 10,383 gaps inside paragraphs scored (the score of a gap = similarity between a sentence and the next). Measurement only; nothing was built, no guard applied, nothing saved to the repo (scripts were in the scratchpad).
+
+*1. How the scores are spread.* Percentiles 5 / 25 / 50 / 75 / 95: 0.42 / 0.51 / 0.57 / 0.63 / 0.72; mean 0.57. The scores are low and narrow, so a fixed threshold must be set from this spread, not guessed.
+
+*2. What fixed thresholds do* (cut at a score below the threshold, and always at a paragraph end; baseline for comparison: 1,670 chunks of about 1,000 characters):
+
+| Threshold | Share of gaps cut | Chunks | Median chunk (characters) | Under 100 characters | Over 1,000 characters |
+|---|---|---|---|---|---|
+| 0.55 | 43% | 5,732 | 144 | 33% | 2% |
+| 0.60 | 64% | 7,973 | 121 | 40% | 0% |
+| 0.65 | 82% | 9,793 | 109 | 45% | 0% |
+| 0.70 | 92% | 10,895 | 103 | 48% | 0% |
+| 0.75 | 97% | 11,418 | 101 | 49% | 0% |
+
+The owner's example threshold of 0.65 sits near the 78th percentile, so it cuts 82% of gaps and shatters the corpus into tiny chunks. At 0.55 to 0.65 the largest chunk was 7,788 characters, probably a passage of near-identical sentences (for example a repeated refrain); not checked.
+
+*3. Why percentile (or standard-deviation) rules.* A fixed score has no meaning on its own: it depends on the embedding model and the text. A percentile rule chooses the **share** of gaps to cut and lets the data give the matching score (lowest 5% means a threshold of about 0.42; about 95% of gaps score at or above it and stay joined). A standard-deviation rule cuts only gaps unusually far below the average. Limit: a percentile rule always cuts its share, even if the text has no real breaks, so the cuts need checking. **How it is applied (owner's understanding, confirmed):** the threshold is computed once from all gaps in the corpus, then applied to every paragraph on its own; a gap below the threshold is a cut; chunks never cross a paragraph end. Many (especially short) paragraphs then have no cut and become one chunk. **A variation to try later:** compute the percentile inside each paragraph, so every long paragraph gets cuts.
+Chunk-count estimates for low percentiles (arithmetic from the percentiles, not measured; at 0.55 the same arithmetic gave about 5,770 against 5,732 measured): paragraph ends give a floor of about 1,306 chunks, plus one per cut: lowest 5% about 1,800 chunks, lowest 10% about 2,300, lowest 25% about 3,900. At a 5% cut, chunks are mostly whole paragraphs, so semantic chunking would add only a few extra cuts to what structure-aware chunking gives.
+
+*4. Signal check: do neighbouring sentences score higher than unrelated ones?* About 10,000 pairs of each kind (random pairs from different paragraphs, seed 1):
+
+| Pairs | 5th | 25th | Median | 75th | 95th | Mean |
+|---|---|---|---|---|---|---|
+| Neighbours (next to each other) | 0.42 | 0.51 | 0.57 | 0.63 | 0.72 | 0.57 |
+| Same paragraph, 3 to 5 sentences apart | 0.39 | 0.47 | 0.53 | 0.59 | 0.68 | 0.53 |
+| Random pairs | 0.35 | 0.42 | 0.47 | 0.52 | 0.58 | 0.47 |
+
+- **The agreed drop rule** (set before looking): if more than about 30% of neighbour pairs score below the median random pair (0.47), the signal counts as weak and semantic chunking is dropped. **Result: 13%**, so it passes. Also: 28% of neighbour pairs score below the 75th-percentile random pair (0.52); 8% of random pairs score above the neighbour median (0.57).
+- **Plain reading.** The score goes up when sentences belong together, and falls as they get further apart, so the method is not hopeless. But the gap between neighbours and random is only about 0.10 and the ranges overlap a lot, so the score is useful but fuzzy. Pairs scoring 0.42 to 0.47 are at the level of random pairs: a score of 0.45 does not prove two sentences belong together (the owner's worry about joining low-scoring pairs is right at the margin).
+
+*5. Hand-check of the cuts (my own reading; the owner is invited to judge the pairs).* 20 gaps drawn at random from the lowest 5% (520 gaps, scores 0.36 to 0.42), both sides read: **5 clearly real breaks, about 7 plausible, 8 not breaks** (roughly 60% reasonable, 40% not). The real breaks were mostly **changes of voice**: one speaker to another, or speech ending and narration starting (for example Sections 76, 160, 93, 166 and 202), not changes of topic as such; the score tracks "this sounds different from the last sentence". The cuts that were not breaks were the same speech or scene continuing (for example Sections 147, 74, 226, 206, 221). Also 10 gaps drawn from just above the cut (scores 0.42 to 0.47, which would be joined): **9 of 10 were continuations of the same speech or scene (correct joins)**; one looked like a missed break (Section 99, a woman described and then a request for a cow); one pair (Section 42) was a sentence cut after "viz.," by the splitter, the known spaCy problem rather than a semantic one.
+
+*6. Verdict so far.* The signal passes the agreed test but is modest. Semantic chunking at a low percentile with a minimum size guard is **still worth exploring, but last in the experiment order**: the expected gain is limited, and a simpler rule based on the quotation marks and "X said" patterns might catch the same speaker-turn breaks more cheaply (an idea, not tested). Open: the cut share, the rule (percentile or standard deviation), the value, within-paragraph percentiles, and the splitter. **Summary line for the owner:** across the corpus, neighbouring-sentence scores are modest (median 0.57, mostly 0.42 to 0.72); neighbours score higher than random pairs (0.57 against 0.47), and only 13% of neighbour pairs fall below the median random pair, so the signal passes our test, though it is modest and the groups overlap; a hand-check of the lowest-5% cuts found about 60% reasonable, mostly changes of speaker or speech to narration.
+*Gotcha:* a script I named `signal.py` shadowed Python's built-in `signal` module and crashed on import; never name scripts after standard-library modules.
+
 **Pending to experiment (semantic):** none run yet. The owner chose to learn each option before deciding.
-1. **Measure the distribution of neighbour scores over the whole corpus** (per paragraph) and what fixed thresholds 0.55, 0.60, 0.65, 0.70 and 0.75 do: number of chunks, sizes, share of tiny chunks. Started on 2026-11-12 and stopped before it ran; read-only, about a minute. This sets the threshold from data instead of guessing.
+1. ~~Measure the distribution of neighbour scores and what fixed thresholds do.~~ **Done 2026-11-12** (see "Whole-corpus measurements and checks" above). Also done: the neighbours-versus-random signal check (passes the agreed rule: 13% against a 30% limit) and the hand-check of 20 cuts (about 60% reasonable). Still to do: percentile and standard-deviation versions with a minimum guard, and within-paragraph percentiles.
 2. Choose the splitter (depends on the splitter comparison below); hold it fixed.
 3. Decide: chunks stay inside one paragraph (the working assumption in the step-by-step story), or may span paragraphs within a section.
 4. Vary the breakpoint rule one at a time: percentile (start near the lowest 10%), standard deviation, fixed threshold; then its value.
