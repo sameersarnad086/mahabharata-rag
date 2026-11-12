@@ -1785,6 +1785,60 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 
 **Method.** Automatic indicators over all 1,306 paragraphs for every candidate; then a **hand-check of about 60 spots where the candidates disagree** about a boundary, drawn with a fixed random seed and stratified across kinds of text (quote-wrapped speeches, abbreviations, lowercase after a full stop, other). I read each spot and judge which cut is right; the owner spot-checks a sample of my judgements. **Limits:** if every splitter makes the same mistake (the typo "Nakula. the son") disagreement-checking does not see it, so such cases stay on the hard-case list; judgements are mine, one author, not independently verified; and the stratified sample gives counts per candidate on the sample, not corpus-wide error rates. **This comparison is only a first filter:** what finally matters is whether chunks retrieve better, which is tested later with the retrieval metrics.
 
+**Splitter comparison: results (run 2026-11-12; scripts in the scratchpad, not committed).** The plan above was followed. Candidates A to E and the control were run on all 1,306 paragraphs, each on its own, with pySBD 0.3.4, spaCy 3.8.18 (rule-based `sentencizer`) and NLTK 3.10.4 (Punkt trained on our corpus, about 1 second).
+
+*Gate (long paragraphs left as one sentence).* A pySBD **fails** (94 of 452 = 21%). B (1, 0.2%), C, D and E (0) pass.
+
+*Automatic counts over the whole corpus.*
+| | A | B | C | D | E | Control |
+|---|---|---|---|---|---|---|
+| Sentences found | 7,948 | 9,712 | 11,689 | 11,584 | 11,627 | 11,555 |
+| Sentences over 1,000 characters | 157 | 87 | 8 | 9 | 9 | 10 |
+| Start with a lowercase letter | 30 | 36 | 73 | 23 | 40 | 0 |
+| Start with , ; : or ) | 48 | 63 | 0 | 0 | 31 | 0 |
+| Pieces under 15 characters | 423 | 605 | 46 | 44 | 50 | 50 |
+| Opening quote stuck at the end of a piece | 2 | 2 | 52 | 50 | 11 | 0 |
+| Seconds for one pass | 4.6 | 4.8 | 0.6 | 0.4 | 0.2 | 0.0 |
+The control looks good on the lowercase and stuck-quote counts only because it requires a capital letter after a full stop; it fails "Mr." and "Dr." (below).
+
+*The 9 hard test cases.*
+| Case | A | B | C | D | E | Control |
+|---|---|---|---|---|---|---|
+| "Mr." and "Dr." (2 cases) | ok | ok | ok | ok | ok | wrong |
+| "viz." | ok | ok | wrong | ok | wrong | ok |
+| "i. e. ," | wrong | wrong | ok | ok | ok | ok |
+| Typo "Nakula. the son of Madri" | wrong | wrong | wrong | wrong | wrong | ok |
+| Closing quotes `."` and `.'` | ok | ok | ok | ok | ok | ok |
+| Semicolon list | ok | ok | ok | ok | ok | ok |
+| Quote-wrapped speech (5 sentences) | wrong | ok | ok | ok | ok | ok |
+| Opening quote stuck to the previous piece | ok | ok | wrong | wrong | ok | ok |
+| Wrong out of 9 | 3 | 2 | 3 | 2 | 2 | 2 |
+
+*Hand-check of 60 spots (my judgement; one author, not independently verified).* Spots are places where A to E disagree about a boundary (4,864 in all, mostly in quote-wrapped speeches), 12 drawn at random (seed 1) from each of five kinds. I first drew 15 from each of four kinds and none from "other", which broke the plan, and redrew before judging anything.
+| Candidate | Cut where no sentence ends | Missed a real sentence end | Quote on the wrong side | Total | Share of 60 |
+|---|---|---|---|---|---|
+| A | 25 | 18 | 3 | 46 | 77% |
+| B | 30 | 10 | 5 | 45 | 75% |
+| C | 25 | 0 | 6 | 31 | 52% |
+| D | 0 | 0 | 6 | 6 | 10% |
+| E | 13 | 0 | 0 | 13 | 22% |
+Errors by kind of spot (out of 12): quote-wrapped speech A 12, B 6, C 0, D 0, E 0; "viz." followed by ", Name" A 6, B 8, C 12, D 0, E 12; "viz ." followed by lowercase A 9, B 11, C 11, D 0, E 1; quote placement A 7, B 8, C 8, D 6, E 0; other (a closing quote at a paragraph end) A 12, B 12, C 0, D 0, E 0.
+
+*Observations, with examples from the text.*
+1. **A fails because of its quote-pair rule.** Section 5, paragraph 0 (Saunaka's question, 487 characters, five sentences) came back as one sentence. In the 12 quote-wrapped spots A missed every real sentence end, for example Section 232: "…afflict me. | Oh, this fire approacheth, spreading fear all around…". It also cut a stray closing quote off as its own piece at a paragraph end (Section 3: "Thou shall obtain good fortune. | '").
+2. **B only half-fixes it.** Stripping the outer quotes cures paragraphs wrapped in one pair, but B still misses sentence ends hidden inside inner single quotes (6 of 12 quote-wrapped spots), for example Section 174: "…these honeyed words, 'Rise, rise, O chastiser of foes! | Blest be thou; it behoveth thee not…". It also makes the most tiny pieces (605), mostly stray closing quotes, and cut "i. e. ," into three pieces.
+3. **C finds every sentence end but cuts too much.** No missed splits in the sample, but 25 false splits after "viz." and 6 quote-placement errors (52 stuck opening quotes corpus-wide). Example of the stuck quote, Section 3: "…presented her the ear-rings.' | Utanka', said she…", where the opening quote of the next sentence stays on the previous piece.
+4. **D's abbreviation fix works.** It removed every cut after "viz.". D's remaining 6 errors are the same stuck opening quotes and brackets as C, for example Section 119 "…like a dog.( | Destitute as I am…" and Section 94 "…immeasurable glory.( | Amongst them…".
+5. **E learned some abbreviations by itself** ("mr", "dr", "i.e") but not "viz.", so 12 of its 13 errors are cuts after "viz.". All its quote placements were right (0), and it has the fewest stuck quotes of the three that pass (11).
+6. **A corpus convention causes the trouble.** The text writes "viz. ," and "viz ." with a space before the full stop and often a comma after it, for example Section 65: "Brahman hath six spiritual sons, viz. , Marichi, Atri, Angiras, Pulastya, Pulaha and Kratu." and Section 131: "…among Kshatriyas, viz ., Drupada…". spaCy ends the sentence after the comma, so my first D check, which looked at the last word, saw "," and never recognised "viz.". Found and fixed before judging any spot; D then merged 105 boundaries. 24 of the 60 sampled spots concern "viz.".
+7. **The typo "Nakula. the son of Madri" defeats all five** (only the control passes, because it needs a capital letter next). No splitter fix helps unless we add a rule such as "a full stop followed by a lowercase letter is not a boundary", which would also catch the "viz ." cases (23 sentences in D start lowercase; not checked whether any are real boundaries).
+8. **The control regex** cuts at "Mr." and "Dr." (no abbreviation knowledge) but avoids "viz." and the typo by requiring a capital letter next. A hybrid of that rule with an abbreviation list is a possible later candidate (an idea added after seeing results).
+
+*Caveats.* The hand-check shares come from a deliberately hard sample (places where candidates disagree; 24 of 60 are "viz."), so they are **not corpus-wide error rates**. D's abbreviation fix was written for the "viz." pattern that fills much of the sample, which flatters D. Judgements are mine. The "fixes needed" row of the scorecard (my reading, not measured): B the quote strip and still misses inner quotes; C an abbreviation list plus moving the stuck quote; D the stuck-quote move; E the abbreviation list on top of a trained model.
+
+*Where this leaves us (rule from the plan).* A is out. Nobody is under the 5% bar. D's errors are concentrated in one fixable problem (stuck opening quotes and brackets) and E's in another (the "viz." cuts), so the plan says: add the fix, measure again. **Next step: build D2 (D plus moving a stuck opening quote or bracket to the next sentence) and E2 (E plus the abbreviation list), and judge them on a FRESH sample of disagreement spots (a new seed), not the 60 above, because the fixes were designed from those spots; also re-run the automatic counts and the 9 hard cases. B and C are superseded (C is D without its fix; B needs more than a wrapper).** Possible extra shared fix: the lowercase-next rule (observation 7).
+*Gotchas:* a script named `signal.py` shadowed a Python built-in module; `python -I` hides packages installed in the user site and broke the spaCy import; a check that looks at the last word of a sentence fails when the splitter attaches trailing punctuation to it.
+
 **Pending to experiment (sentence splitting):** none run yet.
 1. Re-run the corpus scan after stripping outer double quotes, to see how many of the 178 quote-wrapped paragraphs are fixed and whether anything else breaks.
 2. Splitter comparison: hand-check a sample of paragraphs and count each splitter's errors (pySBD with the quote fix, spaCy rule-based, NLTK Punkt, spaCy parser mode).
