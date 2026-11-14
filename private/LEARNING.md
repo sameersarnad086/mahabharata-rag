@@ -1675,8 +1675,43 @@ Over these first 12 sentences (11 values): range 0.50 to 0.81, mean 0.64. Over a
 **How we would score it:** retrieval metrics first (hit@5, MRR@5, with and without the summary passages; free and fast, after a re-embed of about 90 seconds); the frozen judge only for a setting that looks like a winner (it costs money and shows run-to-run noise, for example faithfulness flipping 1.0, 0.75, 1.0 on one answer earlier). The winner is compared with the baseline and with the other strategies we choose.
 **Status:** concept only. The four choices above are not made; the owner wanted to learn each option first.
 
+**Whole-corpus measurements and checks (2026-11-12): does semantic chunking have a usable signal here?** Setup for all of them: every paragraph split into sentences with spaCy's rule-based splitter (not yet compared with other splitters), 11,689 sentences embedded with `bge-small-en-v1.5`, 10,383 gaps inside paragraphs scored (the score of a gap = similarity between a sentence and the next). Measurement only; nothing was built, no guard applied, nothing saved to the repo (scripts were in the scratchpad).
+
+*1. How the scores are spread.* Percentiles 5 / 25 / 50 / 75 / 95: 0.42 / 0.51 / 0.57 / 0.63 / 0.72; mean 0.57. The scores are low and narrow, so a fixed threshold must be set from this spread, not guessed.
+
+*2. What fixed thresholds do* (cut at a score below the threshold, and always at a paragraph end; baseline for comparison: 1,670 chunks of about 1,000 characters):
+
+| Threshold | Share of gaps cut | Chunks | Median chunk (characters) | Under 100 characters | Over 1,000 characters |
+|---|---|---|---|---|---|
+| 0.55 | 43% | 5,732 | 144 | 33% | 2% |
+| 0.60 | 64% | 7,973 | 121 | 40% | 0% |
+| 0.65 | 82% | 9,793 | 109 | 45% | 0% |
+| 0.70 | 92% | 10,895 | 103 | 48% | 0% |
+| 0.75 | 97% | 11,418 | 101 | 49% | 0% |
+
+The owner's example threshold of 0.65 sits near the 78th percentile, so it cuts 82% of gaps and shatters the corpus into tiny chunks. At 0.55 to 0.65 the largest chunk was 7,788 characters, probably a passage of near-identical sentences (for example a repeated refrain); not checked.
+
+*3. Why percentile (or standard-deviation) rules.* A fixed score has no meaning on its own: it depends on the embedding model and the text. A percentile rule chooses the **share** of gaps to cut and lets the data give the matching score (lowest 5% means a threshold of about 0.42; about 95% of gaps score at or above it and stay joined). A standard-deviation rule cuts only gaps unusually far below the average. Limit: a percentile rule always cuts its share, even if the text has no real breaks, so the cuts need checking. **How it is applied (owner's understanding, confirmed):** the threshold is computed once from all gaps in the corpus, then applied to every paragraph on its own; a gap below the threshold is a cut; chunks never cross a paragraph end. Many (especially short) paragraphs then have no cut and become one chunk. **A variation to try later:** compute the percentile inside each paragraph, so every long paragraph gets cuts.
+Chunk-count estimates for low percentiles (arithmetic from the percentiles, not measured; at 0.55 the same arithmetic gave about 5,770 against 5,732 measured): paragraph ends give a floor of about 1,306 chunks, plus one per cut: lowest 5% about 1,800 chunks, lowest 10% about 2,300, lowest 25% about 3,900. At a 5% cut, chunks are mostly whole paragraphs, so semantic chunking would add only a few extra cuts to what structure-aware chunking gives.
+
+*4. Signal check: do neighbouring sentences score higher than unrelated ones?* About 10,000 pairs of each kind (random pairs from different paragraphs, seed 1):
+
+| Pairs | 5th | 25th | Median | 75th | 95th | Mean |
+|---|---|---|---|---|---|---|
+| Neighbours (next to each other) | 0.42 | 0.51 | 0.57 | 0.63 | 0.72 | 0.57 |
+| Same paragraph, 3 to 5 sentences apart | 0.39 | 0.47 | 0.53 | 0.59 | 0.68 | 0.53 |
+| Random pairs | 0.35 | 0.42 | 0.47 | 0.52 | 0.58 | 0.47 |
+
+- **The agreed drop rule** (set before looking): if more than about 30% of neighbour pairs score below the median random pair (0.47), the signal counts as weak and semantic chunking is dropped. **Result: 13%**, so it passes. Also: 28% of neighbour pairs score below the 75th-percentile random pair (0.52); 8% of random pairs score above the neighbour median (0.57).
+- **Plain reading.** The score goes up when sentences belong together, and falls as they get further apart, so the method is not hopeless. But the gap between neighbours and random is only about 0.10 and the ranges overlap a lot, so the score is useful but fuzzy. Pairs scoring 0.42 to 0.47 are at the level of random pairs: a score of 0.45 does not prove two sentences belong together (the owner's worry about joining low-scoring pairs is right at the margin).
+
+*5. Hand-check of the cuts (my own reading; the owner is invited to judge the pairs).* 20 gaps drawn at random from the lowest 5% (520 gaps, scores 0.36 to 0.42), both sides read: **5 clearly real breaks, about 7 plausible, 8 not breaks** (roughly 60% reasonable, 40% not). The real breaks were mostly **changes of voice**: one speaker to another, or speech ending and narration starting (for example Sections 76, 160, 93, 166 and 202), not changes of topic as such; the score tracks "this sounds different from the last sentence". The cuts that were not breaks were the same speech or scene continuing (for example Sections 147, 74, 226, 206, 221). Also 10 gaps drawn from just above the cut (scores 0.42 to 0.47, which would be joined): **9 of 10 were continuations of the same speech or scene (correct joins)**; one looked like a missed break (Section 99, a woman described and then a request for a cow); one pair (Section 42) was a sentence cut after "viz.," by the splitter, the known spaCy problem rather than a semantic one.
+
+*6. Verdict so far.* The signal passes the agreed test but is modest. Semantic chunking at a low percentile with a minimum size guard is **still worth exploring, but last in the experiment order**: the expected gain is limited, and a simpler rule based on the quotation marks and "X said" patterns might catch the same speaker-turn breaks more cheaply (an idea, not tested). Open: the cut share, the rule (percentile or standard deviation), the value, within-paragraph percentiles, and the splitter. **Summary line for the owner:** across the corpus, neighbouring-sentence scores are modest (median 0.57, mostly 0.42 to 0.72); neighbours score higher than random pairs (0.57 against 0.47), and only 13% of neighbour pairs fall below the median random pair, so the signal passes our test, though it is modest and the groups overlap; a hand-check of the lowest-5% cuts found about 60% reasonable, mostly changes of speaker or speech to narration.
+*Gotcha:* a script I named `signal.py` shadowed Python's built-in `signal` module and crashed on import; never name scripts after standard-library modules.
+
 **Pending to experiment (semantic):** none run yet. The owner chose to learn each option before deciding.
-1. **Measure the distribution of neighbour scores over the whole corpus** (per paragraph) and what fixed thresholds 0.55, 0.60, 0.65, 0.70 and 0.75 do: number of chunks, sizes, share of tiny chunks. Started on 2026-11-12 and stopped before it ran; read-only, about a minute. This sets the threshold from data instead of guessing.
+1. ~~Measure the distribution of neighbour scores and what fixed thresholds do.~~ **Done 2026-11-12** (see "Whole-corpus measurements and checks" above). Also done: the neighbours-versus-random signal check (passes the agreed rule: 13% against a 30% limit) and the hand-check of 20 cuts (about 60% reasonable). Still to do: percentile and standard-deviation versions with a minimum guard, and within-paragraph percentiles.
 2. Choose the splitter (depends on the splitter comparison below); hold it fixed.
 3. Decide: chunks stay inside one paragraph (the working assumption in the step-by-step story), or may span paragraphs within a section.
 4. Vary the breakpoint rule one at a time: percentile (start near the lowest 10%), standard deviation, fixed threshold; then its value.
@@ -1716,7 +1751,162 @@ Both strategies depend on knowing where sentences end, so every splitting mistak
 **Conclusion so far.** No splitter is free of errors on our text; each has different weak spots. pySBD needs a quote-stripping step; spaCy's rule-based version needs an abbreviation fix ("viz."). NLTK and spaCy's parser mode are not tested. **Earlier I listed "pySBD only" as the recommended choice for the first semantic experiment; I withdrew that after finding the quote problem.** The next step is a splitter comparison: hand-check a sample of paragraphs, count each splitter's errors, then choose a base splitter and add small fixes for its known gaps.
 **Gotchas:** (a) test the splitter on joined text and on single paragraphs; they differ hugely; (b) a count of "sentences" does not show correctness, only reading the output does; (c) the rule-based splitters hide full stops inside quotes by design.
 
-**Pending to experiment (sentence splitting):** none run yet.
+**Splitter comparison: plan and criteria (written 2026-11-12, BEFORE running, so they cannot be bent afterwards).**
+*Goal: choose a base sentence splitter (and a list of small fixes) for every strategy that depends on sentences. Nothing is built into the main pipeline.*
+
+**Candidates**
+- **A.** pySBD as it comes, run per paragraph.
+- **B.** pySBD with the outer double quotes of a paragraph stripped before splitting (and put back on the first and last sentence).
+- **C.** spaCy's rule-based `sentencizer`.
+- **D.** spaCy rule-based plus a small abbreviation fix (an abbreviation list such as "viz.", "i.e.", "Mr.", "Dr.", so a full stop after them is not a boundary).
+- **E.** NLTK Punkt **trained on our own corpus** (needs no download; feasibility checked: trains in about 1 second, learned 13 abbreviations including "mr", "dr", "i.e").
+- **Control:** a plain rule that splits after `.`, `?` or `!` followed by a capital letter or an opening quote.
+- **Not testable here:** NLTK's pre-trained English Punkt model (its data lives on `raw.githubusercontent.com`, which is not on the environment's allowlist, and NLTK additionally refuses proxied fetches unless `NLTK_ALLOW_PROXIED_URLOPEN=1` is set, a security opt-in left to the owner; allowing that host would also open raw files from any GitHub repository) and spaCy's parser mode (its language model is not available from the package index here). Ways round NLTK later: train Punkt on our corpus (candidate E), or commit the small data file downloaded on the owner's computer.
+
+**Gates (a candidate must pass to stay in)**
+1. **Speeches get split:** the share of long paragraphs (over 1,000 characters) returned as one sentence is **under 2%** (pySBD as it comes had 94 of 452, which is 21%).
+2. **Works in our environment:** needs no download and gives the same output every time.
+
+**Scores (the lower the better)**
+| Score | What it means | Example from our text | How measured |
+|---|---|---|---|
+| False splits | Cuts where the sentence has not ended | spaCy cut after "viz."; pySBD cut "i. e. ," into three pieces | hand-check count; automatic sign: share of sentences that start with a lowercase letter |
+| Missed splits | Sentences left stuck together | pySBD returned Saunaka's 487-character paragraph (five sentences) as one | hand-check count; automatic sign: sentences over 1,000 characters (a hint only: some are genuine semicolon lists such as chunk 478) |
+| Hard-case errors | Specific known traps, each reported on its own | "Mr. C.H. Tawney says…", closing quotes `."` and `.'`, the typo "Nakula. the son of Madri" | a fixed list of test sentences, right or wrong per candidate |
+| Junk fragments | Tiny pieces the splitter creates | spaCy produced `"Sauti said. '` (14 characters; the next sentence's opening quote stuck to the previous one) | count of pieces under about 15 characters; count of sentences ending in a dangling opening quote; a read of a sample |
+| Fixes needed | Extra rules needed on top of the splitter | pySBD: strip outer quotes; spaCy: abbreviation list | count and complexity of custom rules |
+| Speed (minor) | Seconds for one full pass over the corpus | | timing |
+
+**How the winner is chosen**
+1. Remove any candidate that fails a gate.
+2. Among the rest, take the one with the **fewest errors in the hand-check**, false and missed splits together as a share of the spots checked. Suggested bar for a winner: **under 5%**.
+3. If a candidate's errors are concentrated in one fixable category (for example "viz."), add the fix and measure again; the fixed version competes.
+4. If two are close, the tie-breaker is fewer custom fixes, then simplicity.
+
+**Method.** Automatic indicators over all 1,306 paragraphs for every candidate; then a **hand-check of about 60 spots where the candidates disagree** about a boundary, drawn with a fixed random seed and stratified across kinds of text (quote-wrapped speeches, abbreviations, lowercase after a full stop, other). I read each spot and judge which cut is right; the owner spot-checks a sample of my judgements. **Limits:** if every splitter makes the same mistake (the typo "Nakula. the son") disagreement-checking does not see it, so such cases stay on the hard-case list; judgements are mine, one author, not independently verified; and the stratified sample gives counts per candidate on the sample, not corpus-wide error rates. **This comparison is only a first filter:** what finally matters is whether chunks retrieve better, which is tested later with the retrieval metrics.
+
+**Splitter comparison: results (run 2026-11-12; scripts in the scratchpad, not committed).** The plan above was followed. Candidates A to E and the control were run on all 1,306 paragraphs, each on its own, with pySBD 0.3.4, spaCy 3.8.18 (rule-based `sentencizer`) and NLTK 3.10.4 (Punkt trained on our corpus, about 1 second).
+
+*Gate (long paragraphs left as one sentence).* A pySBD **fails** (94 of 452 = 21%). B (1, 0.2%), C, D and E (0) pass.
+
+*Automatic counts over the whole corpus.*
+| | A | B | C | D | E | Control |
+|---|---|---|---|---|---|---|
+| Sentences found | 7,948 | 9,712 | 11,689 | 11,584 | 11,627 | 11,555 |
+| Sentences over 1,000 characters | 157 | 87 | 8 | 9 | 9 | 10 |
+| Start with a lowercase letter | 30 | 36 | 73 | 23 | 40 | 0 |
+| Start with , ; : or ) | 48 | 63 | 0 | 0 | 31 | 0 |
+| Pieces under 15 characters | 423 | 605 | 46 | 44 | 50 | 50 |
+| Opening quote stuck at the end of a piece | 2 | 2 | 52 | 50 | 11 | 0 |
+| Seconds for one pass | 4.6 | 4.8 | 0.6 | 0.4 | 0.2 | 0.0 |
+The control looks good on the lowercase and stuck-quote counts only because it requires a capital letter after a full stop; it fails "Mr." and "Dr." (below).
+
+*The 9 hard test cases.*
+| Case | A | B | C | D | E | Control |
+|---|---|---|---|---|---|---|
+| "Mr." and "Dr." (2 cases) | ok | ok | ok | ok | ok | wrong |
+| "viz." | ok | ok | wrong | ok | wrong | ok |
+| "i. e. ," | wrong | wrong | ok | ok | ok | ok |
+| Typo "Nakula. the son of Madri" | wrong | wrong | wrong | wrong | wrong | ok |
+| Closing quotes `."` and `.'` | ok | ok | ok | ok | ok | ok |
+| Semicolon list | ok | ok | ok | ok | ok | ok |
+| Quote-wrapped speech (5 sentences) | wrong | ok | ok | ok | ok | ok |
+| Opening quote stuck to the previous piece | ok | ok | wrong | wrong | ok | ok |
+| Wrong out of 9 | 3 | 2 | 3 | 2 | 2 | 2 |
+
+*Hand-check of 60 spots (my judgement; one author, not independently verified).* Spots are places where A to E disagree about a boundary (4,864 in all, mostly in quote-wrapped speeches), 12 drawn at random (seed 1) from each of five kinds. I first drew 15 from each of four kinds and none from "other", which broke the plan, and redrew before judging anything.
+| Candidate | Cut where no sentence ends | Missed a real sentence end | Quote on the wrong side | Total | Share of 60 |
+|---|---|---|---|---|---|
+| A | 25 | 18 | 3 | 46 | 77% |
+| B | 30 | 10 | 5 | 45 | 75% |
+| C | 25 | 0 | 6 | 31 | 52% |
+| D | 0 | 0 | 6 | 6 | 10% |
+| E | 13 | 0 | 0 | 13 | 22% |
+Errors by kind of spot (out of 12): quote-wrapped speech A 12, B 6, C 0, D 0, E 0; "viz." followed by ", Name" A 6, B 8, C 12, D 0, E 12; "viz ." followed by lowercase A 9, B 11, C 11, D 0, E 1; quote placement A 7, B 8, C 8, D 6, E 0; other (a closing quote at a paragraph end) A 12, B 12, C 0, D 0, E 0.
+
+*Observations, with examples from the text.*
+1. **A fails because of its quote-pair rule.** Section 5, paragraph 0 (Saunaka's question, 487 characters, five sentences) came back as one sentence. In the 12 quote-wrapped spots A missed every real sentence end, for example Section 232: "…afflict me. | Oh, this fire approacheth, spreading fear all around…". It also cut a stray closing quote off as its own piece at a paragraph end (Section 3: "Thou shall obtain good fortune. | '").
+2. **B only half-fixes it.** Stripping the outer quotes cures paragraphs wrapped in one pair, but B still misses sentence ends hidden inside inner single quotes (6 of 12 quote-wrapped spots), for example Section 174: "…these honeyed words, 'Rise, rise, O chastiser of foes! | Blest be thou; it behoveth thee not…". It also makes the most tiny pieces (605), mostly stray closing quotes, and cut "i. e. ," into three pieces.
+3. **C finds every sentence end but cuts too much.** No missed splits in the sample, but 25 false splits after "viz." and 6 quote-placement errors (52 stuck opening quotes corpus-wide). Example of the stuck quote, Section 3: "…presented her the ear-rings. ' | Utanka', said she…", where the opening quote of the next sentence stays on the previous piece.
+4. **D's abbreviation fix works.** It removed every cut after "viz.". D's remaining 6 errors are the same stuck opening quotes and brackets as C, for example Section 119 "…like a dog. ( | Destitute as I am…" and Section 94 "…immeasurable glory. ( | Amongst them…".
+5. **E learned some abbreviations by itself** ("mr", "dr", "i.e") but not "viz.", so 12 of its 13 errors are cuts after "viz.". All its quote placements were right (0), and it has the fewest stuck quotes of the three that pass (11).
+6. **A corpus convention causes the trouble.** The text writes "viz. ," and "viz ." with a space before the full stop and often a comma after it, for example Section 65: "Brahman hath six spiritual sons, viz. , Marichi, Atri, Angiras, Pulastya, Pulaha and Kratu." and Section 131: "…among Kshatriyas, viz ., Drupada…". spaCy ends the sentence after the comma, so my first D check, which looked at the last word, saw "," and never recognised "viz.". Found and fixed before judging any spot; D then merged 105 boundaries. 24 of the 60 sampled spots concern "viz.".
+7. **The typo "Nakula. the son of Madri" defeats all five** (only the control passes, because it needs a capital letter next). No splitter fix helps unless we add a rule such as "a full stop followed by a lowercase letter is not a boundary", which would also catch the "viz ." cases (23 sentences in D start lowercase; not checked whether any are real boundaries).
+8. **The control regex** cuts at "Mr." and "Dr." (no abbreviation knowledge) but avoids "viz." and the typo by requiring a capital letter next. A hybrid of that rule with an abbreviation list is a possible later candidate (an idea added after seeing results).
+
+*Caveats.* The hand-check shares come from a deliberately hard sample (places where candidates disagree; 24 of 60 are "viz."), so they are **not corpus-wide error rates**. D's abbreviation fix was written for the "viz." pattern that fills much of the sample, which flatters D. Judgements are mine. The "fixes needed" row of the scorecard (my reading, not measured): B the quote strip and still misses inner quotes; C an abbreviation list plus moving the stuck quote; D the stuck-quote move; E the abbreviation list on top of a trained model.
+
+*Where this leaves us (rule from the plan).* A is out. Nobody is under the 5% bar. D's errors are concentrated in one fixable problem (stuck opening quotes and brackets) and E's in another (the "viz." cuts), so the plan says: add the fix, measure again. **Next step: build D2 (D plus moving a stuck opening quote or bracket to the next sentence) and E2 (E plus the abbreviation list), and judge them on a FRESH sample of disagreement spots (a new seed), not the 60 above, because the fixes were designed from those spots; also re-run the automatic counts and the 9 hard cases. B and C are superseded (C is D without its fix; B needs more than a wrapper).** Possible extra shared fix: the lowercase-next rule (observation 7).
+*Gotchas:* a script named `signal.py` shadowed a Python built-in module; `python -I` hides packages installed in the user site and broke the spaCy import; a check that looks at the last word of a sentence fails when the splitter attaches trailing punctuation to it.
+
+**Splitter comparison, round 2: D2, E2 and D3 (run 2026-11-12; scripts in the scratchpad, not committed).** Following the rule in the plan (fix concentrated errors, then measure again).
+
+*What was built (all in plain words).*
+- **D2** = D (spaCy rule-based splitter plus the abbreviation merge) plus **an opening-quote move**: an opening quote or bracket left at the end of a piece, with the next word attached directly to it, moves to the start of the next piece.
+- **E2** = E (Punkt trained on our corpus) plus the same abbreviation merge.
+- **D3** = D2 plus **two more fixes**: (1) a **lowercase merge**: a piece that starts with a lowercase letter (skipping quotes, brackets, commas and dashes) is joined to the previous piece; (2) a **closing-quote-before-a-dash move**: a piece that starts with a quote mark directly followed by `-` begins with the closing quote of the previous sentence, so that quote moves back.
+- **A correction to my first D3 attempt.** I first built fix (2) as a "dash exception" in the quote-move rule, expecting D2 to have moved a closing quote wrongly. It changed nothing on the real text, because in the corpus the text is `world.'--The reply` (no space before the quote) and **spaCy itself leaves that quote at the start of the next piece**; my first test sentence also had a wrong space before the quote. The revised fix (2) acts on the real cause. The 5 hard-case results for the real pattern are in the table below.
+
+*Automatic counts over the whole corpus.*
+| | D | D2 | E | E2 | D3 |
+|---|---|---|---|---|---|
+| Sentences found | 11,584 | 11,584 | 11,627 | 11,594 | 11,561 |
+| Long paragraphs left as one sentence | 0 | 0 | 0 | 0 | 0 |
+| Sentences over 1,000 characters | 9 | 9 | 9 | 9 | 10 |
+| Start with a lowercase letter | 23 | 23 | 40 | 24 | 0 (by construction, so not evidence) |
+| Start with , ; : or ) | 0 | 0 | 31 | 0 | 0 |
+| Pieces under 15 characters | 44 | 46 | 50 | 49 | 43 |
+| Opening quote stuck at the end of a piece | 50 | 11 | 11 | 11 | 10 |
+The remaining 10 to 11 "stuck" quotes are probably real closing quotes with a stray space before them (for example "husband! ' the great god"), so that count over-reports.
+
+*The hard cases (13; I added the last two after seeing the first results).*
+| Hard case (what is expected) | D | D2 | E | E2 | D3 |
+|---|---|---|---|---|---|
+| "Mr." abbreviation (Mr. C.H. Tawney says, …) [2 sentences] | ok | ok | ok | ok | ok |
+| "Dr." abbreviation (Dr. Rost's letter) [2 sentences] | ok | ok | ok | ok | ok |
+| "viz." in the middle of a sentence [1 sentences] | ok | ok | **wrong** | ok | ok |
+| "viz. ," followed by a name (Section 65 style) [2 sentences] | ok | ok | **wrong** | ok | ok |
+| "i. e. ," with spaces [1 sentences] | ok | ok | ok | ok | ok |
+| Source typo: "Nakula. the son of Madri" [1 sentences] | **wrong** | **wrong** | **wrong** | **wrong** | ok |
+| Closing quotes `."` and `.'` [3 sentences] | ok | ok | ok | ok | ok |
+| Semicolon-joined list (chunk 478 style) [1 sentences] | ok | ok | ok | ok | ok |
+| Speech wrapped in quotes (Section 5, 5 sentences) [5 sentences] | ok | ok | ok | ok | ok |
+| Opening quote stuck to the previous piece ("Sauti said. '") [no piece ends in an opening quote] | **wrong** | ok | ok | ok | ok |
+| Opening bracket after a stop ("dog. (Destitute…") [3 sentences] | ok | ok | ok | ok | ok |
+| Closing quote before a dash (Section 147, "world.'--The reply") [2 sentences, quote on the first] | **wrong** | **wrong** | ok | ok | ok |
+| "etc.)," followed by a lowercase word (Section 7) [2 sentences] | **wrong** | **wrong** | ok | ok | ok |
+| **Wrong out of 13** | 4 | 3 | 3 | 1 | 0 |
+Only the **typo "Nakula. the son"** separates D3 from the rest (it is the one case every other candidate fails); the "etc.)," case and the closing-quote-before-a-dash case are fixed only by D3 and E2.
+
+*Fresh check of D2 against E2 (all 27 disagreements in the whole corpus).* D2 and E2 agree on **10,267 boundaries and differ in only 27 places**, so the "sample" is all of them (my judgement).
+| Result | D2 | E2 |
+|---|---|---|
+| Wrong | 7 | 16 |
+| Debatable (either is fine) | 5 | 5 |
+| Right | 15 | 6 |
+- **D2's 7 errors:** 3 closing quotes left at the start of the next piece (Section 147 `…the whole world.'--The reply`, Section 192 `…my arms.'--'Mark`, Section 133 `…one night.'--Thus addressed`); 2 false cuts (Section 23 `…Agni, Pavana, etc. ( | i.e. , the presiding deity…` and Section 7 `…marriage, etc.), | and at other sacrifices.`); 1 missed cut (Section 29 `…and so am I. | But, father…`, which spaCy never cuts but Punkt does); 1 garbled spot both candidates cut (Section 177, `( ???--JBH )`, corrupted source text).
+- **E2's 16 errors:** 8 false cuts in dash-linked runs of cries (Section 137 `'This is the foremost of those versed in arms!' | --'This is the foremost of all cherishers of virtue!'`, and Section 127 `…'O my son, my son!' | --and fell down senseless…`); 5 missed cuts, partly because Punkt learned ordinary words as abbreviations ("fro", "raw", "etc", also "ass", "kin", "ore"), so `…swaying to and fro. | In this manner…` and `…appear raw. | Conducting himself…` were not cut, plus Section 95 `…and Puru., | And the descendants…` and Section 85 `Vaisampayana continued., | 'The son of Nahusha…`; 2 stray closing quotes cut off as 1-character pieces at paragraph ends; and the garbled Section 177 spot.
+- **Debatable (5):** an em dash after a closing quote followed by a capital letter (for example Section 133 `…know me for thy friend!' | --Saying this, I approached him…`), where a cut is plausible either way.
+- **Shared-mistake checks.** 15 random boundaries that both cut: all 15 real sentence ends (if the true error rate were 20% or more, seeing none in 15 would be unlikely, about 4%; 15 is a small sample). Places where both leave a possible boundary (a full stop, then a capital letter) uncut: only 9 in the whole corpus, all "Dr.", "Mr." and initials ("Dr. Sambhu C. | Mookherjee"), all correctly uncut.
+
+*D3 compared with D2 across the whole corpus (every change was read).* D3 differs from D2 in 29 boundaries: **23 lowercase merges and 3 moved closing quotes** (6 boundary changes). Judgement: **all 23 merges are correct or acceptable and none is wrong**, for example Section 1 `'O guide of the Ganas ! | be thou the writer…`, Section 1 `…When I heard that Nakula. | the son of Madri…` (the source typo), Section 7 `…etc.), | and at other sacrifices.`, Section 23 `…Pavana, etc. ( | i.e. , the presiding deity…`, Section 74 `…my union with the? | took place privately`, Section 95 `…brought away by force Subhadra. | the sweet-speeched sister of Vasudeva`, Section 200 `…give me a husband! ' | the great god himself…`; two are merely acceptable (Section 116 `Tell me this, O Rishi! | my curiosity hath been great.`, Section 172). The 3 quote moves (Sections 133, 147, 192) are right.
+*D3 on the 27 fresh spots:* 20 right, **2 wrong** (the garbled `( ???--JBH )` text and the missed `…and so am I. | But, father…`), 5 debatable (D2: 7 wrong). **Caveat:** D3's fixes were designed from these spots, so this overstates its accuracy; there is no new independent sample for D3. What does hold up is that all 29 changes it makes to D2 were examined and none was wrong.
+
+*Decision.* **D3 is kept as the base sentence splitter:** spaCy's rule-based `sentencizer`, then an abbreviation merge ("viz.", "i.e.", "e.g.", "Mr.", "Mrs.", "Dr.", "St.", "&c.", "vs."), a lowercase merge, an opening-quote move, and a closing-quote-before-a-dash move. It passes all 13 hard cases, needs no download, is deterministic, and runs the whole corpus in under a second. E2 is the runner-up (1 of 13 hard cases wrong, but 16 errors against D2's 7 in the disagreements, and it learned junk abbreviations); B and C are superseded; A is out.
+
+*What works and what still does not (D3).*
+| Works | Still does not work or is unknown |
+|---|---|
+| Speeches wrapped in one pair of quotes are split (long paragraphs left unsplit: A 21%, D3 0%) | The garbled source text `( ???--JBH )` (Section 177) is cut inside the garbage |
+| "viz.", "viz. ,", "viz ." followed by a name or lowercase word; "i. e. ,"; "Mr."; "Dr." | One missed cut where spaCy never splits: `…and so am I. | But, father…` (Section 29); how often spaCy misses like this across the corpus is unknown (Punkt cut it correctly) |
+| "etc.)," and "etc. (" followed by lowercase | 10 sentences over 1,000 characters remain (mostly semicolon lists like chunk 478): the chunker needs a size rule for them |
+| Closing quotes `."` and `.'`, and a closing quote before a dash (`world.'--The reply`) | Dash-linked runs of cries (`…arms!'--'This is the foremost…`) stay as one long sentence; a judgement call, and the 5 debatable em-dash spots are decided either way |
+| Opening quotes and brackets go with the next sentence (`ear-rings. 'Utanka'…`, `dog. (Destitute…`) | Mistakes both D3 and E2 would make are invisible to a disagreement check; only 15 + 9 random places were checked for them |
+| The source typo "Nakula. the son of Madri" and 22 similar full-stop-then-lowercase typos are joined | A genuinely new sentence that begins with a lowercase letter would be wrongly joined (none was found among the 23 merges) |
+| No stray 1-character closing-quote pieces at paragraph ends | NLTK's pre-trained Punkt model and spaCy's parser mode were never tested (not available in this environment) |
+| Semicolon lists are kept whole, as intended; no download needed; deterministic; about 0.4 s for the corpus | Hand-check judgements are mine (one author) and the samples are small; D3's fixes were tuned on spots already seen |
+
+**Pending to experiment (sentence splitting):** items 2, 3 and 5 below were done on 2026-11-12 (see the two results blocks above; D3 is the chosen splitter); items 1 and 4 remain, plus a final independent check of D3 through the retrieval metrics when chunks are built on it.
 1. Re-run the corpus scan after stripping outer double quotes, to see how many of the 178 quote-wrapped paragraphs are fixed and whether anything else breaks.
 2. Splitter comparison: hand-check a sample of paragraphs and count each splitter's errors (pySBD with the quote fix, spaCy rule-based, NLTK Punkt, spaCy parser mode).
 3. Fix known gaps: an abbreviation list for spaCy ("viz."), the "i. e. ," case for pySBD.
